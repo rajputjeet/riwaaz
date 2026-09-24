@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 1.45,
                           ),
                         ),
-                        const SizedBox(height: 26),
+                        const Spacer(flex: 3),
 
                         // Email or Phone field
                         _buildFieldLabel('Email Address or Mobile Number'),
@@ -305,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
 
                         // Spacer pushes button and register section to the bottom
-                        const Spacer(),
+                        const Spacer(flex: 2),
                         const SizedBox(height: 24),
 
                         // Login Button at bottom

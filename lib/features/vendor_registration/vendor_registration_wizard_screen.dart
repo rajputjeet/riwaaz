@@ -144,7 +144,7 @@ class _VendorRegistrationWizardScreenState
 
   // Step 5 State: Subscription Plan
   String _selectedPlan = 'gold'; // 'silver', 'gold', 'platinum'
-  bool _isAnnualBilling = true;
+  int _selectedDurationMonths = 1; // 1 = 1 Month, 6 = 6 Months, 12 = 1 Year
   bool _isSubscriptionPaid = false;
   String _selectedPaymentMethod = 'UPI';
   final List<Map<String, dynamic>> _subscriptionPlans = [
@@ -153,8 +153,9 @@ class _VendorRegistrationWizardScreenState
       'name': 'Silver Partner',
       'tagline': 'Essential plan for new vendors',
       'badge': 'STARTER',
-      'monthlyPrice': 999,
-      'annualPrice': 9999,
+      'price1Month': 999,
+      'price6Months': 4999,
+      'price1Year': 8999,
       'color': const Color(0xFF6B7280),
       'icon': Icons.workspace_premium_outlined,
       'features': [
@@ -172,8 +173,9 @@ class _VendorRegistrationWizardScreenState
       'tagline': 'Best for growing wedding businesses',
       'badge': 'MOST POPULAR',
       'isPopular': true,
-      'monthlyPrice': 2499,
-      'annualPrice': 23999,
+      'price1Month': 2499,
+      'price6Months': 12499,
+      'price1Year': 21999,
       'color': const Color(0xFFD4AF37),
       'icon': Icons.stars_rounded,
       'features': [
@@ -191,8 +193,9 @@ class _VendorRegistrationWizardScreenState
       'name': 'Platinum Royal',
       'tagline': 'Dominance & VIP prestige in your city',
       'badge': 'VIP ROYAL',
-      'monthlyPrice': 4999,
-      'annualPrice': 47999,
+      'price1Month': 4999,
+      'price6Months': 24999,
+      'price1Year': 44999,
       'color': const Color(0xFF8B1A2E),
       'icon': Icons.diamond_rounded,
       'features': [
@@ -215,16 +218,24 @@ class _VendorRegistrationWizardScreenState
   }
 
   int _getPlanPrice(Map<String, dynamic> plan) {
-    return _isAnnualBilling
-        ? (plan['annualPrice'] as int)
-        : (plan['monthlyPrice'] as int);
+    if (_selectedDurationMonths == 6) {
+      return (plan['price6Months'] as int?) ?? 4999;
+    } else if (_selectedDurationMonths == 12) {
+      return (plan['price1Year'] as int?) ?? 8999;
+    }
+    return (plan['price1Month'] as int?) ?? 999;
   }
 
-  // Step 3 State: Documents
+  String _getDurationLabel() {
+    if (_selectedDurationMonths == 6) return '6 Months';
+    if (_selectedDurationMonths == 12) return '1 Year';
+    return '1 Month';
+  }
+
+  // Step 3 State: Documents (Bank details removed per user instruction)
   final Map<String, bool> _documentUploaded = {
     'Aadhaar / Passport': true,
     'Business Registration Certificate': true,
-    'Bank Account Details / Cancelled Cheque': true,
     'Address Proof (Electricity Bill / Rent)': true,
     'GST Certificate (Optional)': true,
   };
@@ -320,7 +331,7 @@ class _VendorRegistrationWizardScreenState
   void _showPaymentSheet() {
     final plan = _getSelectedPlan();
     final price = _getPlanPrice(plan);
-    final period = _isAnnualBilling ? 'Yearly' : 'Monthly';
+    final period = _getDurationLabel();
     bool isProcessing = false;
 
     showModalBottomSheet(
@@ -1031,43 +1042,507 @@ class _VendorRegistrationWizardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Review Your Application',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        // Header
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.assignment_turned_in_rounded,
+                color: AppColors.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Review Your Application',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Please verify your details before proceeding to plan selection',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.darkGrey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
+
+        // Card 1: Business Profile
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.offWhite,
-            borderRadius: BorderRadius.circular(14),
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2D6C7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildReviewRow('Business Name', _businessNameController.text),
-              _buildReviewRow('Owner Name', _ownerNameController.text),
-              _buildReviewRow('Category', _selectedCategory),
-              _buildReviewRow('Experience', _experience),
-              _buildReviewRow('Phone', '+91 ${_mobileController.text}'),
-              _buildReviewRow('Subscription Plan', '${_getSelectedPlan()['name']} (${_isAnnualBilling ? "Annual" : "Monthly"})'),
-              _buildReviewRow('Payment Status', _isSubscriptionPaid ? 'Paid & Active ✓' : 'Selected (Pending Payment)'),
-              _buildReviewRow('Documents', '5 Documents Uploaded'),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Business Profile',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 13),
+                        SizedBox(width: 4),
+                        Text(
+                          'Verified Draft',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _buildReviewInfoRow('Business Name', _businessNameController.text),
+              _buildReviewInfoRow('Owner / Contact', _ownerNameController.text),
+              _buildReviewInfoRow('Primary Category', _selectedCategory),
+              _buildReviewInfoRow('Experience', _experience),
+              if (_descriptionController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.offWhite,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFEFE6DC)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'About / Description:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkGrey,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _descriptionController.text.trim(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.black,
+                          height: 1.35,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Card 2: Location & Compliance
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2D6C7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Location & Tax Compliance',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _buildReviewInfoRow(
+                'City / Address',
+                _addressController.text.trim().isNotEmpty
+                    ? _addressController.text.trim()
+                    : 'Chandigarh & Tricity',
+              ),
+              _buildReviewInfoRow(
+                'GSTIN Number',
+                _gstController.text.trim().isNotEmpty
+                    ? _gstController.text.trim()
+                    : 'Not Provided (Exempt)',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Card 3: Contact Details
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2D6C7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.contact_mail_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Contact Verification',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Mobile Number',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.darkGrey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          '+91 ${_mobileController.text}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFF2E7D32),
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Email Address',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.darkGrey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _emailController.text,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.black,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFF2E7D32),
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Card 4: Uploaded Documents (Bank details removed)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2D6C7)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.folder_shared_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Uploaded Documents (${_documentUploaded.length})',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ..._documentUploaded.keys.map((docName) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF2E7D32),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          docName,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Ready',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        CheckboxListTile(
-          value: _agreedToTerms,
-          onChanged: (v) => setState(() => _agreedToTerms = v ?? true),
-          activeColor: AppColors.primary,
-          title: const Text(
-            'I confirm all details provided are accurate and agree to Riwaaz Vendor Terms.',
-            style: TextStyle(fontSize: 12),
+
+        // Card 5: Terms Agreement
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
           ),
-          contentPadding: EdgeInsets.zero,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: _agreedToTerms,
+                onChanged: (v) => setState(() => _agreedToTerms = v ?? true),
+                activeColor: AppColors.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: 6),
+              const Expanded(
+                child: Text(
+                  'I confirm that all details and submitted documents are authentic and accurate as per Riwaaz Vendor Partnership Guidelines.',
+                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.4),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReviewInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.darkGrey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1075,6 +1550,55 @@ class _VendorRegistrationWizardScreenState
   // ─────────────────────────────────────────────────────────────
   // STEP 5: SUBSCRIPTION PLAN
   // ─────────────────────────────────────────────────────────────
+  Widget _buildDurationTab(int months, String label, String? badge) {
+    final isSelected = _selectedDurationMonths == months;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedDurationMonths = months),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? AppColors.white : AppColors.darkGrey,
+                ),
+              ),
+              if (badge != null) ...[
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.cream
+                        : AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    badge,
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? AppColors.primary : AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStep5SubscriptionPlan() {
     final activePlan = _getSelectedPlan();
     final activePrice = _getPlanPrice(activePlan);
@@ -1132,7 +1656,7 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 16),
 
-        // Billing Cycle Toggle (Monthly vs Yearly)
+        // Billing Duration Selector (1 Month, 6 Months, 1 Year)
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -1142,69 +1666,9 @@ class _VendorRegistrationWizardScreenState
           ),
           child: Row(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _isAnnualBilling = false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: !_isAnnualBilling ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Monthly Billing',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: !_isAnnualBilling ? AppColors.white : AppColors.darkGrey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _isAnnualBilling = true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _isAnnualBilling ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Annual Billing',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: _isAnnualBilling ? AppColors.white : AppColors.darkGrey,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _isAnnualBilling ? AppColors.cream : AppColors.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'SAVE 20%',
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w800,
-                              color: _isAnnualBilling ? AppColors.primary : AppColors.primaryDark,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              _buildDurationTab(1, '1 Month', null),
+              _buildDurationTab(6, '6 Months', 'SAVE 15%'),
+              _buildDurationTab(12, '1 Year', 'BEST VALUE'),
             ],
           ),
         ),
@@ -1363,20 +1827,25 @@ class _VendorRegistrationWizardScreenState
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _isAnnualBilling ? '/ year' : '/ month',
+                            _selectedDurationMonths == 1
+                                ? '/ 1 month'
+                                : _selectedDurationMonths == 6
+                                    ? '/ 6 months'
+                                    : '/ 1 year',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: AppColors.darkGrey,
                             ),
                           ),
-                          if (_isAnnualBilling) ...[
+                          if (_selectedDurationMonths > 1) ...[
                             const SizedBox(width: 8),
                             Text(
-                              '(₹${((plan['annualPrice'] as int) ~/ 12)}/mo)',
+                              '(₹${(price ~/ _selectedDurationMonths)}/mo)',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: AppColors.grey,
+                                color: Color(0xFF2E7D32),
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -1566,7 +2035,7 @@ class _VendorRegistrationWizardScreenState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Activate your ${activePlan['name']} (${_isAnnualBilling ? "Annual" : "Monthly"}) membership now to unlock lead inquiries.',
+                  'Activate your ${activePlan['name']} (${_getDurationLabel()}) membership now to unlock lead inquiries.',
                   style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
                 ),
                 const SizedBox(height: 14),
@@ -1607,25 +2076,7 @@ class _VendorRegistrationWizardScreenState
   }
 
 
-  Widget _buildReviewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.grey)),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildFormField({
     required String label,
