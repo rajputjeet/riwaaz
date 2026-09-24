@@ -1,0 +1,39 @@
+name: shaadi_hub
+description: "ShaadiHub - Shaadi Ki Har Zaroorat, Ek Hi Jagah."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  smooth_page_indicator: ^1.2.0+3
+  flutter_rating_bar: ^4.0.1
+  percent_indicator: ^4.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/vendor_royal_click.jpg
+    - assets/images/vendor_memories.jpg
+    - assets/images/vendor_shutter.jpg
+    - assets/images/vendor_candid.jpg
+    - assets/images/vendor_lensart.jpg
+    - assets/images/explore_decoration.jpg
+    - assets/images/explore_catering.jpg
+    - assets/images/explore_wedding_car.jpg
+    - assets/images/vendor_detail_hero.jpg
+    - assets/images/shaadihub_logo.jpg
+    - assets/images/wedding_hero.jpg
+    - assets/images/riwaaz_couple.png
