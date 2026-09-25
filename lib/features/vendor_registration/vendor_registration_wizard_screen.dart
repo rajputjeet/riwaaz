@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/service_categories_bar.dart';
+import '../../shared/widgets/app_search_bar.dart';
 import 'vendor_submitted_screen.dart';
 
 class VendorRegistrationWizardScreen extends StatefulWidget {
@@ -39,83 +42,7 @@ class _VendorRegistrationWizardScreenState
   String _selectedCategory = 'Photography & Videography';
   final _searchTypeController = TextEditingController();
 
-  final List<Map<String, dynamic>> _businessTypes = [
-    {
-      'id': 1,
-      'title': 'Banquet Halls & Hotels',
-      'icon': Icons.apartment_rounded,
-    },
-    {
-      'id': 2,
-      'title': 'Photography & Videography',
-      'icon': Icons.camera_alt_outlined,
-    },
-    {
-      'id': 3,
-      'title': 'Makeup & Hair',
-      'icon': Icons.face_retouching_natural_rounded,
-    },
-    {
-      'id': 4,
-      'title': 'Mehndi Artists',
-      'icon': Icons.brush_rounded,
-    },
-    {
-      'id': 5,
-      'title': 'Catering',
-      'icon': Icons.restaurant_outlined,
-    },
-    {
-      'id': 6,
-      'title': 'Decor & Flora',
-      'icon': Icons.local_florist_outlined,
-    },
-    {
-      'id': 7,
-      'title': 'DJ & Sound',
-      'icon': Icons.speaker_group_outlined,
-    },
-    {
-      'id': 8,
-      'title': 'Live Bands',
-      'icon': Icons.music_note_rounded,
-    },
-    {
-      'id': 9,
-      'title': 'Wedding Cars',
-      'icon': Icons.directions_car_filled_outlined,
-    },
-    {
-      'id': 10,
-      'title': 'Bridal & Groom Dresses',
-      'icon': Icons.checkroom_rounded,
-    },
-    {
-      'id': 11,
-      'title': 'Jaggo Group',
-      'icon': Icons.nightlife_rounded,
-    },
-    {
-      'id': 12,
-      'title': 'Turban Group',
-      'icon': Icons.workspace_premium_rounded,
-    },
-    {
-      'id': 13,
-      'title': 'Invitation Cards',
-      'icon': Icons.mail_outline_rounded,
-    },
-    {
-      'id': 14,
-      'title': 'Jewellers',
-      'icon': Icons.diamond_outlined,
-    },
-    {
-      'id': 15,
-      'title': 'Tent Houses',
-      'icon': Icons.holiday_village_outlined,
-    },
-  ];
+  List<ServiceCategoryItem> get _businessTypes => kServiceCategories;
 
   // Step 2 State: Basic Info
   final _businessNameController =
@@ -142,46 +69,48 @@ class _VendorRegistrationWizardScreenState
   );
   final _gstController = TextEditingController(text: '03AABCR1234F1Z8');
 
-  // Step 5 State: Subscription Plan
-  String _selectedPlan = 'gold'; // 'silver', 'gold', 'platinum'
-  int _selectedDurationMonths = 1; // 1 = 1 Month, 6 = 6 Months, 12 = 1 Year
+  // Step 5 State: Subscription Plans (3, 6, 12 Months)
+  String _selectedPlan = '6_months'; // '3_months', '6_months', '12_months'
   bool _isSubscriptionPaid = false;
   String _selectedPaymentMethod = 'UPI';
   final List<Map<String, dynamic>> _subscriptionPlans = [
     {
-      'id': 'silver',
-      'name': 'Silver Partner',
-      'tagline': 'Essential plan for new vendors',
+      'id': '3_months',
+      'name': '3 Months Plan',
+      'duration': '3 Months',
+      'months': 3,
+      'price': 2999,
+      'monthlyRate': 1000,
+      'tagline': 'Quarterly partner access to start receiving leads',
       'badge': 'STARTER',
-      'price1Month': 999,
-      'price6Months': 4999,
-      'price1Year': 8999,
       'color': const Color(0xFF6B7280),
-      'icon': Icons.workspace_premium_outlined,
+      'icon': Icons.calendar_today_rounded,
       'features': [
-        'Verified Vendor Profile badge',
-        '15 Verified Client Leads / month',
+        'Verified Vendor Profile badge for 3 months',
+        '25 Verified Client Leads / month',
         'Direct WhatsApp & Call inquiries',
-        'Upload up to 10 Portfolio photos',
-        'Standard search ranking in category',
-        'Basic inquiries dashboard',
+        'Upload up to 15 Portfolio photos',
+        'Standard category search ranking',
+        'Real-time inquiry dashboard & SMS alerts',
       ],
     },
     {
-      'id': 'gold',
-      'name': 'Gold Partner',
-      'tagline': 'Best for growing wedding businesses',
+      'id': '6_months',
+      'name': '6 Months Plan',
+      'duration': '6 Months',
+      'months': 6,
+      'price': 4999,
+      'monthlyRate': 833,
+      'tagline': 'High-growth package for wedding season',
       'badge': 'MOST POPULAR',
+      'savings': 'SAVE 15%',
       'isPopular': true,
-      'price1Month': 2499,
-      'price6Months': 12499,
-      'price1Year': 21999,
-      'color': const Color(0xFFD4AF37),
+      'color': AppColors.primary,
       'icon': Icons.stars_rounded,
       'features': [
-        'Official Gold Verified Riwaaz Badge',
-        '50 High-Intent Leads / month',
-        'Priority Search & Category placement',
+        'Verified Partner Badge with Priority Star',
+        '60 High-Intent Client Leads / month',
+        'Priority Search & Category Placement',
         'Unlimited Portfolio photos & 4K videos',
         'Featured in "Top Recommended Vendors"',
         'Direct customer quotation generator',
@@ -189,18 +118,22 @@ class _VendorRegistrationWizardScreenState
       ],
     },
     {
-      'id': 'platinum',
-      'name': 'Platinum Royal',
-      'tagline': 'Dominance & VIP prestige in your city',
-      'badge': 'VIP ROYAL',
-      'price1Month': 4999,
-      'price6Months': 24999,
-      'price1Year': 44999,
+      'id': '12_months',
+      'name': '12 Months Plan',
+      'duration': '12 Months (1 Year)',
+      'months': 12,
+      'price': 8999,
+      'monthlyRate': 749,
+      'tagline': 'Full year dominance & maximum client bookings',
+      'badge': 'BEST VALUE',
+      'savings': 'SAVE 25%',
+      'isPopular': false,
       'color': const Color(0xFF8B1A2E),
       'icon': Icons.diamond_rounded,
       'features': [
-        'Guaranteed Top 3 City Banner Ranking',
+        'Annual Royal Verified Partner Badge',
         'Unlimited Direct Bride & Groom Leads',
+        'Guaranteed Top 3 City Banner Ranking',
         'Social Media Spotlight on Riwaaz Instagram',
         '0% Commission on all client bookings',
         'Instant Priority SMS & Push lead alerts',
@@ -218,18 +151,7 @@ class _VendorRegistrationWizardScreenState
   }
 
   int _getPlanPrice(Map<String, dynamic> plan) {
-    if (_selectedDurationMonths == 6) {
-      return (plan['price6Months'] as int?) ?? 4999;
-    } else if (_selectedDurationMonths == 12) {
-      return (plan['price1Year'] as int?) ?? 8999;
-    }
-    return (plan['price1Month'] as int?) ?? 999;
-  }
-
-  String _getDurationLabel() {
-    if (_selectedDurationMonths == 6) return '6 Months';
-    if (_selectedDurationMonths == 12) return '1 Year';
-    return '1 Month';
+    return (plan['price'] as int?) ?? 4999;
   }
 
   // Step 3 State: Documents (Bank details removed per user instruction)
@@ -331,7 +253,6 @@ class _VendorRegistrationWizardScreenState
   void _showPaymentSheet() {
     final plan = _getSelectedPlan();
     final price = _getPlanPrice(plan);
-    final period = _getDurationLabel();
     bool isProcessing = false;
 
     showModalBottomSheet(
@@ -407,7 +328,7 @@ class _VendorRegistrationWizardScreenState
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '${plan['name']} ($period)',
+                          '${plan['name']}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -748,25 +669,11 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 14),
 
-        // Search Type
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.offWhite,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TextField(
-            controller: _searchTypeController,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Search business type...',
-              hintStyle: TextStyle(color: AppColors.grey, fontSize: 13),
-              prefixIcon:
-                  Icon(Icons.search_rounded, color: AppColors.grey, size: 20),
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            ),
-          ),
+        // Unified Search Type Bar
+        AppSearchBar(
+          controller: _searchTypeController,
+          hintText: 'Search business type...',
+          onChanged: (_) => setState(() {}),
         ),
 
         const SizedBox(height: 18),
@@ -779,62 +686,69 @@ class _VendorRegistrationWizardScreenState
             crossAxisCount: 3,
             crossAxisSpacing: 10,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.9,
+            childAspectRatio: 0.82,
           ),
           itemCount: _businessTypes.length,
           itemBuilder: (context, index) {
             final type = _businessTypes[index];
-            final isSelected = _selectedCategory == type['title'];
-            final query = _searchTypeController.text.toLowerCase();
+            final isSelected = _selectedCategory == type.title;
+            final query = _searchTypeController.text.toLowerCase().trim();
             if (query.isNotEmpty &&
-                !(type['title'] as String).toLowerCase().contains(query)) {
+                !type.title.toLowerCase().contains(query) &&
+                !type.desc.toLowerCase().contains(query)) {
               return const SizedBox.shrink();
             }
 
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  _selectedCategory = type['title'];
-                  
+                  _selectedCategory = type.title;
                 });
               },
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.cream : AppColors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? type.bgColor : AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isSelected
-                        ? AppColors.primary
-                        : AppColors.grey.withValues(alpha: 0.25),
-                    width: isSelected ? 1.8 : 1,
+                        ? type.color
+                        : AppColors.grey.withValues(alpha: 0.22),
+                    width: isSelected ? 2 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      color: isSelected
+                          ? type.color.withValues(alpha: 0.18)
+                          : Colors.black.withValues(alpha: 0.04),
+                      blurRadius: isSelected ? 10 : 6,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      type['icon'],
-                      size: 28,
-                      color:
-                          isSelected ? AppColors.primary : AppColors.darkGrey,
+                    ServiceIconWrap(
+                      item: type,
+                      size: 52,
+                      iconSize: 24,
+                      borderRadius: 14,
+                      isSelected: isSelected,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      type['title'],
+                      type.title,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 12,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
-                        color:
-                            isSelected ? AppColors.primary : AppColors.black,
+                        color: isSelected ? type.color : AppColors.black,
+                        height: 1.15,
                       ),
                     ),
                   ],
@@ -1550,58 +1464,8 @@ class _VendorRegistrationWizardScreenState
   // ─────────────────────────────────────────────────────────────
   // STEP 5: SUBSCRIPTION PLAN
   // ─────────────────────────────────────────────────────────────
-  Widget _buildDurationTab(int months, String label, String? badge) {
-    final isSelected = _selectedDurationMonths == months;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedDurationMonths = months),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? AppColors.white : AppColors.darkGrey,
-                ),
-              ),
-              if (badge != null) ...[
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.cream
-                        : AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    badge,
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w800,
-                      color: isSelected ? AppColors.primary : AppColors.primaryDark,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStep5SubscriptionPlan() {
     final activePlan = _getSelectedPlan();
-    final activePrice = _getPlanPrice(activePlan);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1651,140 +1515,167 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 6),
         const Text(
-          'Select a membership tier to get your verified vendor badge, receive high-intent client inquiries, and showcase your profile on Riwaaz.',
+          'Select your partnership duration (3, 6, or 12 Months) to get verified, receive real-time client leads, and activate your vendor profile on Riwaaz.',
           style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey, height: 1.4),
         ),
-        const SizedBox(height: 16),
-
-        // Billing Duration Selector (1 Month, 6 Months, 1 Year)
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppColors.offWhite,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2D6C7)),
-          ),
-          child: Row(
-            children: [
-              _buildDurationTab(1, '1 Month', null),
-              _buildDurationTab(6, '6 Months', 'SAVE 15%'),
-              _buildDurationTab(12, '1 Year', 'BEST VALUE'),
-            ],
-          ),
-        ),
-
         const SizedBox(height: 18),
 
-        // Plans List
+        // Plans List (3 Months, 6 Months, 12 Months)
         ..._subscriptionPlans.map((plan) {
           final isSelected = _selectedPlan == plan['id'];
           final price = _getPlanPrice(plan);
           final isPopular = plan['isPopular'] == true;
+          final savings = plan['savings'] as String?;
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : isPopular
-                        ? AppColors.primary.withValues(alpha: 0.3)
-                        : AppColors.grey.withValues(alpha: 0.25),
-                width: isSelected ? 2 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedPlan = plan['id'] as String;
+                _isSubscriptionPaid = false;
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+                      ? AppColors.primary
+                      : isPopular
+                          ? AppColors.primary.withValues(alpha: 0.35)
+                          : AppColors.grey.withValues(alpha: 0.25),
+                  width: isSelected ? 2 : 1,
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isPopular)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.star_rounded, size: 14, color: AppColors.cream),
-                        SizedBox(width: 4),
-                        Text(
-                          'MOST POPULAR CHOICE • RECOMMENDED',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.cream,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isPopular)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: (plan['color'] as Color).withValues(alpha: 0.12),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  plan['icon'] as IconData,
-                                  color: plan['color'] as Color,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    plan['name'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    plan['tagline'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      color: AppColors.darkGrey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          Icon(Icons.star_rounded, size: 14, color: AppColors.cream),
+                          SizedBox(width: 4),
+                          Text(
+                            'MOST POPULAR CHOICE • SAVE 15%',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.cream,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedPlan = plan['id'] as String;
-                                _isSubscriptionPaid = false;
-                              });
-                            },
-                            child: Container(
+                        ],
+                      ),
+                    )
+                  else if (savings != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF8B1A2E),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.diamond_rounded, size: 14, color: AppColors.cream),
+                          const SizedBox(width: 4),
+                          Text(
+                            'BEST VALUE • $savings ON ANNUAL',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.cream,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: (plan['color'] as Color).withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    plan['icon'] as IconData,
+                                    color: plan['color'] as Color,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          plan['name'] as String,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: (plan['color'] as Color).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            plan['badge'] as String,
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              color: plan['color'] as Color,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      plan['tagline'] as String,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.darkGrey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
@@ -1809,39 +1700,33 @@ class _VendorRegistrationWizardScreenState
                                     )
                                   : null,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '₹$price',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.primary,
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '₹$price',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.primary,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedDurationMonths == 1
-                                ? '/ 1 month'
-                                : _selectedDurationMonths == 6
-                                    ? '/ 6 months'
-                                    : '/ 1 year',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.darkGrey,
+                            const SizedBox(width: 4),
+                            Text(
+                              '/ ${plan['duration']}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.darkGrey,
+                              ),
                             ),
-                          ),
-                          if (_selectedDurationMonths > 1) ...[
                             const SizedBox(width: 8),
                             Text(
-                              '(₹${(price ~/ _selectedDurationMonths)}/mo)',
+                              '(₹${plan['monthlyRate']}/mo)',
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Color(0xFF2E7D32),
@@ -1849,79 +1734,83 @@ class _VendorRegistrationWizardScreenState
                               ),
                             ),
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(height: 1),
-                      const SizedBox(height: 12),
-                      // Features
-                      ...((plan['features'] as List<String>).map((feat) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(top: 2, right: 8),
-                                child: Icon(
-                                  Icons.check_circle_rounded,
-                                  color: AppColors.success,
-                                  size: 15,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  feat,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    color: AppColors.black,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.35,
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        // Features
+                        ...((plan['features'] as List<String>).map((feat) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 2, right: 8),
+                                  child: Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.success,
+                                    size: 15,
                                   ),
                                 ),
+                                Expanded(
+                                  child: Text(
+                                    feat,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.black,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        })),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 40,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedPlan = plan['id'] as String;
+                                _isSubscriptionPaid = false;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.primary.withValues(alpha: 0.5),
                               ),
-                            ],
-                          ),
-                        );
-                      })),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 40,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _selectedPlan = plan['id'] as String;
-                              _isSubscriptionPaid = false;
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: isSelected ? AppColors.cream : AppColors.white,
-                            side: BorderSide(
-                              color: isSelected ? AppColors.primary : const Color(0xFFD8CCBE),
-                              width: isSelected ? 1.5 : 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Text(
-                            isSelected ? 'Selected Plan ✓' : 'Select ${plan['name']}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected ? AppColors.primary : AppColors.black,
+                            child: Text(
+                              isSelected ? 'Selected Plan ✓' : 'Select ${plan['name']}',
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }),
+
 
         const SizedBox(height: 10),
 
@@ -1968,11 +1857,7 @@ class _VendorRegistrationWizardScreenState
                   width: double.infinity,
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_currentStep < _totalSteps) {
-                        setState(() => _currentStep++);
-                      }
-                    },
+                    onPressed: _submitRegistration,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       foregroundColor: Colors.white,
@@ -1983,87 +1868,9 @@ class _VendorRegistrationWizardScreenState
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Continue to Portfolio', style: TextStyle(fontWeight: FontWeight.w700)),
+                        Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.w700)),
                         SizedBox(width: 6),
                         Icon(Icons.arrow_forward_rounded, size: 16),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.cream,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25), width: 1.2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Ready to Activate?',
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Total: ₹$activePrice',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Activate your ${activePlan['name']} (${_getDurationLabel()}) membership now to unlock lead inquiries.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _showPaymentSheet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.shopping_bag_outlined, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Buy ${activePlan['name']} (₹$activePrice)',
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -2132,9 +1939,11 @@ class _VendorRegistrationWizardScreenState
   Widget _buildBottomBar() {
     String buttonText;
     if (_currentStep == 5) {
+      final activePlan = _getSelectedPlan();
+      final activePrice = _getPlanPrice(activePlan);
       buttonText = _isSubscriptionPaid
-          ? 'Submit Application'
-          : 'Buy Plan & Complete';
+          ? 'Complete Registration'
+          : 'Buy ${activePlan['name']} (₹$activePrice)';
     } else if (_currentStep == 4) {
       buttonText = 'Proceed to Plan Selection';
     } else {

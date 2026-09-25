@@ -5,6 +5,7 @@ import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
 import 'vendor_payouts_screen.dart';
 import 'vendor_profile_screen.dart';
+import 'vendor_subscription_plan_screen.dart';
 
 class VendorDashboardTab extends StatelessWidget {
   final void Function(int tabIndex)? onNavigateTab;
@@ -70,6 +71,11 @@ class VendorDashboardTab extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
+
+          // Vendor Membership Status Banner (3M, 6M, 1Y)
+          _buildMembershipBanner(context),
+
+          const SizedBox(height: 14),
 
           // Earnings Summary Card with Visual Mini Chart
           _buildEarningsCard(context),
@@ -190,6 +196,111 @@ class VendorDashboardTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMembershipBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2C1810), Color(0xFF4A1E18)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.workspace_premium_rounded,
+              color: AppColors.gold,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      '6 Months Plan',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Active',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF81C784),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Active Membership • 84 Days Remaining',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.cream,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).push(
+              FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.black,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Plans',
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
       ),
     );
   }

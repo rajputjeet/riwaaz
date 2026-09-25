@@ -45,8 +45,8 @@ class AppBottomNav extends StatelessWidget {
                 onTap: () => onTap(1),
               ),
               _NavItem(
-                icon: Icons.favorite_rounded,
-                label: 'My Wedding',
+                icon: Icons.celebration_rounded,
+                label: 'My Events',
                 isActive: currentIndex == 2,
                 onTap: () => onTap(2),
               ),

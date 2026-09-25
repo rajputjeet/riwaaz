@@ -11,12 +11,42 @@ class VendorBookingsTab extends StatefulWidget {
 class _VendorBookingsTabState extends State<VendorBookingsTab> {
   int _selectedFilter = 0; // 0 = Upcoming, 1 = Completed, 2 = All
 
-  final List<Map<String, dynamic>> _upcomingBookings = [
+  static final List<Map<String, dynamic>> _upcomingBookings = [
     {
-      'client': 'Aman & Simran Wedding',
+      'client': 'TechCorp Annual Office Gala',
+      'date': '15 Jan 2027',
+      'venue': 'JW Marriott Grand Ballroom, Chandigarh',
+      'package': 'Corporate 4K Multicam & Line-Array Audio (₹1,20,000)',
+      'status': 'Confirmed',
+      'advance': '₹60,000 Paid (Advance)',
+      'balance': '₹60,000 Due on Event',
+      'phone': '+91 98450 11223',
+    },
+    {
+      'client': 'Reyansh 5th Birthday Bash',
+      'date': '10 Jan 2027',
+      'venue': 'Forest Hill Resort Clubhouse, Mohali',
+      'package': 'Jungle Safari Decor & Magic Stage (₹35,000)',
+      'status': 'Confirmed',
+      'advance': '₹35,000 Paid (100%)',
+      'balance': '₹0 (Fully Paid)',
+      'phone': '+91 98144 77889',
+    },
+    {
+      'client': 'Neon Music & Cocktail Party',
+      'date': '31 Dec 2026',
+      'venue': 'The Lalit Sky Lounge, Chandigarh',
+      'package': 'Pro DJ Club Sound & Laser FX (₹45,000)',
+      'status': 'Confirmed',
+      'advance': '₹20,000 Paid (Advance)',
+      'balance': '₹25,000 Due on Event',
+      'phone': '+91 98721 33445',
+    },
+    {
+      'client': 'Aman & Simran Royal Wedding',
       'date': '18 Dec 2026',
-      'venue': 'The Grand Palace, Chandigarh',
-      'package': 'Royal Diamond 4K Package (₹75,000)',
+      'venue': 'The Oberoi Sukhvilas, Chandigarh',
+      'package': 'Royal Diamond 4K Cinema Crew (₹75,000)',
       'status': 'Confirmed',
       'advance': '₹25,000 Paid (Advance)',
       'balance': '₹50,000 Due on Event',
@@ -26,17 +56,17 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
       'client': 'Pooja & Rohan Engagement',
       'date': '04 Nov 2026',
       'venue': 'Kasauli Pine Hills Resort',
-      'package': 'Standard Gold Package (₹45,000)',
+      'package': 'Standard Gold Stage & Photography (₹45,000)',
       'status': 'Confirmed',
       'advance': '₹15,000 Paid (Advance)',
       'balance': '₹30,000 Due on Event',
       'phone': '+91 98112 33445',
     },
     {
-      'client': 'Kavita & Nitin Sangeet Night',
+      'client': 'Kavita & Nitin Sangeet Gala',
       'date': '22 Jan 2027',
       'venue': 'Hyatt Regency, Ludhiana',
-      'package': 'Custom 4K Cinematic (₹60,000)',
+      'package': 'Custom 4K Cinematic & DJ Setup (₹60,000)',
       'status': 'Confirmed',
       'advance': '₹20,000 Paid (Advance)',
       'balance': '₹40,000 Due on Event',
@@ -44,7 +74,17 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
     },
   ];
 
-  final List<Map<String, dynamic>> _completedBookings = [
+  static final List<Map<String, dynamic>> _completedBookings = [
+    {
+      'client': 'InnoTech Corporate Diwali Bash',
+      'date': '10 Nov 2026',
+      'venue': 'JW Marriott, Chandigarh',
+      'package': 'Annual Gala Stage & Sound (₹95,000)',
+      'status': 'Delivered & Paid',
+      'advance': '₹95,000 Paid (100%)',
+      'balance': 'Event Completed ✓',
+      'phone': '+91 98765 44332',
+    },
     {
       'client': 'Gurpreet & Harleen Wedding',
       'date': '12 May 2026',
@@ -56,10 +96,10 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
       'phone': '+91 98881 22334',
     },
     {
-      'client': 'Deepak & Sunita Reception',
+      'client': 'Deepak & Sunita 25th Anniversary',
       'date': '28 Apr 2026',
       'venue': 'Heritage Haveli, Mohali',
-      'package': 'Standard Package (₹45,000)',
+      'package': 'Silver Jubilee Decor & Audio (₹45,000)',
       'status': 'Delivered & Paid',
       'advance': '₹45,000 Paid (100%)',
       'balance': 'Drive Link Sent ✓',
@@ -85,7 +125,8 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final bookings = _displayedBookings;
+    final bookings =
+        _displayedBookings.isNotEmpty ? _displayedBookings : _upcomingBookings;
 
     return Scaffold(
       backgroundColor: AppColors.background,

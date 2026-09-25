@@ -6,6 +6,7 @@ import '../auth/unified_login_screen.dart';
 import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
 import 'vendor_payouts_screen.dart';
+import 'vendor_subscription_plan_screen.dart';
 
 class VendorProfileScreen extends StatelessWidget {
   const VendorProfileScreen({super.key});
@@ -174,6 +175,15 @@ class VendorProfileScreen extends StatelessWidget {
             const SizedBox(height: 10),
 
             // Profile Options Menu
+            _buildMenuItem(
+              icon: Icons.workspace_premium_rounded,
+              iconColor: AppColors.goldDark,
+              title: 'Vendor Membership Plans',
+              subtitle: '6 Months Plan Active • 3, 6 & 12 Month Plans',
+              onTap: () => Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+              ),
+            ),
             _buildMenuItem(
               icon: Icons.inventory_2_outlined,
               title: 'My Pricing Packages',

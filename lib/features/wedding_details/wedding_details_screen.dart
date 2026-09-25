@@ -216,21 +216,14 @@ class _WeddingDetailsScreenState extends State<WeddingDetailsScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Let's Plan Your",
+          "Let's Plan Your Event",
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.cormorantGaramond(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.w700,
             color: AppColors.white,
-            height: 1.1,
-          ),
-        ),
-        Text(
-          'Event',
-          style: GoogleFonts.cormorantGaramond(
-            fontSize: 32,
-            fontWeight: FontWeight.w700,
-            color: AppColors.secondary,
-            height: 1.2,
+            height: 1.15,
           ),
         ),
         const SizedBox(height: 12),

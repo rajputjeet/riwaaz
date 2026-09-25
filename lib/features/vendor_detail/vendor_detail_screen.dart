@@ -31,12 +31,51 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     with TickerProviderStateMixin {
   final int _navIndex = 1;
   int _selectedTab = 1; // 0=About, 1=Packages, 2=Portfolio, 3=Reviews
+  int _selectedPackageIndex = 1; // Default to Standard (popular)
   bool _isWishlisted = false;
   late AnimationController _headerController;
   late ScrollController _scrollController;
   bool _isScrolled = false;
 
   final List<String> _tabs = ['About', 'Packages', 'Portfolio', 'Reviews'];
+
+  static const List<_PackageData> _vendorPackages = [
+    _PackageData(
+      'Basic Package',
+      25000,
+      [
+        '1 Photographer',
+        '5 Edited Photos',
+        '1 Album',
+      ],
+      AppColors.grey,
+    ),
+    _PackageData(
+      'Standard Package',
+      40000,
+      [
+        '2 Photographers',
+        'Candid + Album',
+        'Cinematic Video',
+      ],
+      AppColors.primary,
+    ),
+    _PackageData(
+      'Premium Package',
+      70000,
+      [
+        'Pre-Wedding + Drone',
+        'Cinematic Video',
+        'Album + 2 Photographers',
+      ],
+      AppColors.gold,
+    ),
+  ];
+
+  String _formatCurrency(int amount) {
+    return amount.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  }
 
   @override
   void initState() {
@@ -390,70 +429,57 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildPackages() {
-    final packages = [
-      _PackageData(
-        'Basic Package',
-        25000,
-        [
-          '1 Photographer',
-          '5 Edited Photos',
-          '1 Album',
-        ],
-        AppColors.grey,
-      ),
-      _PackageData(
-        'Standard Package',
-        40000,
-        [
-          '2 Photographers',
-          'Candid + Album',
-          'Cinematic Video',
-        ],
-        AppColors.primary,
-      ),
-      _PackageData(
-        'Premium Package',
-        70000,
-        [
-          'Pre-Wedding + Drone',
-          'Cinematic Video',
-          'Album + 2 Photographers',
-        ],
-        AppColors.gold,
-      ),
-    ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: packages.asMap().entries.map((entry) {
+        children: _vendorPackages.asMap().entries.map((entry) {
           final i = entry.key;
           final pkg = entry.value;
+          final isSelected = _selectedPackageIndex == i;
           return FadeInWidget(
             delay: Duration(milliseconds: 100 * i),
-            child: _buildPackageCard(pkg, i == 1),
+            child: _buildPackageCard(
+              pkg,
+              isPopular: i == 1,
+              isSelected: isSelected,
+              onSelect: () => setState(() => _selectedPackageIndex = i),
+            ),
           );
         }).toList(),
       ),
     );
   }
 
-  Widget _buildPackageCard(_PackageData pkg, bool isPopular) {
+  Widget _buildPackageCard(
+    _PackageData pkg, {
+    required bool isPopular,
+    required bool isSelected,
+    required VoidCallback onSelect,
+  }) {
     return AnimatedTapWidget(
-      onTap: () {},
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: isSelected ? const Color(0xFFFFF9FA) : AppColors.white,
           borderRadius: BorderRadius.circular(16),
-          border: isPopular
-              ? Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 2)
-              : Border.all(color: const Color(0xFFEEE8DF)),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : (isPopular
+                    ? AppColors.primary.withValues(alpha: 0.35)
+                    : const Color(0xFFEEE8DF)),
+            width: isSelected ? 2 : 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.14)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isSelected ? 14 : 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -462,13 +488,37 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           children: [
             Row(
               children: [
+                // Radio indicator
+                Container(
+                  width: 22,
+                  height: 22,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : const Color(0xFFD6CBC3),
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 14)
+                      : null,
+                ),
                 Text(
                   pkg.name,
-                  style: AppTextStyles.headlineSmall.copyWith(fontSize: 15),
+                  style: AppTextStyles.headlineSmall.copyWith(
+                    fontSize: 15.5,
+                    color: isSelected ? const Color(0xFF26050E) : AppColors.black,
+                  ),
                 ),
-                if (isPopular) ...[
-                  const Spacer(),
+                const Spacer(),
+                if (isPopular)
                   Container(
+                    margin: const EdgeInsets.only(right: 6),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -484,37 +534,103 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                       ),
                     ),
                   ),
-                ],
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.done_all_rounded,
+                            color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Selected',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              '₹${pkg.price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
-              style: TextStyle(
-                color: pkg.color == AppColors.gold
-                    ? AppColors.goldDark
-                    : AppColors.primary,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 32),
+              child: Text(
+                '₹${_formatCurrency(pkg.price)}',
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.primary
+                      : (pkg.color == AppColors.gold
+                          ? AppColors.goldDark
+                          : AppColors.primary),
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             const SizedBox(height: 10),
             ...pkg.features.map(
               (f) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.only(bottom: 6, left: 32),
                 child: Row(
                   children: [
                     Icon(
                       Icons.check_circle_rounded,
-                      color: isPopular ? AppColors.primary : AppColors.grey,
+                      color: isSelected
+                          ? AppColors.primary
+                          : (isPopular ? AppColors.primary : AppColors.grey),
                       size: 16,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      f,
-                      style: AppTextStyles.bodyMedium.copyWith(fontSize: 13),
+                    Expanded(
+                      child: Text(
+                        f,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontSize: 13,
+                          color: isSelected
+                              ? const Color(0xFF2E2620)
+                              : AppColors.darkGrey,
+                        ),
+                      ),
                     ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Select button pill
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : const Color(0xFFF7F3EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : const Color(0xFFE2D7CC),
+                  ),
+                ),
+                child: Text(
+                  isSelected ? '✓ Selected Plan' : 'Select Plan',
+                  style: TextStyle(
+                    color: isSelected ? AppColors.primary : AppColors.darkGrey,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -657,6 +773,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildBottomActionBar() {
+    final selectedPkg = _vendorPackages[_selectedPackageIndex];
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
@@ -689,17 +807,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             bgColor: AppColors.successLight,
             onTap: () {},
           ),
-          const SizedBox(width: 8),
-          // Book Now
+          const SizedBox(width: 10),
+          // Selected Package + Book Button
           Expanded(
-            flex: 2,
             child: AnimatedTapWidget(
-              onTap: () => _showBookingSheet(),
+              onTap: () => _showBookingSheet(selectedPkg),
               child: Container(
-                height: 48,
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.primary.withValues(alpha: 0.3),
@@ -708,16 +826,51 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: Text(
-                    'Book Now',
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      letterSpacing: 0.3,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedPkg.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.goldLight,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                          Text(
+                            '₹${_formatCurrency(selectedPkg.price)}',
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    const Row(
+                      children: [
+                        Text(
+                          'Book Now',
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 16),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -762,7 +915,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     );
   }
 
-  void _showBookingSheet() {
+  void _showBookingSheet(_PackageData pkg) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -795,16 +948,46 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
               style: AppTextStyles.bodyLarge.copyWith(color: AppColors.grey),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: AppColors.success, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Standard Package — ₹40,000',
-                  style: AppTextStyles.labelLarge,
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF9FA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.25),
                 ),
-              ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: AppColors.primary, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${pkg.name} — ₹${_formatCurrency(pkg.price)}',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.black,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          pkg.features.join(' • '),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             AnimatedTapWidget(
@@ -812,7 +995,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Booking request sent! 🎉'),
+                    content: Text('Booking request sent for ${pkg.name}! 🎉'),
                     backgroundColor: AppColors.success,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
@@ -854,5 +1037,5 @@ class _PackageData {
   final List<String> features;
   final Color color;
 
-  _PackageData(this.name, this.price, this.features, this.color);
+  const _PackageData(this.name, this.price, this.features, this.color);
 }

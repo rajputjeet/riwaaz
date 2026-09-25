@@ -45,6 +45,7 @@ class _MainShellState extends State<MainShell> {
       backgroundColor: AppColors.background,
       body: IndexedStack(
         index: _currentIndex,
+        sizing: StackFit.expand,
         children: const [
           DashboardBody(),
           ExploreBody(),
@@ -102,11 +103,11 @@ class _MainShellState extends State<MainShell> {
                     child: GestureDetector(
                       onTap: () => _onTabTap(2),
                       behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          const SizedBox(height: 38),
-                          Text(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
                             'My Event',
                             style: TextStyle(
                               fontSize: 10.5,
@@ -118,8 +119,7 @@ class _MainShellState extends State<MainShell> {
                                   : AppColors.grey,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -609,16 +609,92 @@ class _CustomerBookingsTab extends StatefulWidget {
 }
 
 class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
-  int _selectedFilter = 0; // 0 = All, 1 = Confirmed, 2 = Balance Due
+  int _selectedFilter = 0;
 
   final List<Map<String, dynamic>> _allBookings = [
     {
+      'name': 'Grand Stage Crafters & AV Tech',
+      'eventName': 'TechCorp Office Gala',
+      'eventType': 'Office Party',
+      'eventIcon': Icons.business_center_rounded,
+      'eventColor': const Color(0xFF1E3A8A),
+      'category': 'AV, Stage & Lighting',
+      'package': 'Corporate 4K LED Backdrop & Line-Array Audio',
+      'date': '15 Jan 2027',
+      'time': '4:00 PM - 11:30 PM',
+      'venue': 'JW Marriott Grand Ballroom, Chandigarh',
+      'status': 'Confirmed',
+      'total': '₹1,20,000',
+      'paid': '₹60,000 Paid',
+      'balance': '₹60,000 Due on Event',
+      'paidFraction': 0.50,
+      'phone': '+91 98450 11223',
+      'inclusions': [
+        'P3 LED Video Wall (20x10 ft)',
+        'Line Array Sound & 4 Cordless Mics',
+        'Stage Moving Head Lights',
+        'Onsite Sound Engineer',
+      ],
+    },
+    {
+      'name': 'Rainbow Balloon & Carnival Themes',
+      'eventName': "Reyansh's 5th Birthday",
+      'eventType': 'Birthday Party',
+      'eventIcon': Icons.cake_rounded,
+      'eventColor': const Color(0xFFD97706),
+      'category': 'Theme Decor & Kids Setup',
+      'package': 'Grand Jungle Safari Balloon Arc & Magic Stage',
+      'date': '10 Jan 2027',
+      'time': '4:00 PM - 8:30 PM',
+      'venue': 'Forest Hill Resort Clubhouse, Mohali',
+      'status': 'Confirmed',
+      'total': '₹35,000',
+      'paid': '₹35,000 Paid (Full)',
+      'balance': '₹0 (Fully Paid)',
+      'paidFraction': 1.0,
+      'phone': '+91 98144 77889',
+      'inclusions': [
+        '3D Jungle Safari Backdrop & Pillar Arch',
+        'Custom Name Neon Sign',
+        'Magician & Tattoo Artist (2 Hrs)',
+        'Popcorn & Candy Floss Machine',
+      ],
+    },
+    {
+      'name': 'DJ Sandy Beats & Sound System',
+      'eventName': 'Neon Music & Cocktail Night',
+      'eventType': 'Private Party',
+      'eventIcon': Icons.nightlife_rounded,
+      'eventColor': const Color(0xFF7E22CE),
+      'category': 'DJ & Sound System',
+      'package': 'Club Sound, Dual Bass Bins & Laser Lights',
+      'date': '31 Dec 2026',
+      'time': '8:00 PM - 2:00 AM',
+      'venue': 'The Lalit Sky Lounge, Chandigarh',
+      'status': 'Confirmed',
+      'total': '₹45,000',
+      'paid': '₹20,000 Paid',
+      'balance': '₹25,000 Due on Event',
+      'paidFraction': 0.44,
+      'phone': '+91 98721 33445',
+      'inclusions': [
+        'Pioneer CDJ 3000 & DJ Console',
+        '2000W JBL Bass Subwoofers',
+        'RGB Strobe & Laser Show',
+        'Smoke & CO2 Jet FX',
+      ],
+    },
+    {
       'name': 'Royal Click Studio',
+      'eventName': 'Grand Royal Vivah',
+      'eventType': 'Wedding',
+      'eventIcon': Icons.camera_alt_rounded,
+      'eventColor': const Color(0xFF8B1A2E),
       'category': 'Photography & Cinema',
       'package': 'Royal Diamond 4K Crew Package',
       'date': '28 Dec 2026',
       'time': 'Full Day (8:00 AM - 11:00 PM)',
-      'venue': 'Heritage Haveli Resort, Mohali',
+      'venue': 'The Oberoi Sukhvilas, New Chandigarh',
       'status': 'Confirmed',
       'total': '₹75,000',
       'paid': '₹25,000 Paid',
@@ -634,11 +710,15 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
     },
     {
       'name': 'Royal Mandap & Floral Decor',
+      'eventName': 'Grand Royal Vivah',
+      'eventType': 'Wedding',
+      'eventIcon': Icons.local_florist_rounded,
+      'eventColor': const Color(0xFF2E7D32),
       'category': 'Decoration & Themes',
-      'package': 'Grand Floral & Crystal Mandap Theme',
+      'package': 'Grand Floral & Crystal Theme',
       'date': '28 Dec 2026',
       'time': 'Morning Setup (6:00 AM)',
-      'venue': 'Heritage Haveli Resort Lawn',
+      'venue': 'The Oberoi Sukhvilas Lawn',
       'status': 'Confirmed',
       'total': '₹1,50,000',
       'paid': '₹50,000 Paid',
@@ -653,57 +733,113 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
       ],
     },
     {
-      'name': 'Heritage Haveli Resort',
-      'category': 'Venue & Banquet',
-      'package': 'Grand Lawn + 2 AC Ballrooms + 12 Rooms',
-      'date': '28 Dec 2026',
-      'time': 'Full Day Check-in 10:00 AM',
-      'venue': 'SCO 142, Sector 70, Mohali',
+      'name': 'Flavours of Punjab Caterers',
+      'eventName': 'TechCorp Office Gala',
+      'eventType': 'Office Party',
+      'eventIcon': Icons.restaurant_rounded,
+      'eventColor': const Color(0xFF1E3A8A),
+      'category': 'Catering & Buffet',
+      'package': 'Premium 50-Item Multi-Cuisine Live Counters',
+      'date': '15 Jan 2027',
+      'time': 'Lunch & Evening High Tea',
+      'venue': 'JW Marriott Grand Ballroom',
       'status': 'Advance Confirmed',
-      'total': '₹3,50,000',
-      'paid': '₹1,00,000 Paid',
-      'balance': '₹2,50,000 Due on 20 Dec',
-      'paidFraction': 0.28,
-      'phone': '+91 98223 99887',
+      'total': '₹95,000',
+      'paid': '₹40,000 Paid',
+      'balance': '₹55,000 Due on Event',
+      'paidFraction': 0.42,
+      'phone': '+91 98987 11223',
       'inclusions': [
-        '800 Guest Capacity Lawn',
-        'Bridal Luxury Suite',
-        'Full Power Backup & Valet',
-        'Decorative Lighting Setup',
+        'Live Pasta, Chaat & Tandoor Counters',
+        'Continental & North Indian Buffet',
+        'Artisanal Mocktail Bar',
+        'Premium Cutlery & Stewards',
       ],
     },
     {
-      'name': 'Flavours of Punjab Caterers',
-      'category': 'Catering & Buffet',
-      'package': 'Royal 65-Item Live Counters Buffet',
-      'date': '28 Dec 2026',
-      'time': 'Dinner Service 7:30 PM',
-      'venue': 'Heritage Haveli Resort Dining Area',
-      'status': 'Menu Confirmed',
-      'total': '₹45,000 Token (₹850 / Plate)',
-      'paid': '₹20,000 Paid',
-      'balance': 'Remaining on final plate count',
-      'paidFraction': 0.44,
-      'phone': '+91 98987 11223',
+      'name': 'Audi A8 & Vintage Car Rentals',
+      'eventName': 'Silver Jubilee Gala',
+      'eventType': 'Anniversary',
+      'eventIcon': Icons.directions_car_rounded,
+      'eventColor': const Color(0xFF0D9488),
+      'category': 'Luxury Transport',
+      'package': 'Audi A8 Luxury Chauffeur Experience',
+      'date': '05 Jan 2027',
+      'time': '6:00 PM - Midnight',
+      'venue': 'Noorani Lawns, Zirakpur',
+      'status': 'Confirmed',
+      'total': '₹22,000',
+      'paid': '₹10,000 Paid',
+      'balance': '₹12,000 Due on Event',
+      'paidFraction': 0.45,
+      'phone': '+91 98889 00112',
       'inclusions': [
-        '12 Live Chaat & Tandoori Counters',
-        'Authentic Amritsari Kulcha Corner',
-        'Exotic Mocktails & Desserts',
-        'Premium Cutlery & Stewards',
+        'Decorated Luxury White Audi A8',
+        'Uniformed Professional Chauffeur',
+        'Fuel & Tolls Included',
+        'VIP Red Carpet Drop',
       ],
     },
   ];
 
+  int get _officeCount =>
+      _allBookings.where((b) => b['eventType'] == 'Office Party').length;
+  int get _partyCount => _allBookings
+      .where((b) =>
+          b['eventType'] == 'Birthday Party' ||
+          b['eventType'] == 'Private Party')
+      .length;
+  int get _weddingCount => _allBookings
+      .where((b) =>
+          b['eventType'] == 'Wedding' || b['eventType'] == 'Anniversary')
+      .length;
+  int get _pendingCount => _allBookings
+      .where((b) => !((b['balance'] as String?) ?? '').contains('Fully Paid'))
+      .length;
+
   List<Map<String, dynamic>> get _filteredBookings {
-    if (_selectedFilter == 1) {
-      return _allBookings.where((b) => b['status'] == 'Confirmed').toList();
-    } else if (_selectedFilter == 2) {
-      return _allBookings.where((b) => b['balance'] != null).toList();
+    switch (_selectedFilter) {
+      case 1:
+        return _allBookings
+            .where((b) => b['eventType'] == 'Office Party')
+            .toList();
+      case 2:
+        return _allBookings
+            .where((b) =>
+                b['eventType'] == 'Birthday Party' ||
+                b['eventType'] == 'Private Party')
+            .toList();
+      case 3:
+        return _allBookings
+            .where((b) =>
+                b['eventType'] == 'Wedding' || b['eventType'] == 'Anniversary')
+            .toList();
+      case 4:
+        return _allBookings
+            .where((b) =>
+                !((b['balance'] as String?) ?? '').contains('Fully Paid'))
+            .toList();
+      default:
+        return _allBookings;
     }
-    return _allBookings;
   }
 
   void _showBookingDetailsSheet(BuildContext context, Map<String, dynamic> b) {
+    final name = (b['name'] as String?) ?? 'Vendor';
+    final category = (b['category'] as String?) ?? '';
+    final status = (b['status'] as String?) ?? 'Confirmed';
+    final package = (b['package'] as String?) ?? '';
+    final date = (b['date'] as String?) ?? '';
+    final time = (b['time'] as String?) ?? '';
+    final venue = (b['venue'] as String?) ?? '';
+    final inclusions = ((b['inclusions'] as List?) ?? const [])
+        .map((e) => e.toString())
+        .toList();
+    final total = (b['total'] as String?) ?? '';
+    final paid = (b['paid'] as String?) ?? '';
+    final balance = (b['balance'] as String?) ?? '';
+    final phone = (b['phone'] as String?) ?? '';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -737,7 +873,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        b['name'],
+                        name,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -745,7 +881,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                         ),
                       ),
                       Text(
-                        b['category'],
+                        category,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.goldDark,
@@ -763,7 +899,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    b['status'],
+                    status,
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -789,7 +925,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    b['package'],
+                    package,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -797,10 +933,10 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text('📅 Event Date: ${b['date']} • ${b['time']}',
+                  Text('📅 Event Date: $date • $time',
                       style: const TextStyle(fontSize: 12, color: AppColors.black)),
                   const SizedBox(height: 4),
-                  Text('📍 Location: ${b['venue']}',
+                  Text('📍 Location: $venue',
                       style: const TextStyle(fontSize: 12, color: AppColors.darkGrey)),
                 ],
               ),
@@ -814,7 +950,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: (b['inclusions'] as List<String>).map((item) {
+              children: inclusions.map((item) {
                 return Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -862,7 +998,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Total Agreed Package:'),
-                      Text(b['total'],
+                      Text(total,
                           style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               color: AppColors.primary)),
@@ -874,7 +1010,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     children: [
                       const Text('Advance Paid (Verified):',
                           style: TextStyle(color: AppColors.success)),
-                      Text(b['paid'],
+                      Text(paid,
                           style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.success)),
@@ -885,7 +1021,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Remaining Balance:'),
-                      Text(b['balance'],
+                      Text(balance,
                           style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.darkGrey)),
@@ -902,7 +1038,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     onPressed: () {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Calling ${b['name']} (${b['phone']})...')),
+                        SnackBar(content: Text('Calling $name ($phone)...')),
                       );
                     },
                     icon: const Icon(Icons.phone_rounded, size: 16),
@@ -923,7 +1059,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     onPressed: () {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Chat opened with ${b['name']}!')),
+                        SnackBar(content: Text('Chat opened with $name!')),
                       );
                     },
                     icon: const Icon(Icons.chat_bubble_rounded, size: 16),
@@ -951,491 +1087,604 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
     final bookings = _filteredBookings;
 
     return SafeArea(
-      child: ListView(
+      child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'My Booked Vendors',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Bookings',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Track booked vendors & payments across events',
+                        style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Track booked vendors & payments for Dec 28',
-                    style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline_rounded,
+                      color: AppColors.primary, size: 28),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      FadeScaleRoute(
+                        page: const ServiceListingScreen(category: 'Photography'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Summary KPI Strip
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline_rounded,
-                    color: AppColors.primary, size: 28),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    FadeScaleRoute(
-                      page: const ServiceListingScreen(category: 'Photography'),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Summary KPI Strip
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryDark.withValues(alpha: 0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
-                      'WEDDING BUDGET OVERVIEW',
-                      style: TextStyle(
-                        color: AppColors.goldLight,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      '4 Vendors Hired 💍',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Total Booked',
-                          style: TextStyle(color: AppColors.cream, fontSize: 11),
-                        ),
-                        Text(
-                          '₹ 6,20,000',
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      width: 1,
-                      height: 32,
-                      color: AppColors.white.withValues(alpha: 0.3),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Advance Paid',
-                          style: TextStyle(color: AppColors.cream, fontSize: 11),
-                        ),
-                        Text(
-                          '₹ 1,95,000',
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Expanded(
+                        child: Text(
+                          'EVENT BUDGET & BOOKINGS',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: AppColors.goldLight,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
                           ),
                         ),
-                      ],
-                    ),
-                    Container(
-                      width: 1,
-                      height: 32,
-                      color: AppColors.white.withValues(alpha: 0.3),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Due on Event',
-                          style: TextStyle(color: AppColors.cream, fontSize: 11),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '7 Vendors Hired 🎉',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
                         ),
-                        Text(
-                          '₹ 4,25,000',
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                          ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Total Booked',
+                              style: TextStyle(color: AppColors.cream, fontSize: 10),
+                            ),
+                            SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '₹ 5,42,000',
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      Container(
+                        width: 1,
+                        height: 28,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        color: AppColors.white.withValues(alpha: 0.3),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Advance Paid',
+                              style: TextStyle(color: AppColors.cream, fontSize: 10),
+                            ),
+                            SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '₹ 2,40,000',
+                                style: TextStyle(
+                                  color: AppColors.goldLight,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 28,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        color: AppColors.white.withValues(alpha: 0.3),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Due on Event',
+                              style: TextStyle(color: AppColors.cream, fontSize: 10),
+                            ),
+                            SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '₹ 3,02,000',
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Filter Chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text('All (${_allBookings.length})'),
+                  selected: _selectedFilter == 0,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedFilter == 0 ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                  onSelected: (_) => setState(() => _selectedFilter = 0),
+                ),
+                ChoiceChip(
+                  label: Text('Office Parties ($_officeCount)'),
+                  selected: _selectedFilter == 1,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedFilter == 1 ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                  onSelected: (_) => setState(() => _selectedFilter = 1),
+                ),
+                ChoiceChip(
+                  label: Text('Birthdays & Parties ($_partyCount)'),
+                  selected: _selectedFilter == 2,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedFilter == 2 ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                  onSelected: (_) => setState(() => _selectedFilter = 2),
+                ),
+                ChoiceChip(
+                  label: Text('Weddings & Galas ($_weddingCount)'),
+                  selected: _selectedFilter == 3,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedFilter == 3 ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                  onSelected: (_) => setState(() => _selectedFilter = 3),
+                ),
+                ChoiceChip(
+                  label: Text('Pending Balance ($_pendingCount)'),
+                  selected: _selectedFilter == 4,
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedFilter == 4 ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+                  onSelected: (_) => setState(() => _selectedFilter = 4),
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
-          // Filter Chips
-          Row(
-            children: [
-              ChoiceChip(
-                label: Text('All (${_allBookings.length})'),
-                selected: _selectedFilter == 0,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color:
-                      _selectedFilter == 0 ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
+            // Booked Vendors Cards or Empty State
+            if (bookings.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                margin: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
                 ),
-                onSelected: (_) => setState(() => _selectedFilter = 0),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Confirmed (3)'),
-                selected: _selectedFilter == 1,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color:
-                      _selectedFilter == 1 ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.event_busy_rounded,
+                        size: 56, color: AppColors.grey),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No Bookings Found',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "You haven't booked any vendors in this category yet.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          FadeScaleRoute(
+                            page: const ServiceListingScreen(category: 'Photography'),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Explore Vendors'),
+                    ),
+                  ],
                 ),
-                onSelected: (_) => setState(() => _selectedFilter = 1),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Pending Balance (1)'),
-                selected: _selectedFilter == 2,
-                selectedColor: AppColors.primary,
-                labelStyle: TextStyle(
-                  color:
-                      _selectedFilter == 2 ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11,
-                ),
-                onSelected: (_) => setState(() => _selectedFilter = 2),
-              ),
-            ],
-          ),
+              )
+            else
+              ...bookings.map((v) {
+                final double paidFraction = (v['paidFraction'] as num?)?.toDouble() ?? 0.33;
+                final String vendorName = (v['name'] as String?) ?? 'Vendor';
+                final String status = (v['status'] as String?) ?? 'Confirmed';
+                final String category = (v['category'] as String?) ?? '';
+                final String package = (v['package'] as String?) ?? '';
+                final String paid = (v['paid'] as String?) ?? '';
+                final String balance = (v['balance'] as String?) ?? '';
+                final String phone = (v['phone'] as String?) ?? '';
+                final String? eventName = v['eventName'] as String?;
+                final Color eventColor = (v['eventColor'] as Color?) ?? AppColors.primary;
+                final IconData eventIcon = (v['eventIcon'] as IconData?) ?? Icons.celebration_rounded;
 
-          const SizedBox(height: 14),
+                return GestureDetector(
+                  onTap: () => _showBookingDetailsSheet(context, v),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (eventName != null) ...[  
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                      decoration: BoxDecoration(
+                                        color: eventColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            eventIcon,
+                                            size: 11,
+                                            color: eventColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              eventName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: eventColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  Text(
+                                    vendorName,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.successLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                status,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          category,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.goldDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          package,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
 
-          // Booked Vendors Cards or Empty State
-          if (bookings.isEmpty)
+                        // Progress bar for payment
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: paidFraction,
+                            backgroundColor: AppColors.lightGrey,
+                            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                            minHeight: 6,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                paid,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              balance,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () => _showBookingDetailsSheet(context, v),
+                                icon: const Icon(Icons.receipt_long_rounded, size: 14),
+                                label: const Text(
+                                  'Invoice',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Calling $phone...'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.phone_rounded, size: 13),
+                              label: const Text('Call', style: TextStyle(fontSize: 12)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(color: AppColors.primary),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Opening chat with $vendorName...'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.chat_bubble_rounded, size: 13),
+                              label: const Text('Chat', style: TextStyle(fontSize: 12)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                elevation: 0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
+            const SizedBox(height: 10),
+
+            // Browse more services card
             Container(
-              padding: const EdgeInsets.all(32),
-              margin: const EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.white,
+                color: AppColors.offWhite,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.grey.withValues(alpha: 0.2),
+                ),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.event_busy_rounded,
-                      size: 56, color: AppColors.grey),
-                  const SizedBox(height: 12),
                   const Text(
-                    'No Bookings Found',
+                    'Need more services for your event? ✨',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: AppColors.black,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    "You haven't booked any vendors in this category yet.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                    'Book DJs, Caterers, Decorators, Luxury Cars & More',
+                    style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        FadeScaleRoute(
-                          page: const ServiceListingScreen(category: 'Photography'),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 42,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          FadeScaleRoute(
+                            page: const ServiceListingScreen(category: 'Makeup Artist'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.explore_rounded, size: 16),
+                      label: const Text('Explore All Vendors'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text('Explore Vendors'),
                   ),
                 ],
               ),
-            )
-          else
-            ...bookings.map((v) {
-              final double paidFraction = (v['paidFraction'] as double?) ?? 0.33;
-
-              return GestureDetector(
-                onTap: () => _showBookingDetailsSheet(context, v),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.3),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              v['name']!,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.black,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.successLight,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              v['status']!,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.success,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        v['category']!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.goldDark,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        v['package']!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Progress bar for payment
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: paidFraction,
-                          backgroundColor: AppColors.lightGrey,
-                          valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                          minHeight: 6,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            v['paid']!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.success,
-                            ),
-                          ),
-                          Text(
-                            v['balance']!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(height: 1),
-                      const SizedBox(height: 10),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton.icon(
-                            onPressed: () => _showBookingDetailsSheet(context, v),
-                            icon: const Icon(Icons.receipt_long_rounded, size: 14),
-                            label: const Text('View Invoice'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primary,
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              OutlinedButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Calling ${v['phone']}...'),
-                                    ),
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: const BorderSide(color: AppColors.primary),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                ),
-                                child: const Text('Call'),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('Opening chat with ${v['name']}...'),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: AppColors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 6),
-                                  elevation: 0,
-                                ),
-                                child: const Text('Chat'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-
-          const SizedBox(height: 10),
-
-          // Browse more services card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.offWhite,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.grey.withValues(alpha: 0.2),
-              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Need more services for your wedding? 🌸',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Book DJs, Makeup Artists, Luxury Cars & Jewellery',
-                  style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        FadeScaleRoute(
-                          page: const ServiceListingScreen(category: 'Makeup Artist'),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.explore_rounded, size: 16),
-                    label: const Text('Explore Vendors'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

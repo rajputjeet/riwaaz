@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/app_animations.dart';
-import '../auth/unified_login_screen.dart';
 import 'vendor_dashboard_tab.dart';
 import 'vendor_bookings_tab.dart';
 import 'vendor_enquiries_tab.dart';
@@ -18,6 +16,7 @@ class VendorShell extends StatefulWidget {
 
 class _VendorShellState extends State<VendorShell> {
   late int _currentIndex;
+  bool _showApprovalWarning = true;
 
   @override
   void initState() {
@@ -28,36 +27,6 @@ class _VendorShellState extends State<VendorShell> {
   void _onTabTap(int index) {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
-  }
-
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Vendor Logout'),
-        content: const Text('Are you sure you want to sign out of your vendor account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const UnifiedLoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -74,13 +43,7 @@ class _VendorShellState extends State<VendorShell> {
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0.5,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded,
-                color: AppColors.primary, size: 24),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        automaticallyImplyLeading: false,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -137,166 +100,189 @@ class _VendorShellState extends State<VendorShell> {
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
-            onPressed: _confirmLogout,
-          ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
         ],
       ),
-      drawer: _buildDrawer(),
       body: IndexedStack(
         index: _currentIndex,
         children: [
           VendorDashboardTab(onNavigateTab: (idx) => _onTabTap(idx)),
-          const VendorBookingsTab(),
+          const VendorBookingsTab(key: ValueKey('vendor_bookings_tab_v2')),
           const VendorEnquiriesTab(),
           const VendorProfileScreen(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTap,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.white,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.grey,
-        selectedFontSize: 11,
-        unselectedFontSize: 10,
-        elevation: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_rounded),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded),
-            label: 'Enquiries',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: 'Profile',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showApprovalWarning) _buildApprovalWarningSnackBar(),
+          BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onTabTap,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.white,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.grey,
+            selectedFontSize: 11,
+            unselectedFontSize: 10,
+            elevation: 12,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard_rounded),
+                label: 'Dashboard',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.calendar_month_rounded),
+                label: 'Bookings',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.chat_bubble_outline_rounded),
+                label: 'Enquiries',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded),
+                label: 'Profile',
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: AppColors.offWhite,
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'RC',
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+  Widget _buildApprovalWarningSnackBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF26180B),
+            Color(0xFF1A1108),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                    width: 1,
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFFBBF24),
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'Royal Click Studio 👑',
+                        const Text(
+                          'Profile Under Review',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.black,
+                            color: Color(0xFFFDE68A),
+                            letterSpacing: 0.2,
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Verified Riwaaz Partner',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.success,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'PENDING',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFFBBF24),
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 3),
+                    const Text(
+                      'All features will unlock after admin approves your profile.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFFF3F4F6),
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading:
-                  const Icon(Icons.dashboard_rounded, color: AppColors.primary),
-              title: const Text('Dashboard',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              onTap: () {
-                Navigator.pop(context);
-                _onTabTap(0);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_month_rounded,
-                  color: AppColors.black),
-              title: const Text('Bookings'),
-              onTap: () {
-                Navigator.pop(context);
-                _onTabTap(1);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_rounded,
-                  color: AppColors.black),
-              title: const Text('Enquiries & Leads'),
-              onTap: () {
-                Navigator.pop(context);
-                _onTabTap(2);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_rounded,
-                  color: AppColors.black),
-              title: const Text('My Profile'),
-              onTap: () {
-                Navigator.pop(context);
-                _onTabTap(3);
-              },
-            ),
-            const Spacer(),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout_rounded,
-                  color: AppColors.error),
-              title: const Text('Logout',
-                  style: TextStyle(
-                      color: AppColors.error, fontWeight: FontWeight.w700)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmLogout();
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showApprovalWarning = false;
+                  });
+                },
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: Color(0xFFD1D5DB),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
