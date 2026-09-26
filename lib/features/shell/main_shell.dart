@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
 import '../auth/unified_login_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
 import '../service_listing/service_listing_screen.dart';
+import '../../core/services/booking_service.dart';
+import '../vendor_panel/vendor_shell.dart';
+import '../profile/customer_edit_profile_screen.dart';
+import '../notifications/customer_notifications_screen.dart';
 
 /// The main navigation shell — holds all customer tabs in an [IndexedStack]
 class MainShell extends StatefulWidget {
@@ -232,10 +237,10 @@ class _CustomerWeddingTab extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'My Event Plan 💍',
                       style: TextStyle(
                         fontSize: 22,
@@ -243,10 +248,10 @@ class _CustomerWeddingTab extends StatelessWidget {
                         color: AppColors.black,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Simran & Rahul • 28 Dec 2026 • Chandigarh',
-                      style: TextStyle(fontSize: 13, color: AppColors.darkGrey),
+                      '${StorageHelper().getUserName()?.trim().isNotEmpty == true ? StorageHelper().getUserName()! : 'Your'} • 28 Dec 2026 • Chandigarh',
+                      style: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
                     ),
                   ],
                 ),
@@ -522,6 +527,158 @@ class _CustomerWeddingTab extends StatelessWidget {
     );
   }
 
+  void _showEventDetailsSheet(
+    BuildContext context,
+    String title,
+    String date,
+    String time,
+    String location,
+    IconData icon,
+    Color iconColor,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(22),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$date • $time',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.offWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded,
+                          size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          location,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: const [
+                      Icon(Icons.people_outline_rounded,
+                          size: 18, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Estimated Attendees: 450 Guests',
+                          style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: const [
+                      Icon(Icons.check_circle_outline_rounded,
+                          size: 18, color: AppColors.success),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Vendor coordination in progress • Pay in person',
+                          style: TextStyle(fontSize: 12, color: AppColors.success),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEventRow(
     BuildContext context,
     String title,
@@ -532,11 +689,15 @@ class _CustomerWeddingTab extends StatelessWidget {
     Color iconColor,
   ) {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$title: $date at $location')),
-        );
-      },
+      onTap: () => _showEventDetailsSheet(
+        context,
+        title,
+        date,
+        time,
+        location,
+        icon,
+        iconColor,
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
@@ -611,218 +772,29 @@ class _CustomerBookingsTab extends StatefulWidget {
 class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
   int _selectedFilter = 0;
 
-  final List<Map<String, dynamic>> _allBookings = [
-    {
-      'name': 'Grand Stage Crafters & AV Tech',
-      'eventName': 'TechCorp Office Gala',
-      'eventType': 'Office Party',
-      'eventIcon': Icons.business_center_rounded,
-      'eventColor': const Color(0xFF1E3A8A),
-      'category': 'AV, Stage & Lighting',
-      'package': 'Corporate 4K LED Backdrop & Line-Array Audio',
-      'date': '15 Jan 2027',
-      'time': '4:00 PM - 11:30 PM',
-      'venue': 'JW Marriott Grand Ballroom, Chandigarh',
-      'status': 'Confirmed',
-      'total': '₹1,20,000',
-      'paid': '₹60,000 Paid',
-      'balance': '₹60,000 Due on Event',
-      'paidFraction': 0.50,
-      'phone': '+91 98450 11223',
-      'inclusions': [
-        'P3 LED Video Wall (20x10 ft)',
-        'Line Array Sound & 4 Cordless Mics',
-        'Stage Moving Head Lights',
-        'Onsite Sound Engineer',
-      ],
-    },
-    {
-      'name': 'Rainbow Balloon & Carnival Themes',
-      'eventName': "Reyansh's 5th Birthday",
-      'eventType': 'Birthday Party',
-      'eventIcon': Icons.cake_rounded,
-      'eventColor': const Color(0xFFD97706),
-      'category': 'Theme Decor & Kids Setup',
-      'package': 'Grand Jungle Safari Balloon Arc & Magic Stage',
-      'date': '10 Jan 2027',
-      'time': '4:00 PM - 8:30 PM',
-      'venue': 'Forest Hill Resort Clubhouse, Mohali',
-      'status': 'Confirmed',
-      'total': '₹35,000',
-      'paid': '₹35,000 Paid (Full)',
-      'balance': '₹0 (Fully Paid)',
-      'paidFraction': 1.0,
-      'phone': '+91 98144 77889',
-      'inclusions': [
-        '3D Jungle Safari Backdrop & Pillar Arch',
-        'Custom Name Neon Sign',
-        'Magician & Tattoo Artist (2 Hrs)',
-        'Popcorn & Candy Floss Machine',
-      ],
-    },
-    {
-      'name': 'DJ Sandy Beats & Sound System',
-      'eventName': 'Neon Music & Cocktail Night',
-      'eventType': 'Private Party',
-      'eventIcon': Icons.nightlife_rounded,
-      'eventColor': const Color(0xFF7E22CE),
-      'category': 'DJ & Sound System',
-      'package': 'Club Sound, Dual Bass Bins & Laser Lights',
-      'date': '31 Dec 2026',
-      'time': '8:00 PM - 2:00 AM',
-      'venue': 'The Lalit Sky Lounge, Chandigarh',
-      'status': 'Confirmed',
-      'total': '₹45,000',
-      'paid': '₹20,000 Paid',
-      'balance': '₹25,000 Due on Event',
-      'paidFraction': 0.44,
-      'phone': '+91 98721 33445',
-      'inclusions': [
-        'Pioneer CDJ 3000 & DJ Console',
-        '2000W JBL Bass Subwoofers',
-        'RGB Strobe & Laser Show',
-        'Smoke & CO2 Jet FX',
-      ],
-    },
-    {
-      'name': 'Royal Click Studio',
-      'eventName': 'Grand Royal Vivah',
-      'eventType': 'Wedding',
-      'eventIcon': Icons.camera_alt_rounded,
-      'eventColor': const Color(0xFF8B1A2E),
-      'category': 'Photography & Cinema',
-      'package': 'Royal Diamond 4K Crew Package',
-      'date': '28 Dec 2026',
-      'time': 'Full Day (8:00 AM - 11:00 PM)',
-      'venue': 'The Oberoi Sukhvilas, New Chandigarh',
-      'status': 'Confirmed',
-      'total': '₹75,000',
-      'paid': '₹25,000 Paid',
-      'balance': '₹50,000 Due on Event',
-      'paidFraction': 0.33,
-      'phone': '+91 98765 43210',
-      'inclusions': [
-        '4K Cinematic Drone',
-        '2 Candid Photographers',
-        'Traditional Video',
-        '2 Luxury Velvet Albums',
-      ],
-    },
-    {
-      'name': 'Royal Mandap & Floral Decor',
-      'eventName': 'Grand Royal Vivah',
-      'eventType': 'Wedding',
-      'eventIcon': Icons.local_florist_rounded,
-      'eventColor': const Color(0xFF2E7D32),
-      'category': 'Decoration & Themes',
-      'package': 'Grand Floral & Crystal Theme',
-      'date': '28 Dec 2026',
-      'time': 'Morning Setup (6:00 AM)',
-      'venue': 'The Oberoi Sukhvilas Lawn',
-      'status': 'Confirmed',
-      'total': '₹1,50,000',
-      'paid': '₹50,000 Paid',
-      'balance': '₹1,00,000 Due on Event',
-      'paidFraction': 0.33,
-      'phone': '+91 98112 44556',
-      'inclusions': [
-        'Exotic Floral Arch',
-        'Stage Lighting & Fog FX',
-        'Entryway Flower Pathway',
-        'Varmala Stage Setup',
-      ],
-    },
-    {
-      'name': 'Flavours of Punjab Caterers',
-      'eventName': 'TechCorp Office Gala',
-      'eventType': 'Office Party',
-      'eventIcon': Icons.restaurant_rounded,
-      'eventColor': const Color(0xFF1E3A8A),
-      'category': 'Catering & Buffet',
-      'package': 'Premium 50-Item Multi-Cuisine Live Counters',
-      'date': '15 Jan 2027',
-      'time': 'Lunch & Evening High Tea',
-      'venue': 'JW Marriott Grand Ballroom',
-      'status': 'Advance Confirmed',
-      'total': '₹95,000',
-      'paid': '₹40,000 Paid',
-      'balance': '₹55,000 Due on Event',
-      'paidFraction': 0.42,
-      'phone': '+91 98987 11223',
-      'inclusions': [
-        'Live Pasta, Chaat & Tandoor Counters',
-        'Continental & North Indian Buffet',
-        'Artisanal Mocktail Bar',
-        'Premium Cutlery & Stewards',
-      ],
-    },
-    {
-      'name': 'Audi A8 & Vintage Car Rentals',
-      'eventName': 'Silver Jubilee Gala',
-      'eventType': 'Anniversary',
-      'eventIcon': Icons.directions_car_rounded,
-      'eventColor': const Color(0xFF0D9488),
-      'category': 'Luxury Transport',
-      'package': 'Audi A8 Luxury Chauffeur Experience',
-      'date': '05 Jan 2027',
-      'time': '6:00 PM - Midnight',
-      'venue': 'Noorani Lawns, Zirakpur',
-      'status': 'Confirmed',
-      'total': '₹22,000',
-      'paid': '₹10,000 Paid',
-      'balance': '₹12,000 Due on Event',
-      'paidFraction': 0.45,
-      'phone': '+91 98889 00112',
-      'inclusions': [
-        'Decorated Luxury White Audi A8',
-        'Uniformed Professional Chauffeur',
-        'Fuel & Tolls Included',
-        'VIP Red Carpet Drop',
-      ],
-    },
-  ];
-
-  int get _officeCount =>
-      _allBookings.where((b) => b['eventType'] == 'Office Party').length;
-  int get _partyCount => _allBookings
-      .where((b) =>
-          b['eventType'] == 'Birthday Party' ||
-          b['eventType'] == 'Private Party')
-      .length;
-  int get _weddingCount => _allBookings
-      .where((b) =>
-          b['eventType'] == 'Wedding' || b['eventType'] == 'Anniversary')
-      .length;
-  int get _pendingCount => _allBookings
-      .where((b) => !((b['balance'] as String?) ?? '').contains('Fully Paid'))
-      .length;
-
-  List<Map<String, dynamic>> get _filteredBookings {
-    switch (_selectedFilter) {
-      case 1:
-        return _allBookings
-            .where((b) => b['eventType'] == 'Office Party')
-            .toList();
-      case 2:
-        return _allBookings
-            .where((b) =>
-                b['eventType'] == 'Birthday Party' ||
-                b['eventType'] == 'Private Party')
-            .toList();
-      case 3:
-        return _allBookings
-            .where((b) =>
-                b['eventType'] == 'Wedding' || b['eventType'] == 'Anniversary')
-            .toList();
-      case 4:
-        return _allBookings
-            .where((b) =>
-                !((b['balance'] as String?) ?? '').contains('Fully Paid'))
-            .toList();
-      default:
-        return _allBookings;
-    }
+  @override
+  void initState() {
+    super.initState();
+    AppBookingService.instance.addListener(_onBookingsChanged);
   }
+
+  @override
+  void dispose() {
+    AppBookingService.instance.removeListener(_onBookingsChanged);
+    super.dispose();
+  }
+
+  void _onBookingsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  int get _totalCount => AppBookingService.instance.customerBookingsCount;
+  int get _officeCount => AppBookingService.instance.officeCount;
+  int get _partyCount => AppBookingService.instance.partyCount;
+  int get _weddingCount => AppBookingService.instance.weddingCount;
+
+  List<Map<String, dynamic>> get _filteredBookings =>
+      AppBookingService.instance.customerBookingsForFilter(_selectedFilter);
 
   void _showBookingDetailsSheet(BuildContext context, Map<String, dynamic> b) {
     final name = (b['name'] as String?) ?? 'Vendor';
@@ -836,9 +808,8 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
         .map((e) => e.toString())
         .toList();
     final total = (b['total'] as String?) ?? '';
-    final paid = (b['paid'] as String?) ?? '';
-    final balance = (b['balance'] as String?) ?? '';
     final phone = (b['phone'] as String?) ?? '';
+    final isAccepted = status == 'Confirmed' || status == 'Accepted';
 
     showModalBottomSheet(
       context: context,
@@ -895,15 +866,19 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.successLight,
+                    color: isAccepted
+                        ? AppColors.successLight
+                        : const Color(0xFFFEF3C7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     status,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.success,
+                      color: isAccepted
+                          ? AppColors.success
+                          : const Color(0xFFD97706),
                     ),
                   ),
                 ),
@@ -938,6 +913,17 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                   const SizedBox(height: 4),
                   Text('📍 Location: $venue',
                       style: const TextStyle(fontSize: 12, color: AppColors.darkGrey)),
+                  const SizedBox(height: 4),
+                  Text(
+                    isAccepted
+                        ? '📞 Contact: $phone (Call & WhatsApp)'
+                        : '🔒 Contact: Hidden until vendor accepts booking',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isAccepted ? FontWeight.w700 : FontWeight.w500,
+                      color: isAccepted ? AppColors.black : AppColors.darkGrey,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -982,7 +968,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Payment Breakdown',
+              'Pricing & In-Person Settlement',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
@@ -1004,78 +990,142 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               color: AppColors.primary)),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Advance Paid (Verified):',
-                          style: TextStyle(color: AppColors.success)),
-                      Text(paid,
-                          style: const TextStyle(
+                    children: const [
+                      Text('Payment Mode:'),
+                      Text('Pay In Person (Offline)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.black)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text('App Charges / Fees:'),
+                      Text('₹0 (Direct Settlement)',
+                          style: TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.success)),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Remaining Balance:'),
-                      Text(balance,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkGrey)),
-                    ],
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.successLight,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.handshake_rounded,
+                            color: AppColors.success, size: 16),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pay the vendor directly in person on the event day or upon agreement. Riwaaz does not charge fees or collect payments from users.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF166534),
+                              fontWeight: FontWeight.w500,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             const Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Calling $name ($phone)...')),
-                      );
-                    },
-                    icon: const Icon(Icons.phone_rounded, size: 16),
-                    label: const Text('Call'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            if (isAccepted)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Calling $name ($phone)...')),
+                        );
+                      },
+                      icon: const Icon(Icons.phone_rounded, size: 16),
+                      label: const Text('Call'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Chat opened with $name!')),
-                      );
-                    },
-                    icon: const Icon(Icons.chat_bubble_rounded, size: 16),
-                    label: const Text('Chat'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Opening WhatsApp with $name ($phone)...'),
+                            backgroundColor: const Color(0xFF25D366),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.phone_android_rounded, size: 16),
+                      label: const Text('WhatsApp'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
+                ],
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7).withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFD97706).withValues(alpha: 0.3),
+                  ),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.lock_clock_rounded,
+                        color: Color(0xFFD97706), size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Booking awaiting acceptance. Direct Call & WhatsApp contact details will unlock automatically once confirmed.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF92400E),
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -1094,38 +1144,21 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'My Bookings',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Track booked vendors & payments across events',
-                        style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                      ),
-                    ],
+                Text(
+                  'My Bookings',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline_rounded,
-                      color: AppColors.primary, size: 28),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      FadeScaleRoute(
-                        page: const ServiceListingScreen(category: 'Photography'),
-                      ),
-                    );
-                  },
+                SizedBox(height: 2),
+                Text(
+                  'Track booked vendors & in-person arrangements',
+                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
                 ),
               ],
             ),
@@ -1149,8 +1182,8 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Expanded(
+                    children: [
+                      const Expanded(
                         child: Text(
                           'EVENT BUDGET & BOOKINGS',
                           maxLines: 1,
@@ -1163,10 +1196,10 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        '7 Vendors Hired 🎉',
-                        style: TextStyle(
+                        '$_totalCount Vendors Hired 🎉',
+                        style: const TextStyle(
                           color: AppColors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1180,18 +1213,18 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
+                          children: [
+                            const Text(
                               'Total Booked',
                               style: TextStyle(color: AppColors.cream, fontSize: 10),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                '₹ 5,42,000',
-                                style: TextStyle(
+                                AppBookingService.instance.customerTotalBudgetFormatted,
+                                style: const TextStyle(
                                   color: AppColors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -1212,7 +1245,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'Advance Paid',
+                              'Payment Mode',
                               style: TextStyle(color: AppColors.cream, fontSize: 10),
                             ),
                             SizedBox(height: 2),
@@ -1220,10 +1253,10 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                '₹ 2,40,000',
+                                'Pay In-Person',
                                 style: TextStyle(
                                   color: AppColors.goldLight,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -1242,7 +1275,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
                             Text(
-                              'Due on Event',
+                              'App Advance',
                               style: TextStyle(color: AppColors.cream, fontSize: 10),
                             ),
                             SizedBox(height: 2),
@@ -1250,7 +1283,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                '₹ 3,02,000',
+                                '₹0 (Direct)',
                                 style: TextStyle(
                                   color: AppColors.white,
                                   fontSize: 16,
@@ -1262,6 +1295,30 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.handshake_rounded, color: AppColors.goldLight, size: 14),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Direct in-person settlement • Zero app payments or commissions',
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1275,7 +1332,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
               runSpacing: 8,
               children: [
                 ChoiceChip(
-                  label: Text('All (${_allBookings.length})'),
+                  label: Text('All ($_totalCount)'),
                   selected: _selectedFilter == 0,
                   selectedColor: AppColors.primary,
                   labelStyle: TextStyle(
@@ -1317,17 +1374,6 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     fontSize: 11,
                   ),
                   onSelected: (_) => setState(() => _selectedFilter = 3),
-                ),
-                ChoiceChip(
-                  label: Text('Pending Balance ($_pendingCount)'),
-                  selected: _selectedFilter == 4,
-                  selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: _selectedFilter == 4 ? AppColors.white : AppColors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                  onSelected: (_) => setState(() => _selectedFilter = 4),
                 ),
               ],
             ),
@@ -1387,13 +1433,12 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
               )
             else
               ...bookings.map((v) {
-                final double paidFraction = (v['paidFraction'] as num?)?.toDouble() ?? 0.33;
                 final String vendorName = (v['name'] as String?) ?? 'Vendor';
                 final String status = (v['status'] as String?) ?? 'Confirmed';
+                final bool isAccepted = status == 'Confirmed' || status == 'Accepted';
                 final String category = (v['category'] as String?) ?? '';
                 final String package = (v['package'] as String?) ?? '';
-                final String paid = (v['paid'] as String?) ?? '';
-                final String balance = (v['balance'] as String?) ?? '';
+                final String total = (v['total'] as String?) ?? '';
                 final String phone = (v['phone'] as String?) ?? '';
                 final String? eventName = v['eventName'] as String?;
                 final Color eventColor = (v['eventColor'] as Color?) ?? AppColors.primary;
@@ -1476,15 +1521,19 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.successLight,
+                                color: isAccepted
+                                    ? AppColors.successLight
+                                    : const Color(0xFFFEF3C7),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 status,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
+                                  color: isAccepted
+                                      ? AppColors.success
+                                      : const Color(0xFFD97706),
                                 ),
                               ),
                             ),
@@ -1510,43 +1559,44 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Progress bar for payment
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: paidFraction,
-                            backgroundColor: AppColors.lightGrey,
-                            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                            minHeight: 6,
+                        // In-Person settlement notice badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9F6F0),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.25),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                paid,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.handshake_rounded,
+                                  size: 14, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              const Expanded(
+                                child: Text(
+                                  'Pay In Person',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              balance,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.grey,
+                              const SizedBox(width: 6),
+                              Text(
+                                total,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.black,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 12),
                         const Divider(height: 1),
@@ -1555,11 +1605,12 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                         Row(
                           children: [
                             Expanded(
+                              flex: 5,
                               child: TextButton.icon(
                                 onPressed: () => _showBookingDetailsSheet(context, v),
-                                icon: const Icon(Icons.receipt_long_rounded, size: 14),
+                                icon: const Icon(Icons.description_outlined, size: 14),
                                 label: const Text(
-                                  'Invoice',
+                                  'Details',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1571,54 +1622,104 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Calling $phone...'),
+                            const SizedBox(width: 6),
+                            if (isAccepted) ...[
+                              Expanded(
+                                flex: 4,
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Calling $phone...'),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.phone_rounded, size: 12),
+                                  label: const Text('Call', style: TextStyle(fontSize: 11)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(color: AppColors.primary),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.phone_rounded, size: 13),
-                              label: const Text('Call', style: TextStyle(fontSize: 12)),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                side: const BorderSide(color: AppColors.primary),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text('Opening chat with $vendorName...'),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                flex: 6,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Opening WhatsApp with $vendorName ($phone)...'),
+                                        backgroundColor: const Color(0xFF25D366),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.phone_android_rounded, size: 12),
+                                  label: const Text(
+                                    'WhatsApp',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11),
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.chat_bubble_rounded, size: 13),
-                              label: const Text('Chat', style: TextStyle(fontSize: 12)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF25D366),
+                                    foregroundColor: AppColors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                elevation: 0,
                               ),
-                            ),
+                            ] else
+                              Expanded(
+                                flex: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7).withValues(alpha: 0.6),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFD97706).withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.lock_clock_rounded,
+                                          size: 12, color: Color(0xFFD97706)),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Call & WhatsApp unlock upon acceptance',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFFB45309),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ],
@@ -1784,11 +1885,11 @@ class _CustomerProfileTab extends StatelessWidget {
 
   void _showBudgetSheet(BuildContext context) {
     final categories = [
-      ('Venue & Banquet', '₹3,50,000', '₹1,00,000 Paid', 0.8),
-      ('Decoration & Floral', '₹1,50,000', '₹50,000 Paid', 0.6),
-      ('Photography & Cinema', '₹75,000', '₹25,000 Paid', 0.9),
-      ('Catering & Buffet', '₹2,00,000', 'Planned', 0.0),
-      ('Bridal Wear & Jewellery', '₹1,25,000', 'Planned', 0.0),
+      ('Venue & Banquet', '₹3,50,000', 'Agreed • Pay In Person', 0.8),
+      ('Decoration & Floral', '₹1,50,000', 'Agreed • Pay In Person', 0.6),
+      ('Photography & Cinema', '₹75,000', 'Agreed • Pay In Person', 0.9),
+      ('Catering & Buffet', '₹2,00,000', 'Planned • Pay In Person', 0.0),
+      ('Bridal Wear & Jewellery', '₹1,25,000', 'Planned • In-Store', 0.0),
     ];
 
     showModalBottomSheet(
@@ -1983,6 +2084,425 @@ class _CustomerProfileTab extends StatelessWidget {
     );
   }
 
+  void _showPrivacyPolicySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: const [
+                      Icon(Icons.privacy_tip_rounded,
+                          color: AppColors.primary, size: 24),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'Privacy Policy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Last Updated: September 2026 • Riwaaz User Privacy',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildPolicySection(
+                    icon: Icons.shield_rounded,
+                    title: '1. Commitment to User Privacy',
+                    content:
+                        'Riwaaz values your personal privacy. We collect only essential information required to help you discover, coordinate, and organize your wedding and special events seamlessly.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.person_search_rounded,
+                    title: '2. Information We Collect',
+                    content:
+                        'We collect your basic profile details (name, phone number, email address), event milestones (celebration type, date, venue location), and your saved vendor shortlist or checklist items.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.handshake_rounded,
+                    title: '3. In-Person Payments & No Banking Data Collection',
+                    content:
+                        'Clients do NOT pay vendors through the Riwaaz application. All event transactions, advance deposits, and final settlements happen directly in person between you and the vendor. Riwaaz does not collect, process, or store your credit card, debit card, or net banking credentials.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.phone_forwarded_rounded,
+                    title: '4. Direct Communication via Call & WhatsApp',
+                    content:
+                        'The Riwaaz application does not support built-in chat. When a booking request is accepted by a vendor, direct contact details (Phone Call and WhatsApp) are unlocked so you can coordinate directly.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.lock_outline_rounded,
+                    title: '5. Security & Data Protection',
+                    content:
+                        'Your account data is secured using industry-standard encryption protocols. We do not sell your personal data to unauthorized third-party advertisers.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.delete_forever_rounded,
+                    title: '6. Your Rights & Account Deletion',
+                    content:
+                        'You maintain complete control over your information. You can request a data copy or permanently delete your account and all associated planning data anytime from your profile screen.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.contact_support_rounded,
+                    title: '7. Privacy Inquiries & Support',
+                    content:
+                        'For any privacy concerns, data inquiries, or grievance redressal, reach out to our privacy officer at privacy@riwaazweddings.in.',
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTermsAndConditionsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: const [
+                      Icon(Icons.gavel_rounded,
+                          color: AppColors.primary, size: 24),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'Terms & Conditions',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Last Updated: September 2026 • Platform Usage Agreement',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildPolicySection(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: '1. Acceptance of Terms',
+                    content:
+                        'By downloading, accessing, or using the Riwaaz app, you agree to comply with and be legally bound by these Terms and Conditions.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.storefront_rounded,
+                    title: '2. Platform Marketplace Role',
+                    content:
+                        'Riwaaz is a discovery platform connecting event organizers, couples, and hosts with independent event professionals (venues, photographers, decorators, caterers, DJs, etc.). Riwaaz is not an employer or principal of any vendor.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.payments_outlined,
+                    title: '3. In-Person Payments & Direct Contracts',
+                    content:
+                        'Riwaaz is an event discovery and booking connection platform. The application does not support built-in chat or app money transfers. Once a vendor accepts your booking, their direct Call and WhatsApp contact details are unlocked. All service contracts and package fees are settled directly in person between you and the vendor.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.assignment_turned_in_rounded,
+                    title: '4. Service Delivery & Vendor Responsibility',
+                    content:
+                        'Vendors are solely responsible for the execution, quality, and punctuality of their deliverables. Clients are advised to inspect sample work and finalize formal agreements directly with vendors.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.event_repeat_rounded,
+                    title: '5. Cancellations & Rescheduling',
+                    content:
+                        'Policies regarding date rescheduling, cancellations, and advance retention are determined strictly by mutual contract between the host and vendor. Riwaaz is not liable for vendor refund disputes.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.person_remove_rounded,
+                    title: '6. Account Termination & Deletion',
+                    content:
+                        'You may terminate your account at any time using the "Delete Account" feature in your profile settings. Upon deletion, all your stored event planning data is permanently erased.',
+                  ),
+                  _buildPolicySection(
+                    icon: Icons.balance_rounded,
+                    title: '7. Limitation of Liability & Jurisdiction',
+                    content:
+                        'Riwaaz provides vendor listings on an "as-is" basis. Any disputes arising out of the use of the platform shall be governed by the laws of India and subject to the jurisdiction of courts in Chandigarh.',
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actionsOverflowButtonSpacing: 8,
+        title: Row(
+          children: const [
+            Icon(Icons.logout_rounded, color: AppColors.primary, size: 22),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('Log Out', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of Riwaaz? You can sign back in anytime.',
+          style: TextStyle(fontSize: 14, color: AppColors.darkGrey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actionsOverflowButtonSpacing: 8,
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Delete Account',
+                style: TextStyle(fontWeight: FontWeight.w800, color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This action is irreversible. All your data will be permanently erased:',
+              style: TextStyle(fontSize: 13, color: AppColors.black),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('• Profile & event celebration details',
+                      style: TextStyle(fontSize: 12, color: Colors.red)),
+                  SizedBox(height: 4),
+                  Text('• Wedding checklist & task progress',
+                      style: TextStyle(fontSize: 12, color: Colors.red)),
+                  SizedBox(height: 4),
+                  Text('• Wedding budget tracker & cost estimates',
+                      style: TextStyle(fontSize: 12, color: Colors.red)),
+                  SizedBox(height: 4),
+                  Text('• Saved vendor shortlists & bookings',
+                      style: TextStyle(fontSize: 12, color: Colors.red)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Are you sure you want to permanently delete your account?',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Keep Account',
+                style: TextStyle(color: AppColors.darkGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Your account has been deleted successfully.'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              Navigator.of(context).pushAndRemoveUntil(
+                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPolicySection({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  content,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.darkGrey,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -1990,6 +2510,7 @@ class _CustomerProfileTab extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // User Header Card
             Container(
@@ -2011,11 +2532,35 @@ class _CustomerProfileTab extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundColor: AppColors.primary,
-                    child: Icon(Icons.favorite_rounded,
-                        color: AppColors.gold, size: 36),
+                  Stack(
+                    children: [
+                      const CircleAvatar(
+                        radius: 36,
+                        backgroundColor: AppColors.primary,
+                        child: Icon(Icons.favorite_rounded,
+                            color: AppColors.gold, size: 36),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            FadeScaleRoute(
+                              page: const CustomerEditProfileScreen(),
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              color: AppColors.gold,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.edit_rounded,
+                                color: AppColors.white, size: 13),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -2038,9 +2583,41 @@ class _CustomerProfileTab extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
 
-            // Profile Actions
+            const Text(
+              'EVENT PLANNING TOOLS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: AppColors.darkGrey,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            _buildActionItem(
+              context: context,
+              icon: Icons.edit_note_rounded,
+              title: 'Edit Wedding & Host Profile',
+              subtitle: 'Update names, celebration date, city & guest count',
+              onTap: () => Navigator.of(context).push(
+                FadeScaleRoute(
+                  page: const CustomerEditProfileScreen(),
+                ),
+              ),
+            ),
+            _buildActionItem(
+              context: context,
+              icon: Icons.notifications_active_outlined,
+              title: 'Notifications & Alerts',
+              subtitle: 'Booking confirmations, milestones & reminders',
+              onTap: () => Navigator.of(context).push(
+                FadeScaleRoute(
+                  page: const CustomerNotificationsScreen(),
+                ),
+              ),
+            ),
             _buildActionItem(
               context: context,
               icon: Icons.checklist_rounded,
@@ -2062,57 +2639,66 @@ class _CustomerProfileTab extends StatelessWidget {
               subtitle: 'Photographers, Decorators, Caterers',
               onTap: () => _showSavedVendorsSheet(context),
             ),
+            _buildActionItem(
+              context: context,
+              icon: Icons.storefront_rounded,
+              title: 'Vendor Partner Portal',
+              subtitle: 'Switch to vendor panel, incoming bookings & inquiries',
+              onTap: () {
+                Navigator.of(context).push(
+                  FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
+                );
+              },
+            ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // ─── LOGOUT BUTTON ──────────────────────────────────────────
+            const Text(
+              'LEGAL & POLICIES',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: AppColors.darkGrey,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            _buildActionItem(
+              context: context,
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              subtitle: 'Data protection & direct payment privacy',
+              onTap: () => _showPrivacyPolicySheet(context),
+            ),
+            _buildActionItem(
+              context: context,
+              icon: Icons.gavel_rounded,
+              title: 'Terms & Conditions',
+              subtitle: 'Platform agreement & in-person terms',
+              onTap: () => _showTermsAndConditionsSheet(context),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
             SizedBox(
               width: double.infinity,
               height: 48,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Logout'),
-                      content: const Text(
-                          'Are you sure you want to logout?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            Navigator.of(context).pushAndRemoveUntil(
-                              FadeScaleRoute(
-                                  page: const UnifiedLoginScreen()),
-                              (route) => false,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.white,
-                          ),
-                          child: const Text('Logout'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                onPressed: () => _showLogoutDialog(context),
                 icon: const Icon(Icons.logout_rounded,
-                    color: Colors.red, size: 18),
+                    color: AppColors.primary, size: 18),
                 label: const Text(
                   'Logout',
                   style: TextStyle(
-                    color: Colors.red,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red, width: 1.2),
+                  side: const BorderSide(color: AppColors.primary, width: 1.2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -2120,6 +2706,38 @@ class _CustomerProfileTab extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 12),
+
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _showDeleteAccountDialog(context),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.red, size: 16),
+                label: const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Riwaaz v1.0.4 • Direct Celebrations Marketplace',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.grey.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
           ],
         ),

@@ -47,14 +47,7 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
         centerTitle: true,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Simulated: Added new media to portfolio!'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        },
+        onPressed: () => _showUploadMediaSheet(context),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_photo_alternate_rounded,
             color: AppColors.white),
@@ -177,6 +170,173 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showUploadMediaSheet(BuildContext context) {
+    String mediaType = 'Photo';
+    String eventType = 'Wedding & Gala';
+    final titleController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Upload Showcase Media',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Add high-resolution photos or cinematic reels to your portfolio',
+                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                ),
+                const SizedBox(height: 16),
+
+                // Media Type Selector
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Photo (High-Res)')),
+                        selected: mediaType == 'Photo',
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: mediaType == 'Photo'
+                              ? AppColors.white
+                              : AppColors.black,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                        onSelected: (s) {
+                          if (s) setSheetState(() => mediaType = 'Photo');
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Cinematic Video')),
+                        selected: mediaType == 'Video',
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: mediaType == 'Video'
+                              ? AppColors.white
+                              : AppColors.black,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                        onSelected: (s) {
+                          if (s) setSheetState(() => mediaType = 'Video');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Shoot Title (e.g. Royal Anand Karaj at Haveli)',
+                    prefixIcon: const Icon(Icons.title_rounded,
+                        color: AppColors.primary, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Category selector
+                DropdownButtonFormField<String>(
+                  initialValue: eventType,
+                  decoration: InputDecoration(
+                    labelText: 'Event Category',
+                    prefixIcon: const Icon(Icons.category_rounded,
+                        color: AppColors.primary, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [
+                    'Wedding & Gala',
+                    'Pre-Wedding Shoot',
+                    'Sangeet & Mehendi',
+                    'Reception Night',
+                  ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (val) {
+                    if (val != null) setSheetState(() => eventType = val);
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _photos.insert(0, AppImages.vendorRoyalClick);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Media uploaded to portfolio successfully!'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Add to Showcase'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

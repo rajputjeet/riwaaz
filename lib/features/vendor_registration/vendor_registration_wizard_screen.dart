@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/service_categories_bar.dart';
 import '../../shared/widgets/app_search_bar.dart';
+import '../../utils/helper/storage_helper.dart';
+import 'controllers/vendor_registration_controller.dart';
 import 'vendor_submitted_screen.dart';
 
 class VendorRegistrationWizardScreen extends StatefulWidget {
@@ -44,15 +47,12 @@ class _VendorRegistrationWizardScreenState
 
   List<ServiceCategoryItem> get _businessTypes => kServiceCategories;
 
-  // Step 2 State: Basic Info
-  final _businessNameController =
-      TextEditingController(text: 'Royal Click Studio');
-  final _ownerNameController = TextEditingController(text: 'Aman Verma');
-  final _mobileController = TextEditingController(text: '9876543210');
-  final _emailController =
-      TextEditingController(text: 'contact@royalclickstudio.com');
-  final _addressController =
-      TextEditingController(text: 'SCO 142, Sector 70, Mohali, Punjab');
+  // Step 2 State: Basic Info — pre-filled from storage in initState
+  final _businessNameController = TextEditingController();
+  final _ownerNameController = TextEditingController();
+  final _mobileController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _addressController = TextEditingController();
 
   // Step 3 State: Business Details
   String _experience = '5+ Years';
@@ -63,11 +63,8 @@ class _VendorRegistrationWizardScreenState
     '10+ Years',
   ];
 
-  final _descriptionController = TextEditingController(
-    text:
-        'Award-winning wedding studio in Chandigarh & Mohali capturing magical timeless memories since 2018 with artistic storytelling.',
-  );
-  final _gstController = TextEditingController(text: '03AABCR1234F1Z8');
+  final _descriptionController = TextEditingController();
+  final _gstController = TextEditingController();
 
   // Step 5 State: Subscription Plans (3, 6, 12 Months)
   String _selectedPlan = '6_months'; // '3_months', '6_months', '12_months'
@@ -165,6 +162,39 @@ class _VendorRegistrationWizardScreenState
   // Step 4 State: Review
   bool _agreedToTerms = true;
 
+  late final VendorRegistrationController _vendorController;
+
+  void _syncCategory(String categoryName) {
+    if (_vendorController.categories.isNotEmpty) {
+      final match = _vendorController.categories.firstWhereOrNull(
+        (c) =>
+            c.name?.toLowerCase().trim() == categoryName.toLowerCase().trim() ||
+            categoryName.toLowerCase().contains(c.name?.toLowerCase().trim() ?? '') ||
+            (c.name != null &&
+                categoryName.toLowerCase().contains(c.name!.toLowerCase().trim())),
+      );
+      if (match != null && match.id != null) {
+        _vendorController.selectedCategoryId.value = match.id!;
+        _vendorController.selectedCategoryName.value = match.name ?? categoryName;
+      }
+    }
+  }
+
+  void _syncPlan(String planId) {
+    if (_vendorController.subscriptionPlans.isNotEmpty) {
+      final prefix = planId.split('_').first;
+      final match = _vendorController.subscriptionPlans.firstWhereOrNull(
+        (p) =>
+            p.id == planId ||
+            p.name?.toLowerCase().contains(prefix) == true ||
+            p.type?.toLowerCase().contains(prefix) == true,
+      );
+      if (match != null && match.id != null) {
+        _vendorController.selectedSubscriptionPlanId.value = match.id!;
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -173,26 +203,37 @@ class _VendorRegistrationWizardScreenState
         widget.initialCategory!.trim().isNotEmpty) {
       _selectedCategory = widget.initialCategory!.trim();
     }
-    
 
-    if (widget.initialBusinessName != null &&
-        widget.initialBusinessName!.trim().isNotEmpty) {
-      _businessNameController.text = widget.initialBusinessName!.trim();
-    }
-    if (widget.initialOwnerName != null &&
-        widget.initialOwnerName!.trim().isNotEmpty) {
-      _ownerNameController.text = widget.initialOwnerName!.trim();
-    }
-    if (widget.initialPhone != null &&
-        widget.initialPhone!.trim().isNotEmpty) {
-      _mobileController.text = widget.initialPhone!.trim();
-    }
-    if (widget.initialEmail != null &&
-        widget.initialEmail!.trim().isNotEmpty) {
-      _emailController.text = widget.initialEmail!.trim();
-    }
-    if (widget.initialExperience != null &&
-        widget.initialExperience!.trim().isNotEmpty) {
+    _vendorController = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+
+    _vendorController.fetchCategories().then((_) {
+      if (mounted) _syncCategory(_selectedCategory);
+    });
+    _vendorController.fetchSubscriptions().then((_) {
+      if (mounted) _syncPlan(_selectedPlan);
+    });
+
+    // Pre-fill from widget params first, then fall back to StorageHelper
+    final storage = StorageHelper();
+    _businessNameController.text =
+        (widget.initialBusinessName?.trim().isNotEmpty == true)
+            ? widget.initialBusinessName!
+            : (storage.getUserName() ?? '');
+    _ownerNameController.text =
+        (widget.initialOwnerName?.trim().isNotEmpty == true)
+            ? widget.initialOwnerName!
+            : (storage.getUserName() ?? '');
+    _mobileController.text =
+        (widget.initialPhone?.trim().isNotEmpty == true)
+            ? widget.initialPhone!
+            : (storage.getUserMobile() ?? '');
+    _emailController.text =
+        (widget.initialEmail?.trim().isNotEmpty == true)
+            ? widget.initialEmail!
+            : (storage.getUserEmail() ?? '');
+    if (widget.initialExperience?.trim().isNotEmpty == true) {
       _experience = widget.initialExperience!.trim();
     }
   }
@@ -234,20 +275,73 @@ class _VendorRegistrationWizardScreenState
     }
   }
 
-  void _submitRegistration() {
-    Navigator.of(context).pushReplacement(
-      FadeScaleRoute(
-        page: VendorSubmittedScreen(
-          businessName: _businessNameController.text.isEmpty
-              ? 'Royal Click Studio'
-              : _businessNameController.text,
-          businessType: _selectedCategory,
-          ownerName: _ownerNameController.text.isEmpty
-              ? 'Aman Verma'
-              : _ownerNameController.text,
-        ),
-      ),
+  void _submitRegistration() async {
+    // Resolve categoryId
+    String categoryId = _vendorController.selectedCategoryId.value;
+    if (categoryId.isEmpty && _vendorController.categories.isNotEmpty) {
+      final match = _vendorController.categories.firstWhereOrNull(
+        (c) =>
+            c.name?.toLowerCase().trim() == _selectedCategory.toLowerCase().trim() ||
+            _selectedCategory.toLowerCase().contains(c.name?.toLowerCase().trim() ?? '') ||
+            (c.name != null &&
+                _selectedCategory.toLowerCase().contains(c.name!.toLowerCase().trim())),
+      );
+      categoryId = match?.id ?? _vendorController.categories.first.id ?? '';
+      _vendorController.selectedCategoryId.value = categoryId;
+    }
+
+    // Resolve subscriptionPlanId
+    String planId = _vendorController.selectedSubscriptionPlanId.value;
+    if (planId.isEmpty && _vendorController.subscriptionPlans.isNotEmpty) {
+      final prefix = _selectedPlan.split('_').first;
+      final match = _vendorController.subscriptionPlans.firstWhereOrNull(
+        (p) =>
+            p.id == _selectedPlan ||
+            p.name?.toLowerCase().contains(prefix) == true ||
+            p.type?.toLowerCase().contains(prefix) == true,
+      );
+      planId = match?.id ?? _vendorController.subscriptionPlans.first.id ?? '';
+      _vendorController.selectedSubscriptionPlanId.value = planId;
+    }
+
+    final res = await _vendorController.submitApplication(
+      ownerName: _ownerNameController.text.trim().isNotEmpty
+          ? _ownerNameController.text.trim()
+          : (StorageHelper().getUserName() ?? 'Partner'),
+      businessName: _businessNameController.text.trim().isNotEmpty
+          ? _businessNameController.text.trim()
+          : (StorageHelper().getUserName() ?? 'Royal Click Studio'),
+      yearsOfExperience: _experience,
+      businessDescription: _descriptionController.text.trim().isNotEmpty
+          ? _descriptionController.text.trim()
+          : 'Professional wedding services and premium deliverables on Riwaaz.',
+      businessAddress: _addressController.text.trim().isNotEmpty
+          ? _addressController.text.trim()
+          : 'SCO 142, Sector 70, Mohali, Punjab',
+      city: 'Mohali',
+      gstNumber: _gstController.text.trim(),
+      categoryId: categoryId.isNotEmpty ? categoryId : '6701a2b3c4d5e6f7',
+      subscriptionPlanId: planId.isNotEmpty ? planId : '6702b3c4d5e6f7a8',
     );
+
+    if (!mounted) return;
+
+    if (res.isSuccess == true) {
+      Navigator.of(context).pushReplacement(
+        FadeScaleRoute(
+          page: VendorSubmittedScreen(
+            businessName: _businessNameController.text.trim().isNotEmpty
+                ? _businessNameController.text.trim()
+                : 'Royal Click Studio',
+            businessType: _selectedCategory,
+            ownerName: _ownerNameController.text.trim().isNotEmpty
+                ? _ownerNameController.text.trim()
+                : 'Partner',
+            applicationId: res.data?.applicationId ?? StorageHelper().getApplicationId() ?? 'WDV12345678',
+          ),
+        ),
+      );
+    }
   }
   // Helper to open Buy Subscription Modal
   void _showPaymentSheet() {
@@ -704,6 +798,7 @@ class _VendorRegistrationWizardScreenState
                 setState(() {
                   _selectedCategory = type.title;
                 });
+                _syncCategory(type.title);
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -1533,6 +1628,7 @@ class _VendorRegistrationWizardScreenState
                 _selectedPlan = plan['id'] as String;
                 _isSubscriptionPaid = false;
               });
+              _syncPlan(plan['id'] as String);
             },
             child: Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -1778,6 +1874,7 @@ class _VendorRegistrationWizardScreenState
                                 _selectedPlan = plan['id'] as String;
                                 _isSubscriptionPaid = false;
                               });
+                              _syncPlan(plan['id'] as String);
                             },
                             style: OutlinedButton.styleFrom(
                               backgroundColor: isSelected

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import 'controllers/auth_controller.dart';
 import 'login_screen.dart';
 import 'user_otp_verification_screen.dart';
 
@@ -15,13 +17,11 @@ class UserSignupScreen extends StatefulWidget {
 
 class _UserSignupScreenState extends State<UserSignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Priya Sharma');
-  final _emailController =
-      TextEditingController(text: 'priya.sharma@gmail.com');
-  final _phoneController = TextEditingController(text: '9876543210');
-  final _passwordController = TextEditingController(text: 'riwaaz@2025');
-  final _confirmPasswordController =
-      TextEditingController(text: 'riwaaz@2025');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -41,19 +41,33 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 400));
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final res = await authController.signUp(
+      fullName: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      password: _passwordController.text,
+      roleId: 2, // 2 = Customer
+    );
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    Navigator.of(context).push(
-      FadeScaleRoute(
-        page: UserOtpVerificationScreen(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
+    if (res.isSuccess == true) {
+      Navigator.of(context).push(
+        FadeScaleRoute(
+          page: UserOtpVerificationScreen(
+            name: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            phone: _phoneController.text.trim(),
+            initialOtp: res.data?.otp,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override

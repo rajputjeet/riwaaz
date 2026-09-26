@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../vendor_panel/vendor_shell.dart';
 import 'vendor_verification_tracker_screen.dart';
 
@@ -10,15 +11,20 @@ class VendorSubmittedScreen extends StatelessWidget {
   final String businessName;
   final String businessType;
   final String ownerName;
+  final String? applicationId;
 
   const VendorSubmittedScreen({
     super.key,
     this.businessName = 'Royal Click Studio',
     this.businessType = 'Photography',
     this.ownerName = 'Aman Verma',
+    this.applicationId,
   });
 
-  final String applicationId = 'WDV12345678';
+  String get _effectiveApplicationId =>
+      (applicationId != null && applicationId!.trim().isNotEmpty)
+          ? applicationId!
+          : (StorageHelper().getApplicationId() ?? 'WDV12345678');
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +124,7 @@ class VendorSubmittedScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          applicationId,
+                          _effectiveApplicationId,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -130,7 +136,7 @@ class VendorSubmittedScreen extends StatelessWidget {
                         GestureDetector(
                           onTap: () {
                             Clipboard.setData(
-                                ClipboardData(text: applicationId));
+                                ClipboardData(text: _effectiveApplicationId));
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content:

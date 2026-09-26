@@ -5,6 +5,7 @@ import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
+import '../../core/services/booking_service.dart';
 import '../shell/main_shell.dart';
 
 class VendorDetailScreen extends StatefulWidget {
@@ -788,129 +789,134 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Chat
-          _buildActionButton(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'Chat',
-            color: AppColors.darkGrey,
-            bgColor: AppColors.lightGrey,
-            onTap: () {},
-          ),
-          const SizedBox(width: 8),
-          // Call
-          _buildActionButton(
-            icon: Icons.phone_rounded,
-            label: 'Call',
-            color: AppColors.success,
-            bgColor: AppColors.successLight,
-            onTap: () {},
-          ),
-          const SizedBox(width: 10),
-          // Selected Package + Book Button
-          Expanded(
-            child: AnimatedTapWidget(
-              onTap: () => _showBookingSheet(selectedPkg),
-              child: Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedPkg.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.goldLight,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                          ),
-                          Text(
-                            '₹${_formatCurrency(selectedPkg.price)}',
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+          Row(
+            children: [
+              // Contact Locked Indicator Button
+              AnimatedTapWidget(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Direct Call & WhatsApp details unlock once the vendor accepts your booking request.',
                       ),
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    const Row(
-                      children: [
-                        Text(
-                          'Book Now',
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
+                  );
+                },
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.offWhite,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.grey.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.lock_outline_rounded,
+                          size: 16, color: AppColors.darkGrey),
+                      SizedBox(width: 6),
+                      Text(
+                        'Contact\nLocked',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkGrey,
+                          height: 1.15,
                         ),
-                        SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded,
-                            color: Colors.white, size: 16),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
+              const SizedBox(width: 10),
+              // Selected Package + Book Button
+              Expanded(
+                child: AnimatedTapWidget(
+                  onTap: () => _showBookingSheet(selectedPkg),
+                  child: Container(
+                    height: 52,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedPkg.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.goldLight,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              Text(
+                                '₹${_formatCurrency(selectedPkg.price)}',
+                                style: const TextStyle(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Row(
+                          children: [
+                            Text(
+                              'Book Now',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded,
+                                color: Colors.white, size: 16),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Direct Call & WhatsApp contact details will unlock once the vendor accepts your booking',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.darkGrey,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return AnimatedTapWidget(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        height: 48,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -989,13 +995,116 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.handshake_rounded,
+                      color: AppColors.success, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pay In Person Directly to Vendor',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'No online advance or app payment. You settle the package price directly with ${widget.vendorName} in person.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF15803D),
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9F6F0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lock_clock_rounded,
+                      color: AppColors.goldDark, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Direct Call & WhatsApp Contact Info',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Once ${widget.vendorName} accepts your booking request, their verified phone number will be unlocked for direct Call and WhatsApp coordination.',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.darkGrey,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             AnimatedTapWidget(
               onTap: () {
+                AppBookingService.instance.createBooking(
+                  vendorName: widget.vendorName,
+                  category: 'Event Services',
+                  package: '${pkg.name} (₹${_formatCurrency(pkg.price)})',
+                  total: '₹${_formatCurrency(pkg.price)}',
+                  price: pkg.price,
+                  clientName: 'Simran & Rahul 💍',
+                  clientPhone: '+91 98765 11223',
+                  vendorPhone: '+91 98765 43210',
+                  date: '28 Dec 2026',
+                  time: 'Full Day Event',
+                  venue: 'The Oberoi Sukhvilas, New Chandigarh',
+                  eventName: 'Grand Royal Vivah',
+                  eventType: 'Wedding',
+                  eventIcon: Icons.favorite_rounded,
+                  eventColor: AppColors.primary,
+                  inclusions: pkg.features,
+                );
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Booking request sent for ${pkg.name}! 🎉'),
+                    content: Text(
+                        'Booking request sent! Direct Call & WhatsApp will unlock once accepted by ${widget.vendorName}. 🎉'),
                     backgroundColor: AppColors.success,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
@@ -1013,7 +1122,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 ),
                 child: const Center(
                   child: Text(
-                    'Confirm Booking',
+                    'Confirm Booking (Pay In Person)',
                     style: TextStyle(
                       color: AppColors.white,
                       fontWeight: FontWeight.w700,

@@ -6,6 +6,7 @@ import '../../core/utils/app_animations.dart';
 import '../service_listing/service_listing_screen.dart';
 import '../vendor_detail/vendor_detail_screen.dart';
 import '../shell/main_shell.dart';
+import '../notifications/customer_notifications_screen.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/service_categories.dart';
@@ -133,10 +134,9 @@ class _ExploreBodyState extends State<ExploreBody> {
                 // Notification Button with active ping
                 AnimatedTapWidget(
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No new notifications'),
-                        duration: Duration(seconds: 1),
+                    Navigator.of(context).push(
+                      FadeScaleRoute(
+                        page: const CustomerNotificationsScreen(),
                       ),
                     );
                   },

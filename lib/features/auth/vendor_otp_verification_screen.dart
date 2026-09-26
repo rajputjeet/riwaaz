@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import 'controllers/auth_controller.dart';
 import '../vendor_registration/vendor_registration_wizard_screen.dart';
 
 class VendorOtpVerificationScreen extends StatefulWidget {
@@ -13,6 +15,7 @@ class VendorOtpVerificationScreen extends StatefulWidget {
   final String phone;
   final String? experience;
   final String? category;
+  final int? initialOtp;
 
   const VendorOtpVerificationScreen({
     super.key,
@@ -22,6 +25,7 @@ class VendorOtpVerificationScreen extends StatefulWidget {
     required this.phone,
     this.experience,
     this.category,
+    this.initialOtp,
   });
 
   @override
@@ -41,6 +45,10 @@ class _VendorOtpVerificationScreenState
   @override
   void initState() {
     super.initState();
+    // Auto-fill OTP if server returned one in the sign-up response
+    if (widget.initialOtp != null) {
+      _otpController.text = widget.initialOtp.toString();
+    }
     _startTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
@@ -98,9 +106,24 @@ class _VendorOtpVerificationScreenState
     }
 
     setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(milliseconds: 500));
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final parsedOtp = int.tryParse(code) ?? 0;
+    final res = await authController.verifyOtp(
+      identifier: widget.email.isNotEmpty ? widget.email : widget.phone,
+      otp: parsedOtp,
+      roleId: 4, // 4 = Vendor Partner
+      name: widget.businessName ?? widget.ownerName ?? 'Royal Click Studio',
+    );
+
     if (!mounted) return;
     setState(() => _isVerifying = false);
+
+    if (res.isSuccess != true) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -144,24 +167,24 @@ class _VendorOtpVerificationScreenState
     );
   }
 
-  void _handleResend() {
+  void _handleResend() async {
     if (_resendCountdown > 0) return;
 
     _otpController.clear();
     _otpFocusNode.requestFocus();
     _startTimer();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'A new 4-digit verification code has been sent to +91 ${widget.phone}',
-          style: GoogleFonts.plusJakartaSans(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final res = await authController.resendOtp(
+      identifier: widget.email.isNotEmpty ? widget.email : widget.phone,
     );
+
+    if (res.isSuccess == true && res.data?.otp != null) {
+      _otpController.text = res.data!.otp.toString();
+    }
   }
 
   @override

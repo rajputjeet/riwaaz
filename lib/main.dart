@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'core/constants/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/splash_screen.dart';
+import 'utils/helper/storage_helper.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await StorageHelper.init();
 
   // Force portrait orientation
   SystemChrome.setPreferredOrientations([
@@ -29,7 +32,7 @@ class RiwaazApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Riwaaz',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
@@ -40,3 +43,4 @@ class RiwaazApp extends StatelessWidget {
 
 typedef ShaadiHubApp = RiwaazApp;
 typedef RwaazApp = RiwaazApp;
+

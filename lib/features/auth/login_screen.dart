@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
 import '../vendor_panel/vendor_shell.dart';
+import '../vendor_registration/vendor_verification_tracker_screen.dart';
 import 'user_signup_screen.dart';
 import 'vendor_signup_screen.dart';
 
@@ -21,9 +24,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _identifierController =
-      TextEditingController(text: 'priya.sharma@gmail.com');
-  final _passwordController = TextEditingController(text: 'riwaaz@2025');
+  final _identifierController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -39,20 +41,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
 
-    // Simulate authentication call
-    await Future.delayed(const Duration(milliseconds: 650));
+    final res = await authController.login(
+      identifier: _identifierController.text.trim(),
+      password: _passwordController.text,
+    );
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    final id = _identifierController.text.trim().toLowerCase();
-    // Dynamically detect role based on account / credentials
-    final isVendorRole = id.contains('vendor') ||
-        id.contains('royal') ||
-        id.contains('studio') ||
-        id.contains('click') ||
-        id.contains('partner') ||
-        id.contains('business');
+    if (res.isSuccess != true || res.data == null) {
+      return;
+    }
+
+    final user = res.data!;
+    final isVendorRole = user.roleId == 4;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -64,8 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               child: Text(
                 isVendorRole
-                    ? 'Welcome back to Riwaaz Partner Portal!'
-                    : 'Welcome back to Riwaaz!',
+                    ? 'Welcome back, ${user.fullName ?? 'Partner'}! Riwaaz Partner Portal.'
+                    : 'Welcome back, ${user.fullName ?? 'User'}!',
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -83,10 +89,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // Redirect to the appropriate flow based on detected role
     if (isVendorRole) {
-      Navigator.of(context).pushAndRemoveUntil(
-        FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
-        (route) => false,
-      );
+      if (user.isVerified == false &&
+          (user.vendorProfile?.applicationStatus == 'Under Review' ||
+              user.vendorProfile?.applicationStatus == 'Pending')) {
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const VendorVerificationTrackerScreen()),
+          (route) => false,
+        );
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
+          (route) => false,
+        );
+      }
     } else {
       Navigator.of(context).pushAndRemoveUntil(
         FadeScaleRoute(page: const MainShell(initialIndex: 0)),

@@ -5,7 +5,7 @@ import 'package:shaadi_hub/features/shell/main_shell.dart';
 void main() {
   testWidgets('Bookings tab renders and can filter vendors without crashing',
       (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(360, 800);
+    tester.view.physicalSize = const Size(360, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
@@ -42,5 +42,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Grand Stage Crafters & AV Tech'), findsOneWidget);
+
+    // Verify Chat button does not exist anywhere
+    expect(find.text('Chat'), findsNothing);
+
+    // Verify Call and WhatsApp buttons exist for accepted bookings
+    expect(find.text('Call'), findsWidgets);
+    expect(find.text('WhatsApp'), findsWidgets);
+
+    // Verify locked notice for pending bookings
+    expect(find.text('Call & WhatsApp unlock upon acceptance'), findsWidgets);
+
+    // Tap Call button on first booking
+    await tester.ensureVisible(find.text('Call').first);
+    await tester.tap(find.text('Call').first);
+    await tester.pump();
+    expect(find.textContaining('Calling'), findsOneWidget);
+
+    // Tap WhatsApp button on first booking
+    await tester.ensureVisible(find.text('WhatsApp').first);
+    await tester.tap(find.text('WhatsApp').first);
+    await tester.pump();
+    expect(find.textContaining('Opening WhatsApp'), findsOneWidget);
   });
 }

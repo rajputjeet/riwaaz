@@ -16,7 +16,7 @@ class VendorMessagesTab extends StatelessWidget {
       },
       {
         'name': 'Rohan Sharma',
-        'lastMsg': 'We have sent the advance token payment of ₹15,000.',
+        'lastMsg': 'We will meet in person to finalize terms and payment on event day.',
         'time': 'Yesterday',
         'unread': 0,
         'avatar': 'RS',

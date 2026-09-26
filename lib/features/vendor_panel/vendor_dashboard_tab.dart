@@ -1,76 +1,159 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
 import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
-import 'vendor_payouts_screen.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
+import '../../core/services/booking_service.dart';
 
 class VendorDashboardTab extends StatelessWidget {
   final void Function(int tabIndex)? onNavigateTab;
 
   const VendorDashboardTab({super.key, this.onNavigateTab});
 
+  /// Reads business/owner name from storage for the greeting
+  String _vendorDisplayName() {
+    final name = StorageHelper().getUserName() ?? '';
+    return name.trim().isEmpty ? 'Partner' : name.trim();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Greeting & Subtitle
-          const Text(
-            'Hello, Royal Click Studio 👑',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.black,
-            ),
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            "Here's your business overview",
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.grey,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+    return AnimatedBuilder(
+      animation: AppBookingService.instance,
+      builder: (context, _) {
+        final bookingService = AppBookingService.instance;
+        final pendingCount = bookingService.pendingCount;
+        final confirmedCount = bookingService.confirmedCount;
+        final completedCount = bookingService.completedCount;
+        final totalCount = bookingService.totalCount;
 
-          const SizedBox(height: 16),
-
-          // 4 Metric KPI Cards in a row
-          Row(
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildStatCard(
-                title: "Today's Bookings",
-                value: '3',
-                accentColor: AppColors.primary,
+              // Greeting & Subtitle
+              Text(
+                'Hello, ${_vendorDisplayName()} 👑',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
               ),
-              const SizedBox(width: 8),
-              _buildStatCard(
-                title: 'Total Bookings',
-                value: '27',
-                accentColor: AppColors.goldDark,
+              const SizedBox(height: 2),
+              const Text(
+                "Here's your real-time business & bookings overview",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              const SizedBox(width: 8),
-              _buildStatCard(
-                title: 'Total Enquiries',
-                value: '15',
-                accentColor: AppColors.primaryDark,
-              ),
-              const SizedBox(width: 8),
-              _buildStatCard(
-                title: 'Profile Views',
-                value: '245',
-                accentColor: AppColors.goldDark,
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
+
+              // Pending Requests Alert Banner (if any)
+              if (pendingCount > 0) ...[
+                InkWell(
+                  onTap: () => onNavigateTab?.call(1),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.5),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.notifications_active_rounded,
+                            color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$pendingCount New Booking Request${pendingCount > 1 ? 's' : ''} Awaiting Acceptance',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Tap to review and accept/decline now',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Review',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+
+              // 4 Metric KPI Cards in a row
+              Row(
+                children: [
+                  _buildStatCard(
+                    title: 'Pending',
+                    value: '$pendingCount',
+                    accentColor: const Color(0xFFD97706),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatCard(
+                    title: 'Upcoming',
+                    value: '$confirmedCount',
+                    accentColor: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatCard(
+                    title: 'Completed',
+                    value: '$completedCount',
+                    accentColor: AppColors.success,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatCard(
+                    title: 'Total Bookings',
+                    value: '$totalCount',
+                    accentColor: AppColors.goldDark,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
 
           // Vendor Membership Status Banner (3M, 6M, 1Y)
           _buildMembershipBanner(context),
@@ -96,12 +179,12 @@ class VendorDashboardTab extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Recent Enquiries Header
+          // Recent Booking Requests & Clients Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Recent Client Enquiries',
+                'Recent Booking Requests & Clients',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -109,7 +192,7 @@ class VendorDashboardTab extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () => onNavigateTab?.call(2), // go to enquiries
+                onPressed: () => onNavigateTab?.call(1), // go to bookings
                 child: const Text(
                   'View All',
                   style: TextStyle(
@@ -124,29 +207,25 @@ class VendorDashboardTab extends StatelessWidget {
 
           const SizedBox(height: 6),
 
-          _buildRecentEnquiryCard(
-            clientName: 'Simran & Aman',
-            event: 'Wedding & Reception (2 Days)',
-            budget: '₹75,000',
-            date: '18 Dec 2026',
-            venue: 'The Grand Palace, Chandigarh',
-            timeAgo: '10m ago',
-          ),
-
-          const SizedBox(height: 10),
-
-          _buildRecentEnquiryCard(
-            clientName: 'Pooja & Rohan',
-            event: 'Pre-Wedding Shoot + Teaser',
-            budget: '₹45,000',
-            date: '04 Nov 2026',
-            venue: 'Kasauli Pine Hills',
-            timeAgo: '1h ago',
-          ),
+          ...bookingService.bookings.take(3).map(
+                (b) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildRecentEnquiryCard(
+                    clientName: b.clientName,
+                    event: '${b.eventType} • ${b.package}',
+                    budget: b.total,
+                    date: b.date,
+                    venue: b.venue,
+                    timeAgo: b.status,
+                  ),
+                ),
+              ),
 
           const SizedBox(height: 20),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -418,9 +497,11 @@ class VendorDashboardTab extends StatelessWidget {
         () => onNavigateTab?.call(1)
       ),
       (
-        Icons.chat_bubble_outline_rounded,
-        'Enquiries',
-        () => onNavigateTab?.call(2)
+        Icons.card_membership_rounded,
+        'Plans',
+        () => Navigator.of(context).push(
+              FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+            )
       ),
       (
         Icons.access_time_rounded,
@@ -440,11 +521,9 @@ class VendorDashboardTab extends StatelessWidget {
         () => _showReviewsSheet(context),
       ),
       (
-        Icons.account_balance_wallet_outlined,
-        'Payouts',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorPayoutsScreen()),
-            )
+        Icons.handshake_outlined,
+        'Settlements',
+        () => _showDirectSettlementSheet(context),
       ),
     ];
 
@@ -526,43 +605,47 @@ class VendorDashboardTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.favorite_rounded,
-                        color: AppColors.primary, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        clientName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Text(
-                        event,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.favorite_rounded,
+                    color: AppColors.primary, size: 16),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      clientName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      event,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 budget,
                 style: const TextStyle(
@@ -583,7 +666,7 @@ class VendorDashboardTab extends StatelessWidget {
                 date,
                 style: const TextStyle(fontSize: 11, color: AppColors.darkGrey),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               const Icon(Icons.location_on_outlined,
                   size: 12, color: AppColors.grey),
               const SizedBox(width: 4),
@@ -596,9 +679,159 @@ class VendorDashboardTab extends StatelessWidget {
                       const TextStyle(fontSize: 11, color: AppColors.darkGrey),
                 ),
               ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: timeAgo == 'Confirmed' || timeAgo == 'Accepted'
+                      ? AppColors.successLight
+                      : timeAgo == 'Pending'
+                          ? const Color(0xFFFEF3C7)
+                          : AppColors.offWhite,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  timeAgo,
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: timeAgo == 'Confirmed' || timeAgo == 'Accepted'
+                        ? AppColors.success
+                        : timeAgo == 'Pending'
+                            ? const Color(0xFFD97706)
+                            : AppColors.darkGrey,
+                  ),
+                ),
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showDirectSettlementSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.successLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.handshake_rounded,
+                      color: AppColors.success, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Direct In-Person Settlement',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      Text(
+                        'Zero platform commissions or bank payout delays',
+                        style: TextStyle(fontSize: 12, color: AppColors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.offWhite,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: AppColors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Direct Settlement Policy:',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '• Direct Transactions: Customers pay you directly in cash, UPI, or bank transfer on event day.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                        height: 1.4),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    '• No Bank Payout Delays: Riwaaz does not hold escrow or bank payouts. 100% of the client amount is yours.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                        height: 1.4),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    '• Flat Membership Model: You keep every rupee you earn from clients.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                        height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Understood'),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

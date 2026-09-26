@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../vendor_panel/vendor_shell.dart';
+import 'controllers/vendor_registration_controller.dart';
 
 class VendorVerificationTrackerScreen extends StatelessWidget {
   const VendorVerificationTrackerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
@@ -36,14 +42,107 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stepper Timeline (Horizontal/Vertical)
-              _buildTimelineStepper(),
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => controller.fetchApplicationStatus(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Live Application Status Header
+                Obx(() {
+                  final appId = controller.applicationData.value?.applicationId ??
+                      'WDV12345678';
+                  final status = controller.currentStatus.value;
+                  final isVerified = controller.isVerified.value;
+
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.cream,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Application ID',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.grey,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              appId,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isVerified || status == 'Approved'
+                                ? AppColors.success.withValues(alpha: 0.12)
+                                : AppColors.warning.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isVerified || status == 'Approved'
+                                  ? AppColors.success
+                                  : AppColors.warning,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isVerified || status == 'Approved'
+                                    ? Icons.check_circle_rounded
+                                    : Icons.hourglass_empty_rounded,
+                                size: 14,
+                                color: isVerified || status == 'Approved'
+                                    ? AppColors.success
+                                    : AppColors.warning,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                status,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isVerified || status == 'Approved'
+                                      ? AppColors.success
+                                      : AppColors.warning,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+                // Stepper Timeline (Horizontal/Vertical)
+                _buildTimelineStepper(),
 
               const SizedBox(height: 28),
 
@@ -198,8 +297,9 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCheckItem(String title) {
     return Row(

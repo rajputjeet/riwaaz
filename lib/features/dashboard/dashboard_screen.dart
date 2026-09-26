@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../shell/main_shell.dart';
 import '../service_listing/service_listing_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
+import '../notifications/customer_notifications_screen.dart';
 
 /// Standalone Dashboard screen wrapper that launches MainShell at tab index 0
 class DashboardScreen extends StatelessWidget {
@@ -102,7 +104,7 @@ class _DashboardBodyState extends State<DashboardBody> {
   @override
   void initState() {
     super.initState();
-    _eventsPageController = PageController();
+    _eventsPageController = PageController(viewportFraction: 0.91);
     _startAutoScroll();
   }
 
@@ -126,6 +128,13 @@ class _DashboardBodyState extends State<DashboardBody> {
     super.dispose();
   }
 
+  /// Returns first name from storage, e.g. "Priya" from "Priya Sharma"
+  String _firstName() {
+    final full = StorageHelper().getUserName() ?? '';
+    if (full.trim().isEmpty) return 'there';
+    return full.trim().split(' ').first;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -135,14 +144,25 @@ class _DashboardBodyState extends State<DashboardBody> {
           Expanded(
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  _buildCreatedEventsSection(),
+                  // Events header with horizontal padding
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildEventsHeader(),
+                  ),
+                  const SizedBox(height: 12),
+                  // PageView bleeds full width for spacing effect
+                  _buildEventsCarousel(),
+                  const SizedBox(height: 10),
+                  _buildEventsDots(),
                   const SizedBox(height: 18),
-                  _buildBookingsSection(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildBookingsSection(),
+                  ),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -165,7 +185,7 @@ class _DashboardBodyState extends State<DashboardBody> {
               Row(
                 children: [
                   Text(
-                    'Hello Simran',
+                    'Hello ${_firstName()}',
                     style: AppTextStyles.headlineMedium.copyWith(
                       color: AppColors.black,
                     ),
@@ -184,10 +204,9 @@ class _DashboardBodyState extends State<DashboardBody> {
           // Notification
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No new notifications'),
-                  duration: Duration(seconds: 1),
+              Navigator.of(context).push(
+                FadeScaleRoute(
+                  page: const CustomerNotificationsScreen(),
                 ),
               );
             },
@@ -231,90 +250,92 @@ class _DashboardBodyState extends State<DashboardBody> {
     );
   }
 
-  Widget _buildCreatedEventsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  /// Header row: title badge + View All
+  Widget _buildEventsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Created Events',
-                  style: AppTextStyles.headlineSmall.copyWith(fontSize: 18),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${_createdEvents.length} Events',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              'Created Events',
+              style: AppTextStyles.headlineSmall.copyWith(fontSize: 18),
             ),
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  FadeScaleRoute(page: const WeddingDetailsScreen()),
-                );
-              },
-              child: const Text(
-                'View All',
-                style: TextStyle(
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_createdEvents.length} Events',
+                style: const TextStyle(
                   color: AppColors.primary,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 205,
-          child: PageView.builder(
-            controller: _eventsPageController,
-            itemCount: _createdEvents.length,
-            onPageChanged: (i) {
-              setState(() => _currentEventIndex = i);
-            },
-            itemBuilder: (context, i) {
-              final event = _createdEvents[i];
-              return _buildEventCard(event);
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            _createdEvents.length,
-            (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: _currentEventIndex == index ? 22 : 6,
-              height: 5,
-              decoration: BoxDecoration(
-                color: _currentEventIndex == index
-                    ? AppColors.primary
-                    : AppColors.primary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(3),
-              ),
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              FadeScaleRoute(page: const WeddingDetailsScreen()),
+            );
+          },
+          child: const Text(
+            'View All',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Full-width carousel so adjacent cards peek at the edges
+  Widget _buildEventsCarousel() {
+    return SizedBox(
+      height: 205,
+      child: PageView.builder(
+        controller: _eventsPageController,
+        itemCount: _createdEvents.length,
+        onPageChanged: (i) {
+          setState(() => _currentEventIndex = i);
+        },
+        itemBuilder: (context, i) {
+          final event = _createdEvents[i];
+          return _buildEventCard(event);
+        },
+      ),
+    );
+  }
+
+  /// Dot indicators
+  Widget _buildEventsDots() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        _createdEvents.length,
+        (index) => AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: _currentEventIndex == index ? 22 : 6,
+          height: 5,
+          decoration: BoxDecoration(
+            color: _currentEventIndex == index
+                ? AppColors.primary
+                : AppColors.primary.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+      ),
     );
   }
 
@@ -326,7 +347,8 @@ class _DashboardBodyState extends State<DashboardBody> {
         );
       },
       child: Container(
-        width: double.infinity,
+        // horizontal margin creates visible gap between adjacent cards
+        margin: const EdgeInsets.symmetric(horizontal: 8),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           gradient: LinearGradient(

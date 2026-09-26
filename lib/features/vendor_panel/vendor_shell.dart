@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/booking_service.dart';
+import '../../core/utils/app_animations.dart';
 import 'vendor_dashboard_tab.dart';
 import 'vendor_bookings_tab.dart';
-import 'vendor_enquiries_tab.dart';
 import 'vendor_profile_screen.dart';
+import 'vendor_notifications_screen.dart';
 
 class VendorShell extends StatefulWidget {
   final int initialIndex;
@@ -78,10 +80,9 @@ class _VendorShellState extends State<VendorShell> {
                 icon: const Icon(Icons.notifications_none_rounded,
                     color: AppColors.black, size: 22),
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('3 new booking notifications!'),
-                      duration: Duration(seconds: 1),
+                  Navigator.of(context).push(
+                    FadeScaleRoute(
+                      page: const VendorNotificationsScreen(),
                     ),
                   );
                 },
@@ -108,7 +109,6 @@ class _VendorShellState extends State<VendorShell> {
         children: [
           VendorDashboardTab(onNavigateTab: (idx) => _onTabTap(idx)),
           const VendorBookingsTab(key: ValueKey('vendor_bookings_tab_v2')),
-          const VendorEnquiriesTab(),
           const VendorProfileScreen(),
         ],
       ),
@@ -126,20 +126,29 @@ class _VendorShellState extends State<VendorShell> {
             selectedFontSize: 11,
             unselectedFontSize: 10,
             elevation: 12,
-            items: const [
-              BottomNavigationBarItem(
+            items: [
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.dashboard_rounded),
                 label: 'Dashboard',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_month_rounded),
+                icon: ListenableBuilder(
+                  listenable: AppBookingService.instance,
+                  builder: (context, _) {
+                    final pending = AppBookingService.instance.pendingCount;
+                    if (pending > 0) {
+                      return Badge(
+                        label: Text('$pending'),
+                        backgroundColor: const Color(0xFFD97706),
+                        child: const Icon(Icons.calendar_month_rounded),
+                      );
+                    }
+                    return const Icon(Icons.calendar_month_rounded);
+                  },
+                ),
                 label: 'Bookings',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat_bubble_outline_rounded),
-                label: 'Enquiries',
-              ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.person_rounded),
                 label: 'Profile',
               ),
@@ -212,7 +221,10 @@ class _VendorShellState extends State<VendorShell> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text(
                           'Profile Under Review',
@@ -223,7 +235,6 @@ class _VendorShellState extends State<VendorShell> {
                             letterSpacing: 0.2,
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1.5),

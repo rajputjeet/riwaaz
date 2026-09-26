@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import 'controllers/auth_controller.dart';
 import 'login_screen.dart';
 import 'vendor_otp_verification_screen.dart';
 
@@ -15,12 +17,11 @@ class VendorSignupScreen extends StatefulWidget {
 
 class _VendorSignupScreenState extends State<VendorSignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController =
-      TextEditingController(text: 'contact@royalclick.com');
-  final _phoneController = TextEditingController(text: '9876543210');
-  final _passwordController = TextEditingController(text: 'partner@2025');
-  final _confirmPasswordController =
-      TextEditingController(text: 'partner@2025');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -28,6 +29,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -39,18 +41,35 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 400));
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final businessName = _nameController.text.trim();
+    final res = await authController.signUp(
+      fullName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      password: _passwordController.text,
+      roleId: 4, // 4 = Vendor Partner
+    );
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    Navigator.of(context).push(
-      FadeScaleRoute(
-        page: VendorOtpVerificationScreen(
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
+    if (res.isSuccess == true) {
+      Navigator.of(context).push(
+        FadeScaleRoute(
+          page: VendorOtpVerificationScreen(
+            businessName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
+            ownerName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
+            email: _emailController.text.trim(),
+            phone: _phoneController.text.trim(),
+            initialOtp: res.data?.otp,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -117,6 +136,25 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
+
+                // Business Name / Owner Name
+                _buildFieldLabel('Business / Studio Name'),
+                TextFormField(
+                  controller: _nameController,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _buildInputDecoration(
+                    hintText: 'e.g. Royal Click Studio',
+                    prefixIcon: Icons.storefront_outlined,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter business name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 18),
 
                 // Business Email
                 _buildFieldLabel('Business Email Address'),

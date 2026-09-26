@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
 
 class UserOtpVerificationScreen extends StatefulWidget {
   final String name;
   final String email;
   final String phone;
+  final int? initialOtp;
 
   const UserOtpVerificationScreen({
     super.key,
     required this.name,
     required this.email,
     required this.phone,
+    this.initialOtp,
   });
 
   @override
@@ -34,6 +38,10 @@ class _UserOtpVerificationScreenState extends State<UserOtpVerificationScreen> {
   @override
   void initState() {
     super.initState();
+    // Auto-fill OTP if server returned one in the sign-up response
+    if (widget.initialOtp != null) {
+      _otpController.text = widget.initialOtp.toString();
+    }
     _startTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
@@ -91,9 +99,24 @@ class _UserOtpVerificationScreenState extends State<UserOtpVerificationScreen> {
     }
 
     setState(() => _isVerifying = true);
-    await Future.delayed(const Duration(milliseconds: 500));
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final parsedOtp = int.tryParse(code) ?? 0;
+    final res = await authController.verifyOtp(
+      identifier: widget.email.isNotEmpty ? widget.email : widget.phone,
+      otp: parsedOtp,
+      roleId: 2, // Customer
+      name: widget.name,
+    );
+
     if (!mounted) return;
     setState(() => _isVerifying = false);
+
+    if (res.isSuccess != true) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -127,24 +150,24 @@ class _UserOtpVerificationScreenState extends State<UserOtpVerificationScreen> {
     );
   }
 
-  void _handleResend() {
+  void _handleResend() async {
     if (_resendCountdown > 0) return;
 
     _otpController.clear();
     _otpFocusNode.requestFocus();
     _startTimer();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'A new 4-digit verification code has been sent to +91 ${widget.phone}',
-          style: GoogleFonts.plusJakartaSans(color: Colors.white),
-        ),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
+    final authController = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : Get.put(AuthController());
+
+    final res = await authController.resendOtp(
+      identifier: widget.email.isNotEmpty ? widget.email : widget.phone,
     );
+
+    if (res.isSuccess == true && res.data?.otp != null) {
+      _otpController.text = res.data!.otp.toString();
+    }
   }
 
   @override
