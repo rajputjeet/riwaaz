@@ -29,7 +29,7 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
       'id': 'notif_2',
       'title': 'Direct Settlement Reminder',
       'message':
-          'Riwaaz charges 0% commission. Collect 100% of your service fee directly from clients in person.',
+          'Widoora charges 0% commission. Collect 100% of your service fee directly from clients in person.',
       'time': 'Yesterday',
       'icon': Icons.handshake_rounded,
       'color': AppColors.success,

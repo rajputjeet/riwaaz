@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
+import '../../core/constants/service_categories.dart';
+import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/service_categories_bar.dart';
 import '../../utils/helper/storage_helper.dart';
 
 class VendorEditProfileScreen extends StatefulWidget {
@@ -44,8 +49,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
   void initState() {
     super.initState();
     final storage = StorageHelper();
-    _businessNameCtrl =
-        TextEditingController(text: storage.getUserName() ?? '');
+    _businessNameCtrl = TextEditingController(
+        text: (storage.getUserName()?.isNotEmpty == true)
+            ? storage.getUserName()!
+            : 'Royal Click Studio');
     _categoryCtrl = TextEditingController();
     _contactPersonCtrl = TextEditingController();
     _phoneCtrl = TextEditingController(
@@ -130,14 +137,13 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                         border: Border.all(color: AppColors.gold, width: 2.5),
                       ),
                       child: ClipOval(
-                        child: Image.asset(
-                          AppImages.vendorRoyalClick,
+                        child: CachedImageView(
+                          imageUrl: AppImages.vendorRoyalClick,
                           fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => Container(
-                            color: AppColors.primary,
-                            child: const Icon(Icons.camera_alt,
-                                color: AppColors.white, size: 40),
-                          ),
+                          fallbackIcon: Icons.camera_alt,
+                          iconColor: AppColors.white,
+                          iconSize: 40,
+                          backgroundColor: AppColors.primary,
                         ),
                       ),
                     ),
@@ -196,11 +202,7 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                     (v?.trim().isEmpty ?? true) ? 'Name is required' : null,
               ),
 
-              _buildTextField(
-                label: 'Primary Category',
-                controller: _categoryCtrl,
-                icon: Icons.category_rounded,
-              ),
+              _buildCategorySelector(),
 
               _buildTextField(
                 label: 'Owner / Contact Person',
@@ -442,6 +444,273 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCategorySelector() {
+    final categories = Get.isRegistered<CategoryController>()
+        ? CategoryController.to.serviceCategories
+        : <ServiceCategoryItem>[];
+
+    ServiceCategoryItem? currentItem;
+    for (final c in categories) {
+      if (c.title.toLowerCase().trim() ==
+          _categoryCtrl.text.toLowerCase().trim()) {
+        currentItem = c;
+        break;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.category_rounded,
+                  size: 16, color: AppColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Primary Category',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _openCategoryPicker(categories),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: AppColors.grey.withValues(alpha: 0.2), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  if (currentItem != null)
+                    ServiceIconWrap(
+                      item: currentItem,
+                      size: 38,
+                      iconSize: 18,
+                      borderRadius: 10,
+                    )
+                  else
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.storefront_rounded,
+                          size: 18, color: AppColors.primary),
+                    ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _categoryCtrl.text.isNotEmpty
+                              ? _categoryCtrl.text
+                              : (currentItem?.title ?? 'Select Category'),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        if (currentItem != null && currentItem.desc.isNotEmpty)
+                          Text(
+                            currentItem.desc,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.primary, size: 22),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openCategoryPicker(List<ServiceCategoryItem> categories) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Select Business Category',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: categories.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.storefront_outlined,
+                                size: 40, color: AppColors.grey),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No categories available from server',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 15),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: () async {
+                                if (Get.isRegistered<CategoryController>()) {
+                                  await CategoryController.to.fetchCategories(
+                                      forceRefresh: true);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    setState(() {});
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Refresh'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        itemCount: categories.length,
+                  separatorBuilder: (_, index) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = categories[index];
+                    final isSelected = item.title.toLowerCase().trim() ==
+                        _categoryCtrl.text.toLowerCase().trim();
+
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _categoryCtrl.text = item.title;
+                        });
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? item.bgColor : AppColors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? item.color
+                                : AppColors.greyLight.withValues(alpha: 0.6),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            ServiceIconWrap(
+                              item: item,
+                              size: 42,
+                              iconSize: 20,
+                              borderRadius: 12,
+                              isSelected: isSelected,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    item.desc,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: AppColors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(Icons.check_circle_rounded,
+                                  color: item.color, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

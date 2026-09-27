@@ -12,12 +12,15 @@ class CategoryApiProvider {
     _dio = Injector().getDio();
   }
 
-  // 4. Get Business Categories (GET /api/category/list)
-  Future<DataResponse<List<CategoryModel>>> getCategoryList() async {
+  /// 1. Get Public Category List (GET /api/category/list)
+  /// Optional [search] parameter to filter categories by name
+  Future<DataResponse<List<CategoryModel>>> getCategoryList({String? search}) async {
     try {
       final response = await _dio.get(
         ApiConstants.categoryList,
-        options: Injector.getHeaderToken(),
+        queryParameters: (search != null && search.trim().isNotEmpty)
+            ? {'search': search.trim()}
+            : null,
       );
 
       return DataResponse<List<CategoryModel>>.fromJson(

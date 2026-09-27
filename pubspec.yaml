@@ -2,7 +2,7 @@ name: shaadi_hub
 description: "ShaadiHub - Shaadi Ki Har Zaroorat, Ek Hi Jagah."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.11.0
@@ -18,6 +18,8 @@ dependencies:
   get: ^4.7.3
   dio: ^5.11.1
   shared_preferences: ^2.5.5
+  image_picker: ^1.2.3
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -38,5 +40,6 @@ flutter:
     - assets/images/explore_wedding_car.jpg
     - assets/images/vendor_detail_hero.jpg
     - assets/images/shaadihub_logo.jpg
+    - assets/images/widoora_logo.png
     - assets/images/wedding_hero.jpg
     - assets/images/riwaaz_couple.png

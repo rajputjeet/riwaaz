@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import 'login_screen.dart';
 import 'user_signup_screen.dart';
 import 'vendor_signup_screen.dart';
@@ -132,14 +133,11 @@ class UnifiedLoginScreen extends StatelessWidget {
                 ).createShader(rect);
               },
               blendMode: BlendMode.dstIn,
-              child: Image.asset(
-                AppImages.riwaazCouple,
+              child: CachedImageView(
+                imageUrl: AppImages.riwaazCouple,
                 fit: BoxFit.contain,
                 alignment: Alignment.topCenter,
-                errorBuilder: (context, error, stackTrace) => Image.asset(
-                  AppImages.weddingHero,
-                  fit: BoxFit.cover,
-                ),
+                fallbackAsset: AppImages.weddingHero,
               ),
             ),
           ),
@@ -171,14 +169,23 @@ class UnifiedLoginScreen extends StatelessWidget {
           SafeArea(
             child: Column(
               children: [
-                // Top-Left brand mark (Clean RIWAAZ text without R round logo)
+                // Top-Left brand mark with WIDOORA Logo
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                   child: Row(
                     children: [
+                      CachedImageView(
+                        imageUrl: AppImages.widooraLogo,
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.contain,
+                        fallbackIcon: Icons.favorite_rounded,
+                        iconColor: AppColors.gold,
+                      ),
+                      const SizedBox(width: 10),
                       Text(
-                        'RIWAAZ',
+                        'WIDOORA',
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 26,
                           fontWeight: FontWeight.w700,
@@ -206,7 +213,7 @@ class UnifiedLoginScreen extends StatelessWidget {
                     children: [
                       // Welcome Title
                       Text(
-                        'Join Riwaaz',
+                        'Join Widoora',
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 34,
                           fontWeight: FontWeight.w700,

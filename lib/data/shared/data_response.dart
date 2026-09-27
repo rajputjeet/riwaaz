@@ -15,8 +15,14 @@ class DataResponse<TModel> {
     Map<String, dynamic> json,
     TModel Function(dynamic json)? fromJsonT,
   ) {
+    final statusVal = json['status'];
+    final bool statusSuccess = statusVal == true ||
+        statusVal == 'success' ||
+        statusVal == 1 ||
+        statusVal == 'true';
+
     return DataResponse<TModel>(
-      isSuccess: json['success'] ?? json['isSuccess'] ?? false,
+      isSuccess: json['success'] ?? json['isSuccess'] ?? (statusVal != null ? statusSuccess : false),
       error: json['error']?.toString(),
       message: json['message']?.toString(),
       data: json['data'] != null && fromJsonT != null

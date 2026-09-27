@@ -60,7 +60,7 @@ class _VendorShellState extends State<VendorShell> {
             ),
             const SizedBox(width: 6),
             const Text(
-              'RIWAAZ VENDOR',
+              'WIDOORA VENDOR',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,

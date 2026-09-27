@@ -29,11 +29,11 @@ class VendorMessagesTab extends StatelessWidget {
         'avatar': 'NV',
       },
       {
-        'name': 'Riwaaz Partner Support',
+        'name': 'Widoora Partner Support',
         'lastMsg': 'Congratulations! Your profile has been featured in top photographers.',
         'time': '20 May',
         'unread': 1,
-        'avatar': 'RP',
+        'avatar': 'WP',
       },
     ];
 

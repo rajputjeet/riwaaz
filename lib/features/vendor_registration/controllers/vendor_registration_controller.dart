@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
-import '../../../data/api_provider/category_api_provider.dart';
+import '../../../controllers/category_controller.dart';
 import '../../../data/api_provider/subscription_api_provider.dart';
 import '../../../data/api_provider/vendor_api_provider.dart';
 import '../../../data/models/category_model.dart';
@@ -11,7 +11,6 @@ import '../../../utils/helper/storage_helper.dart';
 import '../../../utils/utils.dart';
 
 class VendorRegistrationController extends GetxController {
-  final CategoryApiProvider _categoryApiProvider = CategoryApiProvider();
   final SubscriptionApiProvider _subscriptionApiProvider =
       SubscriptionApiProvider();
   final VendorApiProvider _vendorApiProvider = VendorApiProvider();
@@ -30,6 +29,7 @@ class VendorRegistrationController extends GetxController {
       Rxn<VendorApplicationModel>();
   final RxString currentStatus = 'Under Review'.obs;
   final RxBool isVerified = false.obs;
+  final RxBool isDraftSavedOnServer = false.obs;
 
   @override
   void onInit() {
@@ -45,15 +45,20 @@ class VendorRegistrationController extends GetxController {
   // 4. Get Business Categories (GET /api/category/list)
   Future<void> fetchCategories() async {
     isLoading.value = true;
-    final response = await _categoryApiProvider.getCategoryList();
+    final categoryCtrl = Get.isRegistered<CategoryController>()
+        ? CategoryController.to
+        : Get.put(CategoryController(), permanent: true);
+
+    if (categoryCtrl.categories.isEmpty) {
+      await categoryCtrl.fetchCategories();
+    }
     isLoading.value = false;
 
-    if (response.isSuccess == true && response.data != null) {
-      categories.assignAll(response.data!);
-      if (categories.isNotEmpty && selectedCategoryId.isEmpty) {
-        selectedCategoryId.value = categories.first.id ?? '';
-        selectedCategoryName.value = categories.first.name ?? '';
-      }
+    categories.assignAll(categoryCtrl.categories);
+
+    if (categories.isNotEmpty && selectedCategoryId.isEmpty) {
+      selectedCategoryId.value = categories.first.id ?? '';
+      selectedCategoryName.value = categories.first.name ?? '';
     }
   }
 
@@ -63,9 +68,11 @@ class VendorRegistrationController extends GetxController {
     final response = await _subscriptionApiProvider.getSubscriptionList();
     isLoading.value = false;
 
-    if (response.isSuccess == true && response.data != null) {
+    if (response.isSuccess == true &&
+        response.data != null &&
+        response.data!.isNotEmpty) {
       subscriptionPlans.assignAll(response.data!);
-      if (subscriptionPlans.isNotEmpty && selectedSubscriptionPlanId.isEmpty) {
+      if (selectedSubscriptionPlanId.isEmpty) {
         selectedSubscriptionPlanId.value = subscriptionPlans.first.id ?? '';
       }
     }
@@ -81,12 +88,14 @@ class VendorRegistrationController extends GetxController {
     required String city,
     String? gstNumber,
     required String categoryId,
+    String? categoryName,
     required String subscriptionPlanId,
     dynamic aadharFile,
     dynamic panFile,
     dynamic businessCertFile,
     dynamic addressProofFile,
     dynamic gstDocFile,
+    bool isPreliminaryUpload = false,
   }) async {
     isSubmitting.value = true;
 
@@ -100,48 +109,34 @@ class VendorRegistrationController extends GetxController {
       if (gstNumber != null && gstNumber.trim().isNotEmpty)
         'gstNumber': gstNumber.trim(),
       'categoryId': categoryId,
+      if (categoryName != null && categoryName.trim().isNotEmpty) ...{
+        'category': categoryName.trim(),
+        'categoryName': categoryName.trim(),
+      },
       'subscriptionPlanId': subscriptionPlanId,
     };
 
-    // Attach multipart file fields if provided, otherwise provide dummy multipart filenames
-    if (aadharFile is MultipartFile) {
-      formDataMap['aadhar'] = aadharFile;
-    } else {
-      formDataMap['aadhar'] = MultipartFile.fromString(
-        'aadhar_placeholder_content',
-        filename: 'aadhar_card.pdf',
+    // Convert file paths or MultipartFiles to actual multipart form files
+    Future<MultipartFile> toMultipart(dynamic file, String fallbackFilename) async {
+      if (file is MultipartFile) return file;
+      if (file is String && file.trim().isNotEmpty) {
+        try {
+          final fileName = file.split(RegExp(r'[\\/]')).last;
+          return await MultipartFile.fromFile(file, filename: fileName);
+        } catch (_) {}
+      }
+      return MultipartFile.fromString(
+        'sample_verification_doc',
+        filename: fallbackFilename,
       );
     }
 
-    if (panFile is MultipartFile) {
-      formDataMap['pan'] = panFile;
-    } else {
-      formDataMap['pan'] = MultipartFile.fromString(
-        'pan_placeholder_content',
-        filename: 'pan_card.pdf',
-      );
-    }
-
-    if (businessCertFile is MultipartFile) {
-      formDataMap['businessCert'] = businessCertFile;
-    } else {
-      formDataMap['businessCert'] = MultipartFile.fromString(
-        'business_cert_content',
-        filename: 'business_cert.pdf',
-      );
-    }
-
-    if (addressProofFile is MultipartFile) {
-      formDataMap['addressProof'] = addressProofFile;
-    } else {
-      formDataMap['addressProof'] = MultipartFile.fromString(
-        'address_proof_content',
-        filename: 'address_proof.pdf',
-      );
-    }
-
-    if (gstDocFile is MultipartFile) {
-      formDataMap['gstDoc'] = gstDocFile;
+    formDataMap['aadhar'] = await toMultipart(aadharFile, 'aadhar_card.jpg');
+    formDataMap['pan'] = await toMultipart(panFile, 'pan_card.jpg');
+    formDataMap['businessCert'] = await toMultipart(businessCertFile, 'business_cert.jpg');
+    formDataMap['addressProof'] = await toMultipart(addressProofFile, 'address_proof.jpg');
+    if (gstDocFile != null && (gstDocFile is MultipartFile || (gstDocFile is String && gstDocFile.trim().isNotEmpty))) {
+      formDataMap['gstDoc'] = await toMultipart(gstDocFile, 'gst_cert.jpg');
     }
 
     final formData = FormData.fromMap(formDataMap);
@@ -153,24 +148,42 @@ class VendorRegistrationController extends GetxController {
       applicationData.value = response.data!;
       currentStatus.value = response.data!.applicationStatus ?? 'Under Review';
       isVerified.value = response.data!.isVerified ?? false;
+      isDraftSavedOnServer.value = true;
 
       await _storageHelper.saveApplicationId(response.data!.applicationId);
       await _storageHelper
           .saveApplicationStatus(response.data!.applicationStatus);
       await _storageHelper.saveIsVerified(response.data!.isVerified);
 
-      Utils.showSnackBar(
-        response.message ?? 'Application submitted successfully!',
-        isError: false,
-      );
+      if (!isPreliminaryUpload) {
+        Utils.showSnackBar(
+          response.message ?? 'Application submitted successfully!',
+          isError: false,
+        );
+      }
     } else {
-      Utils.showSnackBar(
-        response.message ?? response.error ?? 'Failed to submit application',
-        isError: true,
-      );
+      if (!isPreliminaryUpload) {
+        Utils.showSnackBar(
+          response.message ?? response.error ?? 'Failed to submit application',
+          isError: true,
+        );
+      }
     }
 
     return response;
+  }
+
+  // ── Draft Helpers ──────────────────────────────────────────────────────────
+  Future<void> saveLocalDraft(Map<String, dynamic> draft) async {
+    await _storageHelper.saveVendorDraft(draft);
+  }
+
+  Map<String, dynamic>? getLocalDraft() {
+    return _storageHelper.getVendorDraft();
+  }
+
+  Future<void> clearLocalDraft() async {
+    await _storageHelper.clearVendorDraft();
   }
 
   // 7. Track Vendor Application Status (GET /api/users/vendor/application/status)

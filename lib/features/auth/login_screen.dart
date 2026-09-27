@@ -70,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               child: Text(
                 isVendorRole
-                    ? 'Welcome back, ${user.fullName ?? 'Partner'}! Riwaaz Partner Portal.'
+                    ? 'Welcome back, ${user.fullName ?? 'Partner'}! Widoora Partner Portal.'
                     : 'Welcome back, ${user.fullName ?? 'User'}!',
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
@@ -127,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'RIWAAZ',
+          'WIDOORA',
           style: GoogleFonts.cormorantGaramond(
             fontSize: 22,
             fontWeight: FontWeight.w700,

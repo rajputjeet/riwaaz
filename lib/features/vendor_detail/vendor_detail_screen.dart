@@ -6,6 +6,7 @@ import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
 import '../../core/services/booking_service.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../shell/main_shell.dart';
 
 class VendorDetailScreen extends StatefulWidget {
@@ -222,13 +223,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // Hero image — real photo
-            Image.asset(
-              AppImages.vendorDetailHero,
+            // Hero image — real photo or server URL
+            CachedImageView(
+              imageUrl: AppImages.vendorDetailHero,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorBuilder: (context, error, stackTrace) => Container(
+              errorWidget: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -682,14 +683,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         itemCount: portfolioImages.length,
         itemBuilder: (_, i) => ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
-            portfolioImages[i],
+          child: CachedImageView(
+            imageUrl: portfolioImages[i],
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: AppColors.primaryDark,
-              child: const Icon(Icons.photo_rounded,
-                  color: Colors.white54, size: 32),
-            ),
+            fallbackIcon: Icons.photo_rounded,
+            iconColor: Colors.white54,
+            iconSize: 32,
+            backgroundColor: AppColors.primaryDark,
           ),
         ),
       ),

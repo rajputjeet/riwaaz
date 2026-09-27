@@ -796,7 +796,7 @@ class VendorDashboardTab extends StatelessWidget {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    '• No Bank Payout Delays: Riwaaz does not hold escrow or bank payouts. 100% of the client amount is yours.',
+                    '• No Bank Payout Delays: Widoora does not hold escrow or bank payouts. 100% of the client amount is yours.',
                     style: TextStyle(
                         fontSize: 12,
                         color: AppColors.darkGrey,

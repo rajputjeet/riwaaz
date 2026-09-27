@@ -92,7 +92,7 @@ class _VendorAuthScreenState extends State<VendorAuthScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Riwaaz Business Partner Portal',
+                      'Widoora Business Partner Portal',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -287,7 +287,7 @@ class _VendorAuthScreenState extends State<VendorAuthScreen> {
                 child: Column(
                   children: [
                     const Text(
-                      'New to Riwaaz Partner Network?',
+                      'New to Widoora Partner Network?',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,

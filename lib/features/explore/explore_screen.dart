@@ -8,8 +8,11 @@ import '../vendor_detail/vendor_detail_screen.dart';
 import '../shell/main_shell.dart';
 import '../notifications/customer_notifications_screen.dart';
 
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../controllers/category_controller.dart';
 import '../../core/constants/service_categories.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/service_categories_bar.dart';
 import '../../shared/widgets/app_search_bar.dart';
 
@@ -202,14 +205,180 @@ class _ExploreBodyState extends State<ExploreBody> {
   }
 
   Widget _buildServiceGrid() {
-    final query = _searchController.text.trim().toLowerCase();
+    final categoryCtrl = Get.isRegistered<CategoryController>()
+        ? CategoryController.to
+        : Get.put(CategoryController(), permanent: true);
+
+    return Obx(() {
+      final query = _searchController.text.trim().toLowerCase();
+      final allCategories = categoryCtrl.serviceCategories;
+      final isLoading = categoryCtrl.isLoading.value;
+
+      if (isLoading && allCategories.isEmpty) {
+        return _buildCategoriesLoadingSkeleton();
+      }
+
+      if (allCategories.isEmpty) {
+        return _buildEmptyCategories(categoryCtrl);
+      }
+
+      return _buildServiceGridContent(allCategories, query);
+    });
+  }
+
+  Widget _buildCategoriesLoadingSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Browse Categories', style: AppTextStyles.headlineSmall),
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.90,
+            ),
+            itemCount: 6,
+            itemBuilder: (context, index) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.grey.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.greyLight.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 60,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.greyLight.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCategories(CategoryController ctrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.grey.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.category_outlined, size: 36, color: AppColors.grey),
+            const SizedBox(height: 8),
+            Text(
+              'No categories available from server',
+              style: GoogleFonts.cormorantGaramond(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Categories will appear here once loaded from the server.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => ctrl.fetchCategories(forceRefresh: true),
+              icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.primary),
+              label: const Text(
+                'Refresh Categories',
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceGridContent(List<ServiceCategoryItem> source, String query) {
     final displayedCategories = query.isEmpty
-        ? kServiceCategories
-        : kServiceCategories
+        ? source
+        : source
             .where((c) =>
                 c.title.toLowerCase().contains(query) ||
                 c.desc.toLowerCase().contains(query))
             .toList();
+
+    if (displayedCategories.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Browse Categories', style: AppTextStyles.headlineSmall),
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'No categories match "$query"',
+                  style: const TextStyle(color: AppColors.grey),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -220,6 +389,16 @@ class _ExploreBodyState extends State<ExploreBody> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Browse Categories', style: AppTextStyles.headlineSmall),
+              if (Get.isRegistered<CategoryController>() &&
+                  CategoryController.to.isLoading.value)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 10),
@@ -450,14 +629,13 @@ class _ExploreBodyState extends State<ExploreBody> {
                   child: SizedBox(
                     height: 145,
                     width: double.infinity,
-                    child: Image.asset(
-                      imagePath,
+                    child: CachedImageView(
+                      imageUrl: imagePath,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.primaryDark,
-                        child: const Icon(Icons.image_rounded,
-                            color: Colors.white54, size: 36),
-                      ),
+                      fallbackIcon: Icons.image_rounded,
+                      iconColor: Colors.white54,
+                      iconSize: 36,
+                      backgroundColor: AppColors.primaryDark,
                     ),
                   ),
                 ),

@@ -89,7 +89,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'RIWAAZ PARTNER',
+          'WIDOORA PARTNER',
           style: GoogleFonts.cormorantGaramond(
             fontSize: 19,
             fontWeight: FontWeight.w700,
@@ -128,7 +128,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Register as a vendor on Riwaaz & connect with thousands of couples planning events',
+                  'Register as a vendor on Widoora & connect with thousands of couples planning events',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: AppColors.darkGrey,
@@ -404,7 +404,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 // Terms disclaimer
                 Center(
                   child: Text(
-                    'By continuing, you agree to Riwaaz Partner Terms, Commission Policy & Code of Conduct.',
+                    'By continuing, you agree to Widoora Partner Terms, Commission Policy & Code of Conduct.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11.5,

@@ -1,11 +1,15 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/cached_image_view.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../auth/unified_login_screen.dart';
+import '../shell/main_shell.dart';
+import '../vendor_panel/vendor_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -90,6 +94,31 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
     _contentController.forward();
+
+    // Check existing logged-in session
+    final storage = StorageHelper();
+    final isLoggedIn = storage.getIsLoggedIn();
+    final token = storage.getAccessToken();
+
+    if (isLoggedIn == true && token != null && token.isNotEmpty) {
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+      final roleId = storage.getRoleId();
+      if (roleId == 4) {
+        // Vendor Partner
+        Navigator.of(context).pushReplacement(
+          FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
+        );
+      } else {
+        // Customer (roleId: 2)
+        Navigator.of(context).pushReplacement(
+          FadeScaleRoute(page: const MainShell(initialIndex: 0)),
+        );
+      }
+      return;
+    }
+
+    // If not logged in, present Get Started button
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     _btnController.forward();
@@ -159,14 +188,14 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _contentOpacity,
                       child: Column(
                         children: [
-                          // Riwaaz title with ornaments
+                          // Widoora title with ornaments
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               _buildOrnament(),
                               const SizedBox(width: 12),
                               Text(
-                                'Riwaaz',
+                                'Widoora',
                                 style: AppTextStyles.brandTitle.copyWith(
                                   letterSpacing: 2.0,
                                   shadows: [
@@ -267,43 +296,37 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildLogo() {
     return Container(
-      width: 130,
-      height: 130,
+      width: 140,
+      height: 140,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary,
         shape: BoxShape.circle,
+        color: AppColors.white.withValues(alpha: 0.08),
         border: Border.all(
           color: AppColors.secondary.withValues(alpha: 0.6),
           width: 2.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.secondary.withValues(alpha: 0.25),
+            color: AppColors.secondary.withValues(alpha: 0.35),
             blurRadius: 30,
             spreadRadius: 4,
           ),
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 18,
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Center(
-        child: Text(
-          'R',
-          style: GoogleFonts.cormorantGaramond(
-            fontSize: 76,
-            fontWeight: FontWeight.w700,
-            color: AppColors.white,
-            height: 1.0,
-            shadows: [
-              Shadow(
-                color: AppColors.secondary.withValues(alpha: 0.3),
-                blurRadius: 10,
-              ),
-            ],
-          ),
+        child: CachedImageView(
+          imageUrl: AppImages.widooraLogo,
+          width: 110,
+          height: 110,
+          fit: BoxFit.contain,
+          fallbackIcon: Icons.favorite_rounded,
+          iconColor: AppColors.gold,
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../vendor_panel/vendor_shell.dart';
 import 'controllers/vendor_registration_controller.dart';
 
@@ -202,14 +203,13 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        AppImages.exploreDecoration,
+                      CachedImageView(
+                        imageUrl: AppImages.exploreDecoration,
                         fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Container(
-                          color: AppColors.cream,
-                          child: const Icon(Icons.celebration_rounded,
-                              size: 48, color: AppColors.gold),
-                        ),
+                        fallbackIcon: Icons.celebration_rounded,
+                        iconColor: AppColors.gold,
+                        iconSize: 48,
+                        backgroundColor: AppColors.cream,
                       ),
                       Container(
                         decoration: BoxDecoration(
@@ -228,7 +228,7 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                         left: 16,
                         right: 16,
                         child: Text(
-                          'Verified Riwaaz partners get 4x more customer bookings & inquiries',
+                          'Verified Widoora partners get 4x more customer bookings & inquiries',
                           style: TextStyle(
                             color: AppColors.white,
                             fontSize: 13,
@@ -348,7 +348,7 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
       },
       {
         'title': 'Approved',
-        'sub': 'Live on\nRiwaaz',
+        'sub': 'Live on\nWidoora',
         'state': 'pending',
         'icon': Icons.celebration_outlined,
       },

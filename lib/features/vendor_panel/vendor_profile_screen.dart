@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../auth/controllers/auth_controller.dart';
 import '../auth/unified_login_screen.dart';
 import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
@@ -88,14 +91,13 @@ class VendorProfileScreen extends StatelessWidget {
                           ),
                         ),
                         child: ClipOval(
-                          child: Image.asset(
-                            AppImages.vendorRoyalClick,
+                          child: CachedImageView(
+                            imageUrl: AppImages.vendorRoyalClick,
                             fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) => Container(
-                              color: AppColors.primary,
-                              child: const Icon(Icons.camera_alt,
-                                  color: AppColors.white, size: 36),
-                            ),
+                            fallbackIcon: Icons.camera_alt,
+                            iconColor: AppColors.white,
+                            iconSize: 36,
+                            backgroundColor: AppColors.primary,
                           ),
                         ),
                       ),
@@ -116,7 +118,7 @@ class VendorProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '${StorageHelper().getUserName()?.trim().isNotEmpty == true ? StorageHelper().getUserName()! : 'Your Business'} 👑',
+                    '${StorageHelper().getUserName()?.trim().isNotEmpty == true ? StorageHelper().getUserName()! : 'Royal Click Studio'} 👑',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -323,7 +325,7 @@ class VendorProfileScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                'Riwaaz Vendor Partner v1.0.4 • Direct Celebrations Marketplace',
+                'Widoora Vendor Partner v1.0.4 • Direct Celebrations Marketplace',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppColors.grey.withValues(alpha: 0.8),
@@ -393,7 +395,7 @@ class VendorProfileScreen extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Riwaaz Partner Privacy',
+              'Last Updated: September 2026 • Widoora Partner Privacy',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
@@ -405,7 +407,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.shield_rounded,
                     title: '1. Commitment to Partner Privacy',
                     content:
-                        'Riwaaz values our vendor partners. We collect only necessary business data required to display your services, portfolio, and connect you with event hosts.',
+                        'Widoora values our vendor partners. We collect only necessary business data required to display your services, portfolio, and connect you with event hosts.',
                   ),
                   _buildPolicySection(
                     icon: Icons.storefront_rounded,
@@ -417,7 +419,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.handshake_rounded,
                     title: '3. Direct In-Person Settlements & No Commission',
                     content:
-                        'Riwaaz does not collect platform commissions from your event fees, nor do we process client booking funds. Clients settle 100% of agreed fees directly with you in person. We do not store your bank credentials.',
+                        'Widoora does not collect platform commissions from your event fees, nor do we process client booking funds. Clients settle 100% of agreed fees directly with you in person. We do not store your bank credentials.',
                   ),
                   _buildPolicySection(
                     icon: Icons.phone_forwarded_rounded,
@@ -441,7 +443,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.contact_support_rounded,
                     title: '7. Partner Support & Grievances',
                     content:
-                        'For inquiries regarding your listings, verification, or data privacy, contact our vendor relations team at partner-support@riwaazweddings.in.',
+                        'For inquiries regarding your listings, verification, or data privacy, contact our vendor relations team at partner-support@widooraweddings.in.',
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -521,7 +523,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.handshake_outlined,
                     title: '1. Vendor Partner Agreement',
                     content:
-                        'By creating a vendor profile or purchasing a membership plan on Riwaaz, you agree to these Vendor Terms and Conditions and represent that you are an authorized representative of your business.',
+                        'By creating a vendor profile or purchasing a membership plan on Widoora, you agree to these Vendor Terms and Conditions and represent that you are an authorized representative of your business.',
                   ),
                   _buildPolicySection(
                     icon: Icons.verified_rounded,
@@ -533,7 +535,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.payments_outlined,
                     title: '3. Direct In-Person Settlements & Zero Commission',
                     content:
-                        'Riwaaz is an event discovery marketplace. All client bookings are contracted and paid directly between you and the client in person (cash, UPI, or bank transfer). Riwaaz does not deduct commission from your client payments.',
+                        'Widoora is an event discovery marketplace. All client bookings are contracted and paid directly between you and the client in person (cash, UPI, or bank transfer). Widoora does not deduct commission from your client payments.',
                   ),
                   _buildPolicySection(
                     icon: Icons.phone_forwarded_rounded,
@@ -545,7 +547,7 @@ class VendorProfileScreen extends StatelessWidget {
                     icon: Icons.event_repeat_rounded,
                     title: '5. Rescheduling & Cancellation Terms',
                     content:
-                        'Rescheduling, cancellation terms, and advance retainers are handled directly between you and the client according to your business policy. Riwaaz is not liable for client disputes or refunds.',
+                        'Rescheduling, cancellation terms, and advance retainers are handled directly between you and the client according to your business policy. Widoora is not liable for client disputes or refunds.',
                   ),
                   _buildPolicySection(
                     icon: Icons.workspace_premium_rounded,
@@ -600,8 +602,13 @@ class VendorProfileScreen extends StatelessWidget {
             child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              await StorageHelper().clearSession();
+              if (Get.isRegistered<AuthController>()) {
+                await Get.find<AuthController>().logout();
+              }
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,
@@ -894,7 +901,7 @@ class VendorProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    '• No Bank Payout Delays: Riwaaz does not hold escrow or bank payouts. 100% of the client payment belongs directly to you.',
+                    '• No Bank Payout Delays: Widoora does not hold escrow or bank payouts. 100% of the client payment belongs directly to you.',
                     style: TextStyle(
                         fontSize: 12,
                         color: AppColors.darkGrey,

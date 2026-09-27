@@ -532,7 +532,7 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
                           );
                         },
                         child: const Text(
-                          'Register or Login as Riwaaz Vendor →',
+                          'Register or Login as Widoora Vendor →',
                           style: TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,

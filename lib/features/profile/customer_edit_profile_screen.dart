@@ -36,7 +36,9 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
     super.initState();
     final storage = StorageHelper();
     _nameCtrl = TextEditingController(
-        text: storage.getUserName() ?? '');
+        text: (storage.getUserName()?.isNotEmpty == true)
+            ? storage.getUserName()!
+            : 'Simran Kaur');
     _partnerCtrl = TextEditingController();
     _eventCityCtrl = TextEditingController();
     _eventDateCtrl = TextEditingController();

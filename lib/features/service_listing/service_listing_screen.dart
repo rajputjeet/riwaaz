@@ -8,8 +8,11 @@ import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
 import '../vendor_detail/vendor_detail_screen.dart';
 import '../shell/main_shell.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../controllers/category_controller.dart';
 import '../../shared/widgets/app_search_bar.dart';
+import '../../shared/widgets/cached_image_view.dart';
 
 class ServiceListingScreen extends StatefulWidget {
   final String category;
@@ -827,6 +830,10 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   }
 
   Widget _buildCategoryFilterBar() {
+    final categories = Get.isRegistered<CategoryController>()
+        ? CategoryController.to.serviceCategories
+        : <ServiceCategoryItem>[];
+
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFFAF2E9),
@@ -841,7 +848,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          itemCount: kServiceCategories.length + 1,
+          itemCount: categories.length + 1,
           separatorBuilder: (context, index) => const SizedBox(width: 8),
           itemBuilder: (context, i) {
             if (i == 0) {
@@ -907,7 +914,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               );
             }
 
-            final cat = kServiceCategories[i - 1];
+            final cat = categories[i - 1];
             final isSelected =
                 _currentCategory.toLowerCase() == cat.title.toLowerCase();
             return GestureDetector(
@@ -948,9 +955,18 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(cat.icon,
-                        size: 14,
-                        color: isSelected ? Colors.white : cat.color),
+                    cat.hasServerIcon
+                        ? CachedImageView(
+                            imageUrl: cat.iconUrl,
+                            width: 14,
+                            height: 14,
+                            fit: BoxFit.contain,
+                            fallbackIcon: cat.icon,
+                            iconColor: isSelected ? Colors.white : cat.color,
+                          )
+                        : Icon(cat.icon,
+                            size: 14,
+                            color: isSelected ? Colors.white : cat.color),
                     const SizedBox(width: 5),
                     Text(
                       cat.title.split(' & ').first,
@@ -974,6 +990,10 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   }
 
   Widget _buildHeader() {
+    final categories = Get.isRegistered<CategoryController>()
+        ? CategoryController.to.serviceCategories
+        : <ServiceCategoryItem>[];
+
     final isAll = _currentCategory.toLowerCase() == 'all';
     final activeCat = isAll
         ? const ServiceCategoryItem(
@@ -985,10 +1005,17 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
             bgColor: Color(0xFFFBF4ED),
             desc: 'Browse all wedding, party, and event vendors.',
           )
-        : kServiceCategories.firstWhere(
-            (c) => c.title.toLowerCase() == _currentCategory.toLowerCase(),
-            orElse: () => kServiceCategories.first,
-          );
+        : (categories.firstWhereOrNull(
+                (c) => c.title.toLowerCase() == _currentCategory.toLowerCase()) ??
+            ServiceCategoryItem(
+              id: 0,
+              title: _currentCategory,
+              icon: Icons.storefront_rounded,
+              colorClass: 'cat-custom',
+              color: AppColors.primary,
+              bgColor: const Color(0xFFFBF4ED),
+              desc: 'Vendors in $_currentCategory',
+            ));
 
     return Container(
       decoration: BoxDecoration(
@@ -1071,11 +1098,22 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                                   color: activeCat.color.withValues(alpha: 0.35),
                                 ),
                               ),
-                              child: Icon(
-                                activeCat.icon,
-                                size: 13,
-                                color: activeCat.color,
-                              ),
+                              child: activeCat.hasServerIcon
+                                  ? Center(
+                                      child: CachedImageView(
+                                        imageUrl: activeCat.iconUrl,
+                                        width: 13,
+                                        height: 13,
+                                        fit: BoxFit.contain,
+                                        fallbackIcon: activeCat.icon,
+                                        iconColor: activeCat.color,
+                                      ),
+                                    )
+                                  : Icon(
+                                      activeCat.icon,
+                                      size: 13,
+                                      color: activeCat.color,
+                                    ),
                             ),
                             const SizedBox(width: 6),
                             Flexible(
@@ -1247,14 +1285,13 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.asset(
-                          vendor.imagePath,
+                        CachedImageView(
+                          imageUrl: vendor.imagePath,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: AppColors.primaryDark,
-                            child: const Icon(Icons.camera_alt_rounded,
-                                color: Colors.white54, size: 40),
-                          ),
+                          fallbackIcon: Icons.camera_alt_rounded,
+                          iconColor: Colors.white54,
+                          iconSize: 40,
+                          backgroundColor: AppColors.primaryDark,
                         ),
                         // Subtle dark overlay at the bottom for badge readability
                         Positioned(

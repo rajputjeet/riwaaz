@@ -86,7 +86,7 @@ class _VendorSubscriptionPlanScreenState
         'Annual Royal Verified Partner Badge',
         'Unlimited Direct Bride & Groom Leads',
         'Guaranteed Top 3 City Banner Ranking',
-        'Social Media Spotlight on Riwaaz Instagram',
+        'Social Media Spotlight on Widoora Instagram',
         '0% Commission on all client bookings',
         'Instant Priority SMS & Push lead alerts',
         'Personalized brand promotional video',
@@ -377,7 +377,7 @@ class _VendorSubscriptionPlanScreenState
                     Icon(Icons.shield_outlined, size: 14, color: AppColors.grey),
                     SizedBox(width: 4),
                     Text(
-                      '256-Bit SSL Encrypted • Powered by Riwaaz Pay',
+                      '256-Bit SSL Encrypted • Powered by Widoora Pay',
                       style: TextStyle(fontSize: 11, color: AppColors.grey),
                     ),
                   ],
@@ -1119,7 +1119,7 @@ class _VendorSubscriptionPlanScreenState
           _FaqItem(
             question: 'What is the 0% commission guarantee on 12 Months?',
             answer:
-                'On our 12 Months Annual plan, Riwaaz takes zero commission on your client contracts and booking fees.',
+                'On our 12 Months Annual plan, Widoora takes zero commission on your client contracts and booking fees.',
           ),
         ],
       ),

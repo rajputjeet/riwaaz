@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../auth/vendor_auth_screen.dart';
 import '../auth/portal_selection_screen.dart';
 import 'vendor_registration_wizard_screen.dart';
@@ -59,7 +60,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
             const Icon(Icons.diamond_rounded, color: AppColors.primary, size: 20),
             const SizedBox(width: 6),
             Text(
-              'RIWAAZ',
+              'WIDOORA',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -161,16 +162,13 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
                             child: SizedBox(
                               height: 220,
                               width: double.infinity,
-                              child: Image.asset(
-                                AppImages.weddingHero,
+                              child: CachedImageView(
+                                imageUrl: AppImages.weddingHero,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  color: AppColors.primaryLight,
-                                  child: const Center(
-                                    child: Icon(Icons.people_alt_rounded,
-                                        size: 64, color: AppColors.cream),
-                                  ),
-                                ),
+                                fallbackIcon: Icons.people_alt_rounded,
+                                iconColor: AppColors.cream,
+                                iconSize: 64,
+                                backgroundColor: AppColors.primaryLight,
                               ),
                             ),
                           ),
@@ -211,7 +209,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
                                           color: AppColors.white, size: 14),
                                       const SizedBox(width: 4),
                                       const Text(
-                                        'RIWAAZ',
+                                        'WIDOORA',
                                         style: TextStyle(
                                           color: AppColors.white,
                                           fontSize: 12,
@@ -244,7 +242,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
                         ],
                       ),
 
-                      // Join Riwaaz as a Vendor text
+                      // Join Widoora as a Vendor text
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
@@ -255,7 +253,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: 'Join Riwaaz as\n',
+                                    text: 'Join Widoora as\n',
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w800,
@@ -397,7 +395,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
 
               const SizedBox(height: 32),
 
-              // Why Join RIWAAZ Section
+              // Why Join WIDOORA Section
               _buildWhyJoinSection(),
 
               const SizedBox(height: 24),
@@ -438,7 +436,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
               ),
               const SizedBox(width: 8),
               const Text(
-                'Why Join RIWAAZ?',
+                'Why Join WIDOORA?',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -524,7 +522,7 @@ class _VendorWelcomeScreenState extends State<VendorWelcomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Join thousands of successful vendors on RIWAAZ',
+              'Join thousands of successful vendors on WIDOORA',
               style: TextStyle(
                 color: AppColors.cream,
                 fontSize: 12,

@@ -206,7 +206,7 @@ class _VendorOtpVerificationScreenState
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'RIWAAZ PARTNER',
+          'WIDOORA PARTNER',
           style: GoogleFonts.cormorantGaramond(
             fontSize: 18,
             fontWeight: FontWeight.w700,

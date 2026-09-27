@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../auth/controllers/auth_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
 import '../auth/unified_login_screen.dart';
@@ -1029,7 +1031,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Pay the vendor directly in person on the event day or upon agreement. Riwaaz does not charge fees or collect payments from users.',
+                            'Pay the vendor directly in person on the event day or upon agreement. Widoora does not charge fees or collect payments from users.',
                             style: TextStyle(
                               fontSize: 11,
                               color: Color(0xFF166534),
@@ -2140,7 +2142,7 @@ class _CustomerProfileTab extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Riwaaz User Privacy',
+              'Last Updated: September 2026 • Widoora User Privacy',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
@@ -2152,7 +2154,7 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.shield_rounded,
                     title: '1. Commitment to User Privacy',
                     content:
-                        'Riwaaz values your personal privacy. We collect only essential information required to help you discover, coordinate, and organize your wedding and special events seamlessly.',
+                        'Widoora values your personal privacy. We collect only essential information required to help you discover, coordinate, and organize your wedding and special events seamlessly.',
                   ),
                   _buildPolicySection(
                     icon: Icons.person_search_rounded,
@@ -2164,13 +2166,13 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.handshake_rounded,
                     title: '3. In-Person Payments & No Banking Data Collection',
                     content:
-                        'Clients do NOT pay vendors through the Riwaaz application. All event transactions, advance deposits, and final settlements happen directly in person between you and the vendor. Riwaaz does not collect, process, or store your credit card, debit card, or net banking credentials.',
+                        'Clients do NOT pay vendors through the Widoora application. All event transactions, advance deposits, and final settlements happen directly in person between you and the vendor. Widoora does not collect, process, or store your credit card, debit card, or net banking credentials.',
                   ),
                   _buildPolicySection(
                     icon: Icons.phone_forwarded_rounded,
                     title: '4. Direct Communication via Call & WhatsApp',
                     content:
-                        'The Riwaaz application does not support built-in chat. When a booking request is accepted by a vendor, direct contact details (Phone Call and WhatsApp) are unlocked so you can coordinate directly.',
+                        'The Widoora application does not support built-in chat. When a booking request is accepted by a vendor, direct contact details (Phone Call and WhatsApp) are unlocked so you can coordinate directly.',
                   ),
                   _buildPolicySection(
                     icon: Icons.lock_outline_rounded,
@@ -2188,7 +2190,7 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.contact_support_rounded,
                     title: '7. Privacy Inquiries & Support',
                     content:
-                        'For any privacy concerns, data inquiries, or grievance redressal, reach out to our privacy officer at privacy@riwaazweddings.in.',
+                        'For any privacy concerns, data inquiries, or grievance redressal, reach out to our privacy officer at privacy@widooraweddings.in.',
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -2268,19 +2270,19 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.check_circle_outline_rounded,
                     title: '1. Acceptance of Terms',
                     content:
-                        'By downloading, accessing, or using the Riwaaz app, you agree to comply with and be legally bound by these Terms and Conditions.',
+                        'By downloading, accessing, or using the Widoora app, you agree to comply with and be legally bound by these Terms and Conditions.',
                   ),
                   _buildPolicySection(
                     icon: Icons.storefront_rounded,
                     title: '2. Platform Marketplace Role',
                     content:
-                        'Riwaaz is a discovery platform connecting event organizers, couples, and hosts with independent event professionals (venues, photographers, decorators, caterers, DJs, etc.). Riwaaz is not an employer or principal of any vendor.',
+                        'Widoora is a discovery platform connecting event organizers, couples, and hosts with independent event professionals (venues, photographers, decorators, caterers, DJs, etc.). Widoora is not an employer or principal of any vendor.',
                   ),
                   _buildPolicySection(
                     icon: Icons.payments_outlined,
                     title: '3. In-Person Payments & Direct Contracts',
                     content:
-                        'Riwaaz is an event discovery and booking connection platform. The application does not support built-in chat or app money transfers. Once a vendor accepts your booking, their direct Call and WhatsApp contact details are unlocked. All service contracts and package fees are settled directly in person between you and the vendor.',
+                        'Widoora is an event discovery and booking connection platform. The application does not support built-in chat or app money transfers. Once a vendor accepts your booking, their direct Call and WhatsApp contact details are unlocked. All service contracts and package fees are settled directly in person between you and the vendor.',
                   ),
                   _buildPolicySection(
                     icon: Icons.assignment_turned_in_rounded,
@@ -2292,7 +2294,7 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.event_repeat_rounded,
                     title: '5. Cancellations & Rescheduling',
                     content:
-                        'Policies regarding date rescheduling, cancellations, and advance retention are determined strictly by mutual contract between the host and vendor. Riwaaz is not liable for vendor refund disputes.',
+                        'Policies regarding date rescheduling, cancellations, and advance retention are determined strictly by mutual contract between the host and vendor. Widoora is not liable for vendor refund disputes.',
                   ),
                   _buildPolicySection(
                     icon: Icons.person_remove_rounded,
@@ -2304,7 +2306,7 @@ class _CustomerProfileTab extends StatelessWidget {
                     icon: Icons.balance_rounded,
                     title: '7. Limitation of Liability & Jurisdiction',
                     content:
-                        'Riwaaz provides vendor listings on an "as-is" basis. Any disputes arising out of the use of the platform shall be governed by the laws of India and subject to the jurisdiction of courts in Chandigarh.',
+                        'Widoora provides vendor listings on an "as-is" basis. Any disputes arising out of the use of the platform shall be governed by the laws of India and subject to the jurisdiction of courts in Chandigarh.',
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -2332,7 +2334,7 @@ class _CustomerProfileTab extends StatelessWidget {
           ],
         ),
         content: const Text(
-          'Are you sure you want to log out of Riwaaz? You can sign back in anytime.',
+          'Are you sure you want to log out of Widoora? You can sign back in anytime.',
           style: TextStyle(fontSize: 14, color: AppColors.darkGrey),
         ),
         actions: [
@@ -2341,8 +2343,13 @@ class _CustomerProfileTab extends StatelessWidget {
             child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              await StorageHelper().clearSession();
+              if (Get.isRegistered<AuthController>()) {
+                await Get.find<AuthController>().logout();
+              }
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,
@@ -2731,7 +2738,7 @@ class _CustomerProfileTab extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                'Riwaaz v1.0.4 • Direct Celebrations Marketplace',
+                'Widoora v1.0.4 • Direct Celebrations Marketplace',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppColors.grey.withValues(alpha: 0.8),

@@ -16,6 +16,7 @@ class StorageHelper {
   static const String _applicationId    = "applicationId";
   static const String _applicationStatus= "applicationStatus";
   static const String _userModel        = "userModel";
+  static const String _vendorDraft      = "vendorDraft";
 
   static final StorageHelper _singleton = StorageHelper._internal();
 
@@ -125,6 +126,30 @@ class StorageHelper {
     }
   }
 
+  // ── Vendor Onboarding Draft ────────────────────────────────────────────────
+  Future<void> saveVendorDraft(Map<String, dynamic>? draft) async {
+    if (draft == null) {
+      await _savePref(_vendorDraft, null);
+    } else {
+      await _savePref(_vendorDraft, jsonEncode(draft));
+    }
+  }
+
+  Map<String, dynamic>? getVendorDraft() {
+    final raw = _prefsInstance?.getString(_vendorDraft);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearVendorDraft() async {
+    if (_prefsInstance == null) return;
+    await _prefsInstance!.remove(_vendorDraft);
+  }
+
   // ── Session Clear ──────────────────────────────────────────────────────────
 
   Future<void> clearSession() async {
@@ -139,6 +164,7 @@ class StorageHelper {
       _prefsInstance!.remove(_userModel),
       _prefsInstance!.remove(_applicationId),
       _prefsInstance!.remove(_applicationStatus),
+      _prefsInstance!.remove(_vendorDraft),
     ]);
   }
 }

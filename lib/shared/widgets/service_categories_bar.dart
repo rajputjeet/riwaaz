@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
 import '../../features/service_listing/service_listing_screen.dart';
+import 'cached_image_view.dart';
 
 /// Reusable squircle icon wrap matching `.service-icon-wrap`
-/// - Width/Height: 72px (or custom size)
+/// - Width/Height: 70px (or custom size)
 /// - BorderRadius: 18px
 /// - Soft tinted background matching the category
-/// - Distinct colorful icon with soft shadow
+/// - Dynamic server icon image via [CachedImageView] with graceful fallback to IconData
 class ServiceIconWrap extends StatelessWidget {
   final ServiceCategoryItem item;
   final double size;
@@ -54,11 +57,21 @@ class ServiceIconWrap extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: Icon(
-          item.icon,
-          color: item.color,
-          size: iconSize,
-        ),
+        child: item.hasServerIcon
+            ? CachedImageView(
+                imageUrl: item.iconUrl,
+                width: iconSize,
+                height: iconSize,
+                fit: BoxFit.contain,
+                fallbackIcon: item.icon,
+                iconColor: item.color,
+                iconSize: iconSize,
+              )
+            : Icon(
+                item.icon,
+                color: item.color,
+                size: iconSize,
+              ),
       ),
     );
   }
@@ -66,20 +79,103 @@ class ServiceIconWrap extends StatelessWidget {
 
 /// Horizontal scroll bar for categories with royal dark maroon background
 /// directly matching the reference screenshot.
+/// Dynamically updates from [CategoryController] with server icons.
 class ServiceCategoriesHorizontalBar extends StatelessWidget {
   final String? selectedCategory;
   final ValueChanged<ServiceCategoryItem>? onCategorySelected;
   final bool showHeader;
+  final List<ServiceCategoryItem>? customCategories;
 
   const ServiceCategoriesHorizontalBar({
     super.key,
     this.selectedCategory,
     this.onCategorySelected,
     this.showHeader = true,
+    this.customCategories,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (customCategories != null) {
+      return _buildBar(context, customCategories!);
+    }
+
+    final categoryCtrl = Get.isRegistered<CategoryController>()
+        ? CategoryController.to
+        : null;
+
+    if (categoryCtrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Obx(() {
+      final categories = categoryCtrl.serviceCategories;
+      final isLoading = categoryCtrl.isLoading.value;
+
+      if (isLoading && categories.isEmpty) {
+        return _buildLoadingBar();
+      }
+
+      if (categories.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return _buildBar(context, categories);
+    });
+  }
+
+  Widget _buildLoadingBar() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF26050E),
+            Color(0xFF1E040B),
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: SizedBox(
+        height: 108,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 5,
+          separatorBuilder: (context, index) => const SizedBox(width: 14),
+          itemBuilder: (context, index) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 50,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBar(BuildContext context, List<ServiceCategoryItem> categories) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -128,7 +224,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '15 Services',
+                    '${categories.length} Services',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -146,10 +242,10 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              itemCount: kServiceCategories.length,
+              itemCount: categories.length,
               separatorBuilder: (context, index) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
-                final cat = kServiceCategories[index];
+                final cat = categories[index];
                 final isSelected = selectedCategory == cat.title;
 
                 return GestureDetector(

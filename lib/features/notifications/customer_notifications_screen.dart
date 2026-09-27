@@ -30,7 +30,7 @@ class _CustomerNotificationsScreenState
       'id': 'cust_2',
       'title': 'Pay In Person Reminder',
       'message':
-          'Riwaaz protects your budget. No advance is paid on the app. Pay your vendor directly in cash, UPI, or bank transfer.',
+          'Widoora protects your budget. No advance is paid on the app. Pay your vendor directly in cash, UPI, or bank transfer.',
       'time': 'Yesterday',
       'icon': Icons.handshake_rounded,
       'color': AppColors.success,

@@ -74,6 +74,7 @@ void main() {
     // 4. Vendor accepts the booking
     await tester.tap(find.text('Accept Booking').first);
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
 
     // Verify service state updated to Confirmed
     expect(service.pendingCount, equals(initialPending));
@@ -96,5 +97,8 @@ void main() {
 
     // Verify no Chat button exists
     expect(find.text('Chat'), findsNothing);
+
+    // Unmount widget tree to clean up any timers
+    await tester.pumpWidget(const SizedBox());
   });
 }

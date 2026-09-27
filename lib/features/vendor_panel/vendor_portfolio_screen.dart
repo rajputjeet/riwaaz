@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
+import '../../shared/widgets/cached_image_view.dart';
 
 class VendorPortfolioScreen extends StatefulWidget {
   const VendorPortfolioScreen({super.key});
@@ -130,14 +133,12 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        _photos[index],
+                      CachedImageView(
+                        imageUrl: _photos[index],
                         fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => Container(
-                          color: AppColors.cream,
-                          child: const Icon(Icons.image,
-                              color: AppColors.gold),
-                        ),
+                        fallbackIcon: Icons.image,
+                        iconColor: AppColors.gold,
+                        backgroundColor: AppColors.cream,
                       ),
                       Positioned(
                         top: 6,
@@ -292,12 +293,19 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  items: [
-                    'Wedding & Gala',
-                    'Pre-Wedding Shoot',
-                    'Sangeet & Mehendi',
-                    'Reception Night',
-                  ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: (Get.isRegistered<CategoryController>() &&
+                          CategoryController.to.serviceCategories.isNotEmpty
+                      ? CategoryController.to.serviceCategories.map((c) => c.title).toList()
+                      : [
+                          'Wedding & Gala',
+                          'Pre-Wedding Shoot',
+                          'Sangeet & Mehendi',
+                          'Reception Night',
+                          'Banquet Halls & Hotels',
+                          'Photography & Videography',
+                          'Makeup & Hair',
+                          'Decorators',
+                        ]).map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (val) {
                     if (val != null) setSheetState(() => eventType = val);
                   },

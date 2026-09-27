@@ -18,7 +18,8 @@ class AppImages {
   static const String vendorDetailHero = '$_base/vendor_detail_hero.jpg';
 
   // Brand / App wide
-  static const String shaadihubLogo = '$_base/shaadihub_logo.jpg';
+  static const String widooraLogo   = '$_base/widoora_logo.png';
+  static const String shaadihubLogo = '$_base/widoora_logo.png';
   static const String weddingHero   = '$_base/wedding_hero.jpg';
   static const String riwaazCouple  = '$_base/riwaaz_couple.png';
 }

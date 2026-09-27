@@ -1,6 +1,6 @@
 // App strings
 class AppStrings {
-  static const String appName = 'Riwaaz';
+  static const String appName = 'Widoora';
   static const String tagline = 'Everything You Need to Make Your Event Special';
   static const String splashSubtitle = 'Everything You Need to Make Your Event Special';
 

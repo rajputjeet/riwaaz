@@ -1,8 +1,8 @@
 const bool isProdMode = false;
 
 abstract class ApiConstants {
-  static const String _prodUrl = "http://192.168.1.8:5174";
-  static const String _localUrl = "http://192.168.1.8:5174";
+  static const String _prodUrl = "https://wedora-pgc7.onrender.com";
+  static const String _localUrl = "https://wedora-pgc7.onrender.com";
 
   static const String baseUrl = isProdMode ? _prodUrl : _localUrl;
 

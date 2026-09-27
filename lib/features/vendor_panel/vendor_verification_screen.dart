@@ -71,7 +71,7 @@ class VendorVerificationScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    isVerified || appStatus == 'Approved'
+                    isVerified || appStatus == 'Approved' || appStatus == 'Active'
                         ? '100% Verified Partner'
                         : 'Application Under Review',
                     style: const TextStyle(
@@ -93,13 +93,13 @@ class VendorVerificationScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isVerified || appStatus == 'Approved'
+                      color: isVerified || appStatus == 'Approved' || appStatus == 'Active'
                           ? AppColors.success
                           : AppColors.warning,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      isVerified || appStatus == 'Approved'
+                      isVerified || appStatus == 'Approved' || appStatus == 'Active'
                           ? 'STATUS: ACTIVE & TRUSTED'
                           : 'STATUS: ${appStatus.toUpperCase()}',
                       style: const TextStyle(
@@ -163,7 +163,7 @@ class VendorVerificationScreen extends StatelessWidget {
               subtitle: '4K Cinema cameras, prime lenses, gimbal gear',
               idNumber: 'GEAR-AUDIT-PASS',
               status: 'Approved ✓',
-              date: 'Verified by Riwaaz QA',
+              date: 'Verified by Widoora QA',
             ),
 
             _buildDocCard(

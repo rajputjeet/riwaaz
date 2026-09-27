@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../data/models/category_model.dart';
 
-/// Represents a wedding service / vendor category in Riwaaz / ShaadiHub.
+/// Represents a wedding service / vendor category in Widoora.
 class ServiceCategoryItem {
   final int id;
+  final String? serverId;
   final String title;
   final IconData icon;
+  final String? iconUrl;
   final String colorClass;
   final Color color;
   final Color bgColor;
@@ -12,13 +15,95 @@ class ServiceCategoryItem {
 
   const ServiceCategoryItem({
     required this.id,
+    this.serverId,
     required this.title,
     required this.icon,
+    this.iconUrl,
     required this.colorClass,
     required this.color,
     required this.bgColor,
     required this.desc,
   });
+
+  bool get hasServerIcon => iconUrl != null && iconUrl!.trim().isNotEmpty;
+
+  ServiceCategoryItem copyWith({
+    int? id,
+    String? serverId,
+    String? title,
+    IconData? icon,
+    String? iconUrl,
+    String? colorClass,
+    Color? color,
+    Color? bgColor,
+    String? desc,
+  }) {
+    return ServiceCategoryItem(
+      id: id ?? this.id,
+      serverId: serverId ?? this.serverId,
+      title: title ?? this.title,
+      icon: icon ?? this.icon,
+      iconUrl: iconUrl ?? this.iconUrl,
+      colorClass: colorClass ?? this.colorClass,
+      color: color ?? this.color,
+      bgColor: bgColor ?? this.bgColor,
+      desc: desc ?? this.desc,
+    );
+  }
+
+  static ServiceCategoryItem? findLocalMatch(String name) {
+    final lower = name.toLowerCase().trim();
+    for (final item in kServiceCategories) {
+      final itemLower = item.title.toLowerCase().trim();
+      if (itemLower == lower ||
+          itemLower.contains(lower) ||
+          lower.contains(itemLower)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  factory ServiceCategoryItem.fromCategoryModel(CategoryModel model, {int index = 0}) {
+    final name = (model.name ?? '').trim();
+    final match = findLocalMatch(name);
+
+    if (match != null) {
+      return match.copyWith(
+        id: int.tryParse(model.id ?? '') ?? match.id,
+        serverId: model.id,
+        title: name.isNotEmpty ? name : match.title,
+        iconUrl: model.iconUrl,
+        desc: (model.desc != null && model.desc!.trim().isNotEmpty)
+            ? model.desc!.trim()
+            : match.desc,
+      );
+    }
+
+    const palette = [
+      (Color(0xFFD97706), Color(0xFFFFFBEB), Icons.apartment_rounded),
+      (Color(0xFFE11D48), Color(0xFFFFF1F2), Icons.auto_awesome_rounded),
+      (Color(0xFF059669), Color(0xFFF0FDF4), Icons.front_hand_rounded),
+      (Color(0xFFEA580C), Color(0xFFFFF7ED), Icons.restaurant_rounded),
+      (Color(0xFF7C3AED), Color(0xFFF5F3FF), Icons.local_florist_rounded),
+      (Color(0xFF2563EB), Color(0xFFEFF6FF), Icons.camera_alt_rounded),
+      (Color(0xFF0D9488), Color(0xFFF0FDFA), Icons.music_note_rounded),
+      (Color(0xFFDC2626), Color(0xFFFEF2F2), Icons.local_bar_rounded),
+    ];
+    final p = palette[index % palette.length];
+
+    return ServiceCategoryItem(
+      id: int.tryParse(model.id ?? '') ?? (100 + index),
+      serverId: model.id,
+      title: name.isNotEmpty ? name : 'Category ${index + 1}',
+      icon: p.$3,
+      iconUrl: model.iconUrl,
+      colorClass: 'cat-dynamic',
+      color: p.$1,
+      bgColor: p.$2,
+      desc: model.desc ?? 'Professional wedding and event services.',
+    );
+  }
 }
 
 /// 15 distinct service categories with curated colors, soft-tinted backgrounds,

@@ -87,7 +87,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'RIWAAZ',
+          'WIDOORA',
           style: GoogleFonts.cormorantGaramond(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -404,7 +404,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                 // Terms disclaimer
                 Center(
                   child: Text(
-                    'By signing up, you agree to Riwaaz Terms of Service & Privacy Policy.',
+                    'By signing up, you agree to Widoora Terms of Service & Privacy Policy.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11.5,

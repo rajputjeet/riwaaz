@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
@@ -45,7 +48,18 @@ class _VendorRegistrationWizardScreenState
   String _selectedCategory = 'Photography & Videography';
   final _searchTypeController = TextEditingController();
 
-  List<ServiceCategoryItem> get _businessTypes => kServiceCategories;
+  List<ServiceCategoryItem> get _businessTypes {
+    if (Get.isRegistered<CategoryController>() &&
+        CategoryController.to.serviceCategories.isNotEmpty) {
+      return CategoryController.to.serviceCategories;
+    }
+    if (_vendorController.categories.isNotEmpty) {
+      return _vendorController.categories
+          .map((cat) => ServiceCategoryItem.fromCategoryModel(cat))
+          .toList();
+    }
+    return const [];
+  }
 
   // Step 2 State: Basic Info — pre-filled from storage in initState
   final _businessNameController = TextEditingController();
@@ -131,7 +145,7 @@ class _VendorRegistrationWizardScreenState
         'Annual Royal Verified Partner Badge',
         'Unlimited Direct Bride & Groom Leads',
         'Guaranteed Top 3 City Banner Ranking',
-        'Social Media Spotlight on Riwaaz Instagram',
+        'Social Media Spotlight on Widoora Instagram',
         '0% Commission on all client bookings',
         'Instant Priority SMS & Push lead alerts',
         'Personalized brand promotional video',
@@ -151,13 +165,132 @@ class _VendorRegistrationWizardScreenState
     return (plan['price'] as int?) ?? 4999;
   }
 
-  // Step 3 State: Documents (Bank details removed per user instruction)
-  final Map<String, bool> _documentUploaded = {
-    'Aadhaar / Passport': true,
-    'Business Registration Certificate': true,
-    'Address Proof (Electricity Bill / Rent)': true,
-    'GST Certificate (Optional)': true,
-  };
+  // Step 3 State: Documents with real ImagePickers
+  String? _aadharPath;
+  String? _panPath;
+  String? _businessCertPath;
+  String? _addressProofPath;
+  String? _gstDocPath;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Future<void> _pickDocumentImage(String key, ImageSource source) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      );
+      if (picked != null) {
+        setState(() {
+          if (key == 'aadhar') _aadharPath = picked.path;
+          if (key == 'pan') _panPath = picked.path;
+          if (key == 'businessCert') _businessCertPath = picked.path;
+          if (key == 'addressProof') _addressProofPath = picked.path;
+          if (key == 'gstDoc') _gstDocPath = picked.path;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Document selected: ${picked.name}'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(milliseconds: 1500),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick document: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDocumentSourceSheet(String key, String title) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Upload $title',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select a clear photo or document from your device',
+                style: TextStyle(fontSize: 13, color: AppColors.darkGrey),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _pickDocumentImage(key, ImageSource.camera);
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      label: const Text('Camera', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _pickDocumentImage(key, ImageSource.gallery);
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
+                      label: const Text('Gallery', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   // Step 4 State: Review
   bool _agreedToTerms = true;
@@ -165,6 +298,14 @@ class _VendorRegistrationWizardScreenState
   late final VendorRegistrationController _vendorController;
 
   void _syncCategory(String categoryName) {
+    if (Get.isRegistered<CategoryController>()) {
+      final id = CategoryController.to.resolveCategoryId(categoryName);
+      if (id.isNotEmpty) {
+        _vendorController.selectedCategoryId.value = id;
+        _vendorController.selectedCategoryName.value = categoryName;
+        return;
+      }
+    }
     if (_vendorController.categories.isNotEmpty) {
       final match = _vendorController.categories.firstWhereOrNull(
         (c) =>
@@ -176,6 +317,7 @@ class _VendorRegistrationWizardScreenState
       if (match != null && match.id != null) {
         _vendorController.selectedCategoryId.value = match.id!;
         _vendorController.selectedCategoryName.value = match.name ?? categoryName;
+        return;
       }
     }
   }
@@ -195,90 +337,14 @@ class _VendorRegistrationWizardScreenState
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _currentStep = widget.initialStep;
-    if (widget.initialCategory != null &&
-        widget.initialCategory!.trim().isNotEmpty) {
-      _selectedCategory = widget.initialCategory!.trim();
-    }
-
-    _vendorController = Get.isRegistered<VendorRegistrationController>()
-        ? Get.find<VendorRegistrationController>()
-        : Get.put(VendorRegistrationController());
-
-    _vendorController.fetchCategories().then((_) {
-      if (mounted) _syncCategory(_selectedCategory);
-    });
-    _vendorController.fetchSubscriptions().then((_) {
-      if (mounted) _syncPlan(_selectedPlan);
-    });
-
-    // Pre-fill from widget params first, then fall back to StorageHelper
-    final storage = StorageHelper();
-    _businessNameController.text =
-        (widget.initialBusinessName?.trim().isNotEmpty == true)
-            ? widget.initialBusinessName!
-            : (storage.getUserName() ?? '');
-    _ownerNameController.text =
-        (widget.initialOwnerName?.trim().isNotEmpty == true)
-            ? widget.initialOwnerName!
-            : (storage.getUserName() ?? '');
-    _mobileController.text =
-        (widget.initialPhone?.trim().isNotEmpty == true)
-            ? widget.initialPhone!
-            : (storage.getUserMobile() ?? '');
-    _emailController.text =
-        (widget.initialEmail?.trim().isNotEmpty == true)
-            ? widget.initialEmail!
-            : (storage.getUserEmail() ?? '');
-    if (widget.initialExperience?.trim().isNotEmpty == true) {
-      _experience = widget.initialExperience!.trim();
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchTypeController.dispose();
-    _businessNameController.dispose();
-    _ownerNameController.dispose();
-    _mobileController.dispose();
-    _emailController.dispose();
-    _addressController.dispose();
-    _descriptionController.dispose();
-    _gstController.dispose();
-    super.dispose();
-  }
-
-  void _nextStep() {
-    if (_currentStep == 5) {
-      if (!_isSubscriptionPaid) {
-        _showPaymentSheet();
-        return;
-      }
-      _submitRegistration();
-      return;
-    }
-    if (_currentStep < _totalSteps) {
-      setState(() => _currentStep++);
-    } else {
-      _submitRegistration();
-    }
-  }
-
-  void _prevStep() {
-    if (_currentStep > 1) {
-      setState(() => _currentStep--);
-    } else {
-      Navigator.of(context).pop();
-    }
-  }
-
-  void _submitRegistration() async {
-    // Resolve categoryId
+  String _resolveCategoryId() {
     String categoryId = _vendorController.selectedCategoryId.value;
-    if (categoryId.isEmpty && _vendorController.categories.isNotEmpty) {
+    if (categoryId.isNotEmpty) return categoryId;
+    if (Get.isRegistered<CategoryController>()) {
+      final id = CategoryController.to.resolveCategoryId(_selectedCategory);
+      if (id.isNotEmpty) return id;
+    }
+    if (_vendorController.categories.isNotEmpty) {
       final match = _vendorController.categories.firstWhereOrNull(
         (c) =>
             c.name?.toLowerCase().trim() == _selectedCategory.toLowerCase().trim() ||
@@ -286,13 +352,15 @@ class _VendorRegistrationWizardScreenState
             (c.name != null &&
                 _selectedCategory.toLowerCase().contains(c.name!.toLowerCase().trim())),
       );
-      categoryId = match?.id ?? _vendorController.categories.first.id ?? '';
-      _vendorController.selectedCategoryId.value = categoryId;
+      if (match != null && match.id != null) return match.id!;
     }
+    return '';
+  }
 
-    // Resolve subscriptionPlanId
+  String _resolvePlanId() {
     String planId = _vendorController.selectedSubscriptionPlanId.value;
-    if (planId.isEmpty && _vendorController.subscriptionPlans.isNotEmpty) {
+    if (planId.isNotEmpty) return planId;
+    if (_vendorController.subscriptionPlans.isNotEmpty) {
       final prefix = _selectedPlan.split('_').first;
       final match = _vendorController.subscriptionPlans.firstWhereOrNull(
         (p) =>
@@ -300,9 +368,59 @@ class _VendorRegistrationWizardScreenState
             p.name?.toLowerCase().contains(prefix) == true ||
             p.type?.toLowerCase().contains(prefix) == true,
       );
-      planId = match?.id ?? _vendorController.subscriptionPlans.first.id ?? '';
-      _vendorController.selectedSubscriptionPlanId.value = planId;
+      if (match != null && match.id != null) return match.id!;
+      return _vendorController.subscriptionPlans.first.id ?? '6ab8b8666cfb719e21fbb970';
     }
+    return '6ab8b8666cfb719e21fbb970';
+  }
+
+  void _persistCurrentDraft() {
+    StorageHelper().saveVendorDraft({
+      'step': _currentStep,
+      'category': _selectedCategory,
+      'categoryId': _vendorController.selectedCategoryId.value,
+      'businessName': _businessNameController.text.trim(),
+      'ownerName': _ownerNameController.text.trim(),
+      'mobile': _mobileController.text.trim(),
+      'email': _emailController.text.trim(),
+      'address': _addressController.text.trim(),
+      'experience': _experience,
+      'description': _descriptionController.text.trim(),
+      'gstNumber': _gstController.text.trim(),
+      'aadharPath': _aadharPath,
+      'panPath': _panPath,
+      'businessCertPath': _businessCertPath,
+      'addressProofPath': _addressProofPath,
+      'gstDocPath': _gstDocPath,
+      'selectedPlan': _selectedPlan,
+      'isSubscriptionPaid': _isSubscriptionPaid,
+    });
+  }
+
+  Future<void> _uploadVendorDetailsToServer() async {
+    final categoryId = _resolveCategoryId();
+    final planId = _resolvePlanId();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text('Saving application & documents to server...'),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
     final res = await _vendorController.submitApplication(
       ownerName: _ownerNameController.text.trim().isNotEmpty
@@ -314,19 +432,248 @@ class _VendorRegistrationWizardScreenState
       yearsOfExperience: _experience,
       businessDescription: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
-          : 'Professional wedding services and premium deliverables on Riwaaz.',
+          : 'Professional wedding services and premium deliverables on Widoora.',
       businessAddress: _addressController.text.trim().isNotEmpty
           ? _addressController.text.trim()
           : 'SCO 142, Sector 70, Mohali, Punjab',
       city: 'Mohali',
       gstNumber: _gstController.text.trim(),
-      categoryId: categoryId.isNotEmpty ? categoryId : '6701a2b3c4d5e6f7',
-      subscriptionPlanId: planId.isNotEmpty ? planId : '6702b3c4d5e6f7a8',
+      categoryId: categoryId,
+      categoryName: _selectedCategory,
+      subscriptionPlanId: planId,
+      aadharFile: _aadharPath,
+      panFile: _panPath,
+      businessCertFile: _businessCertPath,
+      addressProofFile: _addressProofPath,
+      gstDocFile: _gstDocPath,
+      isPreliminaryUpload: true,
     );
 
     if (!mounted) return;
 
     if (res.isSuccess == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.cloud_done_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Profile details & documents uploaded to server!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _vendorController = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+
+    _vendorController.fetchCategories().then((_) {
+      if (mounted) {
+        _syncCategory(_selectedCategory);
+        setState(() {});
+      }
+    });
+    _vendorController.fetchSubscriptions().then((_) {
+      if (mounted) {
+        _syncPlan(_selectedPlan);
+        setState(() {});
+      }
+    });
+
+    final storage = StorageHelper();
+    final draft = storage.getVendorDraft();
+
+    if (draft != null) {
+      _currentStep = (draft['step'] as int?) ?? widget.initialStep;
+      if (draft['category'] != null && (draft['category'] as String).isNotEmpty) {
+        _selectedCategory = draft['category'] as String;
+      }
+      _businessNameController.text = (draft['businessName'] as String?) ?? '';
+      _ownerNameController.text = (draft['ownerName'] as String?) ?? '';
+      _mobileController.text = (draft['mobile'] as String?) ?? '';
+      _emailController.text = (draft['email'] as String?) ?? '';
+      _addressController.text = (draft['address'] as String?) ?? '';
+      _experience = (draft['experience'] as String?) ?? '5+ Years';
+      _descriptionController.text = (draft['description'] as String?) ?? '';
+      _gstController.text = (draft['gstNumber'] as String?) ?? '';
+      _aadharPath = draft['aadharPath'] as String?;
+      _panPath = draft['panPath'] as String?;
+      _businessCertPath = draft['businessCertPath'] as String?;
+      _addressProofPath = draft['addressProofPath'] as String?;
+      _gstDocPath = draft['gstDocPath'] as String?;
+      _selectedPlan = (draft['selectedPlan'] as String?) ?? '6_months';
+      _isSubscriptionPaid = (draft['isSubscriptionPaid'] as bool?) ?? false;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.history_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('Restored your saved application progress'),
+                ],
+              ),
+              backgroundColor: AppColors.primaryDark,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      });
+    } else {
+      _currentStep = widget.initialStep;
+      if (widget.initialCategory != null &&
+          widget.initialCategory!.trim().isNotEmpty) {
+        _selectedCategory = widget.initialCategory!.trim();
+      }
+      _businessNameController.text =
+          (widget.initialBusinessName?.trim().isNotEmpty == true)
+              ? widget.initialBusinessName!
+              : (storage.getUserName() ?? '');
+      _ownerNameController.text =
+          (widget.initialOwnerName?.trim().isNotEmpty == true)
+              ? widget.initialOwnerName!
+              : (storage.getUserName() ?? '');
+      _mobileController.text =
+          (widget.initialPhone?.trim().isNotEmpty == true)
+              ? widget.initialPhone!
+              : (storage.getUserMobile() ?? '');
+      _emailController.text =
+          (widget.initialEmail?.trim().isNotEmpty == true)
+              ? widget.initialEmail!
+              : (storage.getUserEmail() ?? '');
+      if (widget.initialExperience?.trim().isNotEmpty == true) {
+        _experience = widget.initialExperience!.trim();
+      }
+    }
+
+    // Auto-save draft on any text keystroke
+    for (final c in [
+      _businessNameController,
+      _ownerNameController,
+      _mobileController,
+      _emailController,
+      _addressController,
+      _descriptionController,
+      _gstController,
+    ]) {
+      c.addListener(_persistCurrentDraft);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in [
+      _businessNameController,
+      _ownerNameController,
+      _mobileController,
+      _emailController,
+      _addressController,
+      _descriptionController,
+      _gstController,
+    ]) {
+      c.removeListener(_persistCurrentDraft);
+    }
+    _searchTypeController.dispose();
+    _businessNameController.dispose();
+    _ownerNameController.dispose();
+    _mobileController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _descriptionController.dispose();
+    _gstController.dispose();
+    super.dispose();
+  }
+
+  void _nextStep() async {
+    _persistCurrentDraft();
+
+    // When on Step 4 (Review Application) moving to Step 5 (Subscription Plan):
+    // UPLOAD DETAILS TO SERVER RIGHT NOW before buying plan!
+    if (_currentStep == 4) {
+      await _uploadVendorDetailsToServer();
+      if (!mounted) return;
+      setState(() => _currentStep = 5);
+      _persistCurrentDraft();
+      return;
+    }
+
+    if (_currentStep == 5) {
+      if (!_isSubscriptionPaid) {
+        _showPaymentSheet();
+        return;
+      }
+      _submitRegistration();
+      return;
+    }
+
+    if (_currentStep < _totalSteps) {
+      setState(() => _currentStep++);
+      _persistCurrentDraft();
+    } else {
+      _submitRegistration();
+    }
+  }
+
+  void _prevStep() {
+    _persistCurrentDraft();
+    if (_currentStep > 1) {
+      setState(() => _currentStep--);
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _submitRegistration() async {
+    final categoryId = _resolveCategoryId();
+    final planId = _resolvePlanId();
+
+    final res = await _vendorController.submitApplication(
+      ownerName: _ownerNameController.text.trim().isNotEmpty
+          ? _ownerNameController.text.trim()
+          : (StorageHelper().getUserName() ?? 'Partner'),
+      businessName: _businessNameController.text.trim().isNotEmpty
+          ? _businessNameController.text.trim()
+          : (StorageHelper().getUserName() ?? 'Royal Click Studio'),
+      yearsOfExperience: _experience,
+      businessDescription: _descriptionController.text.trim().isNotEmpty
+          ? _descriptionController.text.trim()
+          : 'Professional wedding services and premium deliverables on Widoora.',
+      businessAddress: _addressController.text.trim().isNotEmpty
+          ? _addressController.text.trim()
+          : 'SCO 142, Sector 70, Mohali, Punjab',
+      city: 'Mohali',
+      gstNumber: _gstController.text.trim(),
+      categoryId: categoryId,
+      categoryName: _selectedCategory,
+      subscriptionPlanId: planId,
+      aadharFile: _aadharPath,
+      panFile: _panPath,
+      businessCertFile: _businessCertPath,
+      addressProofFile: _addressProofPath,
+      gstDocFile: _gstDocPath,
+      isPreliminaryUpload: false,
+    );
+
+    // Clear local draft upon final submission
+    await StorageHelper().clearVendorDraft();
+
+    if (!mounted) return;
+
+    if (res.isSuccess == true || _vendorController.isDraftSavedOnServer.value) {
       Navigator.of(context).pushReplacement(
         FadeScaleRoute(
           page: VendorSubmittedScreen(
@@ -337,7 +684,9 @@ class _VendorRegistrationWizardScreenState
             ownerName: _ownerNameController.text.trim().isNotEmpty
                 ? _ownerNameController.text.trim()
                 : 'Partner',
-            applicationId: res.data?.applicationId ?? StorageHelper().getApplicationId() ?? 'WDV12345678',
+            applicationId: res.data?.applicationId ??
+                StorageHelper().getApplicationId() ??
+                'WDV12345678',
           ),
         ),
       );
@@ -390,7 +739,7 @@ class _VendorRegistrationWizardScreenState
                         ),
                       ),
                       Text(
-                        'Riwaaz Partner Membership',
+                        'Widoora Partner Membership',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: AppColors.darkGrey,
@@ -607,7 +956,7 @@ class _VendorRegistrationWizardScreenState
                     Icon(Icons.shield_outlined, size: 14, color: AppColors.grey),
                     SizedBox(width: 4),
                     Text(
-                      '256-Bit SSL Encrypted • Powered by Riwaaz Pay',
+                      '256-Bit SSL Encrypted • Powered by Widoora Pay',
                       style: TextStyle(fontSize: 11, color: AppColors.grey),
                     ),
                   ],
@@ -772,8 +1121,67 @@ class _VendorRegistrationWizardScreenState
 
         const SizedBox(height: 18),
 
-        // 3-Column Grid
-        GridView.builder(
+        if (Get.isRegistered<CategoryController>() &&
+            CategoryController.to.isLoading.value) ...[
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+              ),
+            ),
+          ),
+        ] else if (_businessTypes.isEmpty) ...[
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.grey.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.storefront_outlined, size: 36, color: AppColors.grey),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No categories available from server',
+                    style: GoogleFonts.cormorantGaramond(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Vendor categories will appear here once loaded from the server.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: AppColors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () async {
+                      if (Get.isRegistered<CategoryController>()) {
+                        await CategoryController.to.fetchCategories(forceRefresh: true);
+                        if (mounted) setState(() {});
+                      }
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.primary),
+                    label: const Text(
+                      'Retry Loading',
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          // 3-Column Grid
+          GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -852,6 +1260,7 @@ class _VendorRegistrationWizardScreenState
             );
           },
         ),
+      ],
       ],
     );
   }
@@ -981,6 +1390,154 @@ class _VendorRegistrationWizardScreenState
     );
   }
 
+  Widget _buildDocPickerCard({
+    required String key,
+    required String title,
+    required String subtitle,
+    required String? filePath,
+    required bool isRequired,
+    required IconData icon,
+  }) {
+    final isSelected = filePath != null && filePath.isNotEmpty;
+    final fileName = isSelected ? filePath.split(RegExp(r'[\\/]')).last : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected
+              ? AppColors.success.withValues(alpha: 0.6)
+              : AppColors.grey.withValues(alpha: 0.25),
+          width: isSelected ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isSelected
+                ? AppColors.success.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showDocumentSourceSheet(key, title),
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                if (isSelected)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      color: AppColors.cream,
+                      child: Image.file(
+                        File(filePath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.success,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: AppColors.primary, size: 24),
+                  ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ),
+                          if (isRequired) ...[
+                            const SizedBox(width: 4),
+                            const Text('*', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        isSelected ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded') : subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isSelected ? AppColors.success : AppColors.darkGrey,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.success.withValues(alpha: 0.12)
+                        : AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.success.withValues(alpha: 0.5)
+                          : AppColors.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected ? Icons.check_circle_rounded : Icons.upload_file_rounded,
+                        size: 13,
+                        color: isSelected ? AppColors.success : AppColors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isSelected ? 'Selected ✓' : 'Upload',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected ? AppColors.success : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────
   // STEP 3: DOCUMENTS
   // ─────────────────────────────────────────────────────────────
@@ -990,56 +1547,54 @@ class _VendorRegistrationWizardScreenState
       children: [
         const Text(
           'Upload Verification Documents',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         const Text(
-          'Documents help verify your account and build trust with clients',
-          style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+          'Tap any document to take a photo or select an image from your device.',
+          style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey),
         ),
-        const SizedBox(height: 16),
-        ..._documentUploaded.entries.map((entry) {
-          final isUploaded = entry.value;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isUploaded
-                    ? AppColors.success.withValues(alpha: 0.4)
-                    : AppColors.grey.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isUploaded
-                      ? Icons.check_circle_rounded
-                      : Icons.description_outlined,
-                  color: isUploaded ? AppColors.success : AppColors.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    entry.key,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Text(
-                  isUploaded ? 'Uploaded ✓' : 'Pending',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: isUploaded ? AppColors.success : AppColors.grey,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+        const SizedBox(height: 18),
+        _buildDocPickerCard(
+          key: 'aadhar',
+          title: 'Aadhaar / ID Proof',
+          subtitle: 'Government ID card of owner',
+          filePath: _aadharPath,
+          isRequired: true,
+          icon: Icons.badge_outlined,
+        ),
+        _buildDocPickerCard(
+          key: 'pan',
+          title: 'PAN Card',
+          subtitle: 'Owner or business PAN card',
+          filePath: _panPath,
+          isRequired: true,
+          icon: Icons.credit_card_outlined,
+        ),
+        _buildDocPickerCard(
+          key: 'businessCert',
+          title: 'Business Registration / MSME',
+          subtitle: 'Trade certificate or incorporation',
+          filePath: _businessCertPath,
+          isRequired: true,
+          icon: Icons.apartment_outlined,
+        ),
+        _buildDocPickerCard(
+          key: 'addressProof',
+          title: 'Address Proof',
+          subtitle: 'Electricity bill, rent agreement',
+          filePath: _addressProofPath,
+          isRequired: true,
+          icon: Icons.receipt_long_outlined,
+        ),
+        _buildDocPickerCard(
+          key: 'gstDoc',
+          title: 'GST Certificate (Optional)',
+          subtitle: 'GSTIN document if registered',
+          filePath: _gstDocPath,
+          isRequired: false,
+          icon: Icons.verified_outlined,
+        ),
       ],
     );
   }
@@ -1435,7 +1990,7 @@ class _VendorRegistrationWizardScreenState
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Uploaded Documents (${_documentUploaded.length})',
+                    'Uploaded Documents (5)',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
@@ -1445,39 +2000,73 @@ class _VendorRegistrationWizardScreenState
                 ],
               ),
               const SizedBox(height: 12),
-              ..._documentUploaded.keys.map((docName) {
+              ...[
+                {'name': 'Aadhaar / ID Proof', 'path': _aadharPath, 'req': true},
+                {'name': 'PAN Card', 'path': _panPath, 'req': true},
+                {'name': 'Business Registration', 'path': _businessCertPath, 'req': true},
+                {'name': 'Address Proof', 'path': _addressProofPath, 'req': true},
+                {'name': 'GST Certificate', 'path': _gstDocPath, 'req': false},
+              ].map((doc) {
+                final hasPath = doc['path'] != null && (doc['path'] as String).isNotEmpty;
+                final fileName = hasPath ? (doc['path'] as String).split(RegExp(r'[\\/]')).last : null;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 9),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        color: Color(0xFF2E7D32),
+                      Icon(
+                        hasPath ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        color: hasPath ? const Color(0xFF2E7D32) : AppColors.grey,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          docName,
+                          doc['name'] as String,
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.black,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'Ready',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2E7D32),
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 130),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: hasPath ? const Color(0xFFE8F5E9) : AppColors.cream,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: hasPath
+                                  ? const Color(0xFFA5D6A7)
+                                  : AppColors.grey.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (hasPath) ...[
+                                const Icon(Icons.attachment_rounded, size: 11, color: Color(0xFF2E7D32)),
+                                const SizedBox(width: 3),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  hasPath
+                                      ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded ✓')
+                                      : (doc['req'] == true ? 'Default' : 'Optional'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: hasPath ? const Color(0xFF2E7D32) : AppColors.darkGrey,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1510,7 +2099,7 @@ class _VendorRegistrationWizardScreenState
               const SizedBox(width: 6),
               const Expanded(
                 child: Text(
-                  'I confirm that all details and submitted documents are authentic and accurate as per Riwaaz Vendor Partnership Guidelines.',
+                  'I confirm that all details and submitted documents are authentic and accurate as per Widoora Vendor Partnership Guidelines.',
                   style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.4),
                 ),
               ),
@@ -1553,6 +2142,17 @@ class _VendorRegistrationWizardScreenState
         ],
       ),
     );
+  }
+
+  String _shortenFileName(String fileName) {
+    if (fileName.length <= 14) return fileName;
+    final dotIndex = fileName.lastIndexOf('.');
+    final ext = dotIndex != -1 ? fileName.substring(dotIndex) : '';
+    final nameWithoutExt = dotIndex != -1 ? fileName.substring(0, dotIndex) : fileName;
+    if (nameWithoutExt.length > 7) {
+      return '${nameWithoutExt.substring(0, 6)}...$ext';
+    }
+    return fileName;
   }
 
 
@@ -1610,10 +2210,52 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 6),
         const Text(
-          'Select your partnership duration (3, 6, or 12 Months) to get verified, receive real-time client leads, and activate your vendor profile on Riwaaz.',
+          'Select your partnership duration (3, 6, or 12 Months) to get verified, receive real-time client leads, and activate your vendor profile on Widoora.',
           style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey, height: 1.4),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
+
+        // Server Sync Confirmation Banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 18),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.cloud_done_rounded, color: Color(0xFF16A34A), size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Details & Documents Saved to Server',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF15803D),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Your business profile has been securely registered on our server. Select a plan below to activate instant client bookings.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF166534),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
 
         // Plans List (3 Months, 6 Months, 12 Months)
         ..._subscriptionPlans.map((plan) {
@@ -2042,41 +2684,64 @@ class _VendorRegistrationWizardScreenState
           ? 'Complete Registration'
           : 'Buy ${activePlan['name']} (₹$activePrice)';
     } else if (_currentStep == 4) {
-      buttonText = 'Proceed to Plan Selection';
+      buttonText = 'Save Details & View Plans';
     } else {
       buttonText = 'Continue';
     }
 
     return Container(
       color: AppColors.white,
-      padding: const EdgeInsets.all(16),
-      child: SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton(
-          onPressed: _nextStep,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                buttonText,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _nextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.arrow_forward_rounded, size: 18),
-            ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    buttonText,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_rounded, size: 18),
+                ],
+              ),
+            ),
           ),
-        ),
+          if (_currentStep == 5) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 40,
+              child: TextButton(
+                onPressed: _submitRegistration,
+                child: const Text(
+                  'Skip Plan for Now & Finish Application',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkGrey,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

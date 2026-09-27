@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'controllers/category_controller.dart';
 import 'core/constants/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/splash_screen.dart';
@@ -9,6 +10,9 @@ import 'utils/helper/storage_helper.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await StorageHelper.init();
+
+  // Initialize global category controller
+  Get.put(CategoryController(), permanent: true);
 
   // Force portrait orientation
   SystemChrome.setPreferredOrientations([
@@ -24,16 +28,16 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
-  runApp(const RiwaazApp());
+  runApp(const WidooraApp());
 }
 
-class RiwaazApp extends StatelessWidget {
-  const RiwaazApp({super.key});
+class WidooraApp extends StatelessWidget {
+  const WidooraApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Riwaaz',
+      title: 'Widoora',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),
@@ -41,6 +45,7 @@ class RiwaazApp extends StatelessWidget {
   }
 }
 
-typedef ShaadiHubApp = RiwaazApp;
-typedef RwaazApp = RiwaazApp;
+typedef RiwaazApp = WidooraApp;
+typedef ShaadiHubApp = WidooraApp;
+typedef RwaazApp = WidooraApp;
 
