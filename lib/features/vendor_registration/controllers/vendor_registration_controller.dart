@@ -63,7 +63,8 @@ class VendorRegistrationController extends GetxController {
   }
 
   // 5. Get Subscription Partner Plans (GET /api/subscription/list)
-  Future<void> fetchSubscriptions() async {
+  Future<void> fetchSubscriptions({bool forceRefresh = false}) async {
+    if (!forceRefresh && subscriptionPlans.isNotEmpty) return;
     isLoading.value = true;
     final response = await _subscriptionApiProvider.getSubscriptionList();
     isLoading.value = false;
@@ -73,7 +74,10 @@ class VendorRegistrationController extends GetxController {
         response.data!.isNotEmpty) {
       subscriptionPlans.assignAll(response.data!);
       if (selectedSubscriptionPlanId.isEmpty) {
-        selectedSubscriptionPlanId.value = subscriptionPlans.first.id ?? '';
+        final preferred = subscriptionPlans.firstWhereOrNull(
+          (p) => p.durationInMonths == 6 || p.type?.contains('6') == true,
+        ) ?? subscriptionPlans.first;
+        selectedSubscriptionPlanId.value = preferred.id ?? '';
       }
     }
   }
@@ -98,6 +102,19 @@ class VendorRegistrationController extends GetxController {
     bool isPreliminaryUpload = false,
   }) async {
     isSubmitting.value = true;
+
+    final bool hasAadhar = aadharFile is MultipartFile || (aadharFile is String && aadharFile.trim().isNotEmpty);
+    final bool hasPan = panFile is MultipartFile || (panFile is String && panFile.trim().isNotEmpty);
+    final bool hasBusinessCert = businessCertFile is MultipartFile || (businessCertFile is String && businessCertFile.trim().isNotEmpty);
+    final bool hasAddressProof = addressProofFile is MultipartFile || (addressProofFile is String && addressProofFile.trim().isNotEmpty);
+
+    if (!hasAadhar || !hasPan || !hasBusinessCert || !hasAddressProof) {
+      isSubmitting.value = false;
+      return DataResponse<VendorApplicationModel>(
+        isSuccess: false,
+        message: 'All 4 verification documents (Aadhaar, PAN, Business & Address Proof) are required and cannot be skipped.',
+      );
+    }
 
     final formDataMap = <String, dynamic>{
       'ownerName': ownerName.trim(),

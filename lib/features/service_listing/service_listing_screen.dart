@@ -841,9 +841,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           bottom: BorderSide(color: Color(0xFFEADBCE), width: 1),
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: SizedBox(
-        height: 36,
+        height: 48,
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
@@ -863,7 +863,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? const LinearGradient(
@@ -871,7 +871,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           )
                         : null,
                     color: isSelected ? null : AppColors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
@@ -893,14 +893,14 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     children: [
                       Icon(
                         Icons.grid_view_rounded,
-                        size: 14,
+                        size: 20,
                         color: isSelected ? Colors.white : AppColors.primary,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 7),
                       Text(
                         'All',
                         style: TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w600,
                           color: isSelected
@@ -927,7 +927,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                 decoration: BoxDecoration(
                   gradient: isSelected
                       ? LinearGradient(
@@ -935,7 +935,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                         )
                       : null,
                   color: isSelected ? null : cat.bgColor,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   border: Border.all(
                     color: isSelected
                         ? cat.color
@@ -958,20 +958,20 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     cat.hasServerIcon
                         ? CachedImageView(
                             imageUrl: cat.iconUrl,
-                            width: 14,
-                            height: 14,
+                            width: 26,
+                            height: 26,
                             fit: BoxFit.contain,
                             fallbackIcon: cat.icon,
                             iconColor: isSelected ? Colors.white : cat.color,
                           )
                         : Icon(cat.icon,
-                            size: 14,
+                            size: 24,
                             color: isSelected ? Colors.white : cat.color),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 7),
                     Text(
                       cat.title.split(' & ').first,
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 12.5,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
@@ -1089,11 +1089,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              width: 22,
-                              height: 22,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: activeCat.bgColor,
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: activeCat.color.withValues(alpha: 0.35),
                                 ),
@@ -1102,8 +1102,8 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                                   ? Center(
                                       child: CachedImageView(
                                         imageUrl: activeCat.iconUrl,
-                                        width: 13,
-                                        height: 13,
+                                        width: 22,
+                                        height: 22,
                                         fit: BoxFit.contain,
                                         fallbackIcon: activeCat.icon,
                                         iconColor: activeCat.color,
@@ -1111,11 +1111,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                                     )
                                   : Icon(
                                       activeCat.icon,
-                                      size: 13,
+                                      size: 22,
                                       color: activeCat.color,
                                     ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 isAll ? 'All Vendors' : _currentCategory,

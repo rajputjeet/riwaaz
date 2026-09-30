@@ -4,9 +4,9 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../shell/main_shell.dart';
 import 'controllers/auth_controller.dart';
 import 'login_screen.dart';
-import 'user_otp_verification_screen.dart';
 
 class UserSignupScreen extends StatefulWidget {
   const UserSignupScreen({super.key});
@@ -45,11 +45,16 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
         ? Get.find<AuthController>()
         : Get.put(AuthController());
 
-    final res = await authController.signUp(
-      fullName: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      password: _passwordController.text,
+    final fullName = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    final res = await authController.signUpAndSignIn(
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      password: password,
       roleId: 2, // 2 = Customer
     );
 
@@ -57,15 +62,36 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     setState(() => _isLoading = false);
 
     if (res.isSuccess == true) {
-      Navigator.of(context).push(
-        FadeScaleRoute(
-          page: UserOtpVerificationScreen(
-            name: _nameController.text.trim(),
-            email: _emailController.text.trim(),
-            phone: _phoneController.text.trim(),
-            initialOtp: res.data?.otp,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Welcome, $fullName! Your account has been created.',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(milliseconds: 1500),
         ),
+      );
+
+      // Directly enter MainShell without OTP
+      Navigator.of(context).pushAndRemoveUntil(
+        FadeScaleRoute(page: const MainShell(initialIndex: 0)),
+        (route) => false,
       );
     }
   }
@@ -358,7 +384,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                 const Spacer(),
                 const SizedBox(height: 24),
 
-                // Continue / Send OTP Button
+                // Create Account Button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -386,7 +412,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Continue to Verification',
+                                'Create Account',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,

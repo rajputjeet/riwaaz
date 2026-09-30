@@ -13,24 +13,41 @@ class SubscriptionApiProvider {
   }
 
   // 5. Get Subscription Partner Plans (GET /api/subscription/list)
+  // Public endpoint - Authentication: Public (No header required)
   Future<DataResponse<List<SubscriptionModel>>> getSubscriptionList() async {
     try {
       final response = await _dio.get(
         ApiConstants.subscriptionList,
-        options: Injector.getHeaderToken(),
       );
 
-      return DataResponse<List<SubscriptionModel>>.fromJson(
-        response.data as Map<String, dynamic>,
-        (json) {
-          if (json is List) {
-            return json
-                .map((e) =>
-                    SubscriptionModel.fromJson(e as Map<String, dynamic>))
-                .toList();
-          }
-          return [];
-        },
+      if (response.data is Map<String, dynamic>) {
+        return DataResponse<List<SubscriptionModel>>.fromJson(
+          response.data as Map<String, dynamic>,
+          (json) {
+            if (json is List) {
+              return json
+                  .map((e) =>
+                      SubscriptionModel.fromJson(e as Map<String, dynamic>))
+                  .toList();
+            }
+            return [];
+          },
+        );
+      } else if (response.data is List) {
+        final list = (response.data as List)
+            .map((e) =>
+                SubscriptionModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return DataResponse<List<SubscriptionModel>>(
+          isSuccess: true,
+          message: 'Subscriptions found successfully',
+          data: list,
+        );
+      }
+
+      return DataResponse<List<SubscriptionModel>>(
+        isSuccess: true,
+        data: [],
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);

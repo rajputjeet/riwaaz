@@ -80,89 +80,97 @@ class _VendorRegistrationWizardScreenState
   final _descriptionController = TextEditingController();
   final _gstController = TextEditingController();
 
-  // Step 5 State: Subscription Plans (3, 6, 12 Months)
-  String _selectedPlan = '6_months'; // '3_months', '6_months', '12_months'
+  // Step 5 State: Subscription Plans (fetched dynamically from /api/subscription/list)
+  String _selectedPlan = '6_months'; // will hold selected plan _id
   bool _isSubscriptionPaid = false;
   String _selectedPaymentMethod = 'UPI';
-  final List<Map<String, dynamic>> _subscriptionPlans = [
-    {
-      'id': '3_months',
-      'name': '3 Months Plan',
-      'duration': '3 Months',
-      'months': 3,
-      'price': 2999,
-      'monthlyRate': 1000,
-      'tagline': 'Quarterly partner access to start receiving leads',
-      'badge': 'STARTER',
-      'color': const Color(0xFF6B7280),
-      'icon': Icons.calendar_today_rounded,
-      'features': [
-        'Verified Vendor Profile badge for 3 months',
-        '25 Verified Client Leads / month',
-        'Direct WhatsApp & Call inquiries',
-        'Upload up to 15 Portfolio photos',
-        'Standard category search ranking',
-        'Real-time inquiry dashboard & SMS alerts',
-      ],
-    },
-    {
-      'id': '6_months',
-      'name': '6 Months Plan',
-      'duration': '6 Months',
-      'months': 6,
-      'price': 4999,
-      'monthlyRate': 833,
-      'tagline': 'High-growth package for wedding season',
-      'badge': 'MOST POPULAR',
-      'savings': 'SAVE 15%',
-      'isPopular': true,
-      'color': AppColors.primary,
-      'icon': Icons.stars_rounded,
-      'features': [
-        'Verified Partner Badge with Priority Star',
-        '60 High-Intent Client Leads / month',
-        'Priority Search & Category Placement',
-        'Unlimited Portfolio photos & 4K videos',
-        'Featured in "Top Recommended Vendors"',
-        'Direct customer quotation generator',
-        'Dedicated WhatsApp account manager',
-      ],
-    },
-    {
-      'id': '12_months',
-      'name': '12 Months Plan',
-      'duration': '12 Months (1 Year)',
-      'months': 12,
-      'price': 8999,
-      'monthlyRate': 749,
-      'tagline': 'Full year dominance & maximum client bookings',
-      'badge': 'BEST VALUE',
-      'savings': 'SAVE 25%',
-      'isPopular': false,
-      'color': const Color(0xFF8B1A2E),
-      'icon': Icons.diamond_rounded,
-      'features': [
-        'Annual Royal Verified Partner Badge',
-        'Unlimited Direct Bride & Groom Leads',
-        'Guaranteed Top 3 City Banner Ranking',
-        'Social Media Spotlight on Widoora Instagram',
-        '0% Commission on all client bookings',
-        'Instant Priority SMS & Push lead alerts',
-        'Personalized brand promotional video',
-        '24/7 Priority VIP Concierge service',
-      ],
-    },
-  ];
 
-  Map<String, dynamic> _getSelectedPlan() {
-    return _subscriptionPlans.firstWhere(
+
+  List<Map<String, dynamic>> get _availablePlans {
+    if (_vendorController.subscriptionPlans.isNotEmpty) {
+      return _vendorController.subscriptionPlans.map((sub) {
+        final id = sub.id ?? '';
+        final name = sub.displayName;
+        final duration = sub.type ??
+            (sub.durationInMonths != null
+                ? '${sub.durationInMonths} Months'
+                : 'Membership');
+        final months = sub.durationInMonths ??
+            (duration.contains('12')
+                ? 12
+                : (duration.contains('6')
+                    ? 6
+                    : (duration.contains('3') ? 3 : 1)));
+        final price = sub.planPrice;
+        final monthlyRate = months > 0 ? (price / months).round() : price;
+        final desc =
+            (sub.description != null && sub.description!.trim().isNotEmpty)
+                ? sub.description!.trim()
+                : 'Vendor partner membership plan on Widoora';
+        final isPopular = months == 6 ||
+            name.toLowerCase().contains('gold') ||
+            name.toLowerCase().contains('popular');
+        final isBestValue = months == 12 ||
+            name.toLowerCase().contains('royal') ||
+            name.toLowerCase().contains('platinum');
+        final badge = isPopular
+            ? 'MOST POPULAR'
+            : (isBestValue
+                ? 'BEST VALUE'
+                : (months == 1 ? 'STARTER' : 'PRO'));
+        final color = isPopular
+            ? AppColors.primary
+            : (isBestValue
+                ? const Color(0xFF8B1A2E)
+                : const Color(0xFF6B7280));
+        final icon = isPopular
+            ? Icons.stars_rounded
+            : (isBestValue
+                ? Icons.diamond_rounded
+                : Icons.calendar_today_rounded);
+
+        return {
+          'id': id,
+          'name': name,
+          'duration': duration,
+          'months': months,
+          'price': price,
+          'monthlyRate': monthlyRate,
+          'tagline': desc,
+          'badge': badge,
+          'savings':
+              isBestValue ? 'SAVE 25%' : (isPopular ? 'SAVE 15%' : null),
+          'isPopular': isPopular,
+          'color': color,
+          'icon': icon,
+          'features': [
+            'Verified Vendor Profile badge for $duration',
+            'Direct Bride & Groom Leads & WhatsApp inquiries',
+            'Portfolio & packages showcase on Widoora',
+            'Real-time inquiry dashboard & lead alerts',
+            '0% Commission on client bookings',
+          ],
+        };
+      }).toList();
+    }
+    return const [];
+  }
+
+  Map<String, dynamic>? _getSelectedPlan() {
+    final plans = _availablePlans;
+    if (plans.isEmpty) return null;
+    return plans.firstWhere(
       (p) => p['id'] == _selectedPlan,
-      orElse: () => _subscriptionPlans[1],
+      orElse: () => plans.firstWhere(
+        (p) => p['isPopular'] == true,
+        orElse: () => plans.first,
+      ),
     );
   }
 
-  int _getPlanPrice(Map<String, dynamic> plan) {
-    return (plan['price'] as int?) ?? 4999;
+  int _getPlanPrice(Map<String, dynamic>? plan) {
+    if (plan == null) return 0;
+    return (plan['price'] as int?) ?? 0;
   }
 
   // Step 3 State: Documents with real ImagePickers
@@ -171,7 +179,34 @@ class _VendorRegistrationWizardScreenState
   String? _businessCertPath;
   String? _addressProofPath;
   String? _gstDocPath;
+  bool _showDocValidationErrors = false;
   final ImagePicker _imagePicker = ImagePicker();
+
+  List<String> _getMissingRequiredDocs() {
+    final List<String> missing = [];
+    if (_aadharPath == null || _aadharPath!.trim().isEmpty) {
+      missing.add('Aadhaar / ID Proof');
+    }
+    if (_panPath == null || _panPath!.trim().isEmpty) {
+      missing.add('PAN Card');
+    }
+    if (_businessCertPath == null || _businessCertPath!.trim().isEmpty) {
+      missing.add('Business Registration / MSME');
+    }
+    if (_addressProofPath == null || _addressProofPath!.trim().isEmpty) {
+      missing.add('Address Proof');
+    }
+    return missing;
+  }
+
+  int _getUploadedRequiredDocsCount() {
+    int count = 0;
+    if (_aadharPath != null && _aadharPath!.trim().isNotEmpty) count++;
+    if (_panPath != null && _panPath!.trim().isNotEmpty) count++;
+    if (_businessCertPath != null && _businessCertPath!.trim().isNotEmpty) count++;
+    if (_addressProofPath != null && _addressProofPath!.trim().isNotEmpty) count++;
+    return count;
+  }
 
   Future<void> _pickDocumentImage(String key, ImageSource source) async {
     try {
@@ -188,6 +223,10 @@ class _VendorRegistrationWizardScreenState
           if (key == 'businessCert') _businessCertPath = picked.path;
           if (key == 'addressProof') _addressProofPath = picked.path;
           if (key == 'gstDoc') _gstDocPath = picked.path;
+
+          if (_getMissingRequiredDocs().isEmpty) {
+            _showDocValidationErrors = false;
+          }
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -323,13 +362,14 @@ class _VendorRegistrationWizardScreenState
   }
 
   void _syncPlan(String planId) {
+    _vendorController.selectedSubscriptionPlanId.value = planId;
     if (_vendorController.subscriptionPlans.isNotEmpty) {
-      final prefix = planId.split('_').first;
       final match = _vendorController.subscriptionPlans.firstWhereOrNull(
         (p) =>
             p.id == planId ||
-            p.name?.toLowerCase().contains(prefix) == true ||
-            p.type?.toLowerCase().contains(prefix) == true,
+            (p.durationInMonths != null && planId.contains('${p.durationInMonths}')) ||
+            (p.type != null && planId.contains(p.type!.split(' ').first)) ||
+            (p.title != null && p.title!.toLowerCase().contains(planId.toLowerCase())),
       );
       if (match != null && match.id != null) {
         _vendorController.selectedSubscriptionPlanId.value = match.id!;
@@ -359,19 +399,39 @@ class _VendorRegistrationWizardScreenState
 
   String _resolvePlanId() {
     String planId = _vendorController.selectedSubscriptionPlanId.value;
-    if (planId.isNotEmpty) return planId;
+    if (planId.isNotEmpty &&
+        planId != '6_months' &&
+        planId != '3_months' &&
+        planId != '12_months') {
+      return planId;
+    }
+    if (_selectedPlan.isNotEmpty &&
+        _selectedPlan != '6_months' &&
+        _selectedPlan != '3_months' &&
+        _selectedPlan != '12_months') {
+      _vendorController.selectedSubscriptionPlanId.value = _selectedPlan;
+      return _selectedPlan;
+    }
     if (_vendorController.subscriptionPlans.isNotEmpty) {
       final prefix = _selectedPlan.split('_').first;
       final match = _vendorController.subscriptionPlans.firstWhereOrNull(
         (p) =>
             p.id == _selectedPlan ||
-            p.name?.toLowerCase().contains(prefix) == true ||
-            p.type?.toLowerCase().contains(prefix) == true,
+            (p.durationInMonths != null && _selectedPlan.contains('${p.durationInMonths}')) ||
+            (p.type != null && _selectedPlan.contains(p.type!.split(' ').first)) ||
+            (p.title != null && p.title!.toLowerCase().contains(prefix.toLowerCase())),
       );
-      if (match != null && match.id != null) return match.id!;
-      return _vendorController.subscriptionPlans.first.id ?? '6ab8b8666cfb719e21fbb970';
+      if (match != null && match.id != null && match.id!.isNotEmpty) {
+        _vendorController.selectedSubscriptionPlanId.value = match.id!;
+        return match.id!;
+      }
+      final firstId = _vendorController.subscriptionPlans.first.id;
+      if (firstId != null && firstId.isNotEmpty) {
+        _vendorController.selectedSubscriptionPlanId.value = firstId;
+        return firstId;
+      }
     }
-    return '6ab8b8666cfb719e21fbb970';
+    return _selectedPlan;
   }
 
   void _persistCurrentDraft() {
@@ -398,6 +458,24 @@ class _VendorRegistrationWizardScreenState
   }
 
   Future<void> _uploadVendorDetailsToServer() async {
+    final missing = _getMissingRequiredDocs();
+    if (missing.isNotEmpty) {
+      setState(() {
+        _currentStep = 3;
+        _showDocValidationErrors = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cannot save details: Required verification documents missing (${missing.join(', ')}).',
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final categoryId = _resolveCategoryId();
     final planId = _resolvePlanId();
 
@@ -486,6 +564,18 @@ class _VendorRegistrationWizardScreenState
     });
     _vendorController.fetchSubscriptions().then((_) {
       if (mounted) {
+        if (_vendorController.subscriptionPlans.isNotEmpty) {
+          final serverPlans = _vendorController.subscriptionPlans;
+          final existing = serverPlans.firstWhereOrNull((p) => p.id == _selectedPlan);
+          if (existing == null) {
+            final preferred = serverPlans.firstWhereOrNull(
+              (p) => p.durationInMonths == 6 || p.type?.contains('6') == true,
+            ) ?? serverPlans.first;
+            if (preferred.id != null) {
+              _selectedPlan = preferred.id!;
+            }
+          }
+        }
         _syncPlan(_selectedPlan);
         setState(() {});
       }
@@ -601,9 +691,81 @@ class _VendorRegistrationWizardScreenState
   void _nextStep() async {
     _persistCurrentDraft();
 
+    if (_currentStep == 1) {
+      if (_selectedCategory.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select your business category to continue.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (_currentStep == 2) {
+      if (_businessNameController.text.trim().isEmpty ||
+          _ownerNameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in business name and owner name.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Step 3 Validation: Required documents CANNOT be skipped
+    if (_currentStep == 3) {
+      final missing = _getMissingRequiredDocs();
+      if (missing.isNotEmpty) {
+        setState(() {
+          _showDocValidationErrors = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Vendor cannot skip required verification documents:\n• ${missing.join('\n• ')}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
     // When on Step 4 (Review Application) moving to Step 5 (Subscription Plan):
     // UPLOAD DETAILS TO SERVER RIGHT NOW before buying plan!
     if (_currentStep == 4) {
+      final missing = _getMissingRequiredDocs();
+      if (missing.isNotEmpty) {
+        setState(() {
+          _currentStep = 3;
+          _showDocValidationErrors = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please upload all required verification documents first.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
       await _uploadVendorDetailsToServer();
       if (!mounted) return;
       setState(() => _currentStep = 5);
@@ -638,6 +800,24 @@ class _VendorRegistrationWizardScreenState
   }
 
   void _submitRegistration() async {
+    final missing = _getMissingRequiredDocs();
+    if (missing.isNotEmpty) {
+      setState(() {
+        _currentStep = 3;
+        _showDocValidationErrors = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cannot submit: Required verification documents missing (${missing.join(', ')}).',
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final categoryId = _resolveCategoryId();
     final planId = _resolvePlanId();
 
@@ -695,6 +875,16 @@ class _VendorRegistrationWizardScreenState
   // Helper to open Buy Subscription Modal
   void _showPaymentSheet() {
     final plan = _getSelectedPlan();
+    if (plan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please wait for active plans to load, or select a plan to continue.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     final price = _getPlanPrice(plan);
     bool isProcessing = false;
 
@@ -1188,7 +1378,7 @@ class _VendorRegistrationWizardScreenState
             crossAxisCount: 3,
             crossAxisSpacing: 10,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.82,
+            childAspectRatio: 0.76,
           ),
           itemCount: _businessTypes.length,
           itemBuilder: (context, index) {
@@ -1235,9 +1425,9 @@ class _VendorRegistrationWizardScreenState
                   children: [
                     ServiceIconWrap(
                       item: type,
-                      size: 52,
-                      iconSize: 24,
-                      borderRadius: 14,
+                      size: 64,
+                      iconSize: 36,
+                      borderRadius: 16,
                       isSelected: isSelected,
                     ),
                     const SizedBox(height: 8),
@@ -1247,7 +1437,7 @@ class _VendorRegistrationWizardScreenState
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.cormorantGaramond(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected ? type.color : AppColors.black,
@@ -1399,24 +1589,29 @@ class _VendorRegistrationWizardScreenState
     required IconData icon,
   }) {
     final isSelected = filePath != null && filePath.isNotEmpty;
+    final isMissingError = _showDocValidationErrors && isRequired && !isSelected;
     final fileName = isSelected ? filePath.split(RegExp(r'[\\/]')).last : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: isMissingError ? const Color(0xFFFFF6F6) : AppColors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isSelected
               ? AppColors.success.withValues(alpha: 0.6)
-              : AppColors.grey.withValues(alpha: 0.25),
-          width: isSelected ? 1.5 : 1,
+              : (isMissingError
+                  ? AppColors.error
+                  : AppColors.grey.withValues(alpha: 0.25)),
+          width: isSelected || isMissingError ? 1.6 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
                 ? AppColors.success.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.03),
+                : (isMissingError
+                    ? AppColors.error.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.03)),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -1435,8 +1630,8 @@ class _VendorRegistrationWizardScreenState
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      width: 46,
-                      height: 46,
+                      width: 48,
+                      height: 48,
                       color: AppColors.cream,
                       child: Image.file(
                         File(filePath),
@@ -1451,13 +1646,19 @@ class _VendorRegistrationWizardScreenState
                   )
                 else
                   Container(
-                    width: 46,
-                    height: 46,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: isMissingError
+                          ? AppColors.error.withValues(alpha: 0.1)
+                          : AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: AppColors.primary, size: 24),
+                    child: Icon(
+                      isMissingError ? Icons.error_outline_rounded : icon,
+                      color: isMissingError ? AppColors.error : AppColors.primary,
+                      size: 24,
+                    ),
                   ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1469,28 +1670,55 @@ class _VendorRegistrationWizardScreenState
                           Flexible(
                             child: Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.black,
+                                color: isMissingError ? AppColors.error : AppColors.black,
                               ),
                             ),
                           ),
                           if (isRequired) ...[
-                            const SizedBox(width: 4),
-                            const Text('*', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.success.withValues(alpha: 0.12)
+                                    : (isMissingError
+                                        ? AppColors.error
+                                        : AppColors.error.withValues(alpha: 0.1)),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                isSelected
+                                    ? 'ATTACHED ✓'
+                                    : (isMissingError ? 'REQUIRED *' : 'REQUIRED'),
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                  color: isSelected
+                                      ? AppColors.success
+                                      : (isMissingError ? Colors.white : AppColors.error),
+                                ),
+                              ),
+                            ),
                           ],
                         ],
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        isSelected ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded') : subtitle,
+                        isSelected
+                            ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded')
+                            : (isMissingError ? 'Please upload this required document' : subtitle),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isSelected ? AppColors.success : AppColors.darkGrey,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected
+                              ? AppColors.success
+                              : (isMissingError ? AppColors.error : AppColors.darkGrey),
+                          fontWeight: isSelected || isMissingError ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -1502,29 +1730,41 @@ class _VendorRegistrationWizardScreenState
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.success.withValues(alpha: 0.12)
-                        : AppColors.primary.withValues(alpha: 0.08),
+                        : (isMissingError
+                            ? AppColors.error.withValues(alpha: 0.12)
+                            : AppColors.primary.withValues(alpha: 0.08)),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.success.withValues(alpha: 0.5)
-                          : AppColors.primary.withValues(alpha: 0.3),
+                          : (isMissingError
+                              ? AppColors.error.withValues(alpha: 0.6)
+                              : AppColors.primary.withValues(alpha: 0.3)),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isSelected ? Icons.check_circle_rounded : Icons.upload_file_rounded,
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : (isMissingError ? Icons.warning_amber_rounded : Icons.upload_file_rounded),
                         size: 13,
-                        color: isSelected ? AppColors.success : AppColors.primary,
+                        color: isSelected
+                            ? AppColors.success
+                            : (isMissingError ? AppColors.error : AppColors.primary),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isSelected ? 'Selected ✓' : 'Upload',
+                        isSelected
+                            ? 'Selected ✓'
+                            : (isMissingError ? 'Upload *' : 'Upload'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: isSelected ? AppColors.success : AppColors.primary,
+                          color: isSelected
+                              ? AppColors.success
+                              : (isMissingError ? AppColors.error : AppColors.primary),
                         ),
                       ),
                     ],
@@ -1542,17 +1782,75 @@ class _VendorRegistrationWizardScreenState
   // STEP 3: DOCUMENTS
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep3Documents() {
+    final uploadedCount = _getUploadedRequiredDocsCount();
+    final allUploaded = uploadedCount == 4;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Upload Verification Documents',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'Upload Verification Documents',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: allUploaded
+                    ? AppColors.success.withValues(alpha: 0.12)
+                    : (_showDocValidationErrors
+                        ? AppColors.error.withValues(alpha: 0.12)
+                        : AppColors.primary.withValues(alpha: 0.1)),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: allUploaded
+                      ? AppColors.success
+                      : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+                  width: 1.2,
+                ),
+              ),
+              child: Text(
+                '$uploadedCount/4 Required',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: allUploaded
+                      ? AppColors.success
+                      : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        const Text(
-          'Tap any document to take a photo or select an image from your device.',
-          style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey),
+        const SizedBox(height: 6),
+        Text(
+          allUploaded
+              ? 'All 4 required documents attached. You can proceed to review.'
+              : 'All 4 required documents (Aadhaar, PAN, Business & Address Proof) must be uploaded to continue. Skipping is not permitted.',
+          style: TextStyle(
+            fontSize: 12.5,
+            color: _showDocValidationErrors && !allUploaded ? AppColors.error : AppColors.darkGrey,
+            fontWeight: _showDocValidationErrors && !allUploaded ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Progress Bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: uploadedCount / 4,
+            backgroundColor: AppColors.greyLight.withValues(alpha: 0.5),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              allUploaded
+                  ? AppColors.success
+                  : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+            ),
+            minHeight: 5,
+          ),
         ),
         const SizedBox(height: 18),
         _buildDocPickerCard(
@@ -2257,296 +2555,400 @@ class _VendorRegistrationWizardScreenState
           ),
         ),
 
-        // Plans List (3 Months, 6 Months, 12 Months)
-        ..._subscriptionPlans.map((plan) {
-          final isSelected = _selectedPlan == plan['id'];
-          final price = _getPlanPrice(plan);
-          final isPopular = plan['isPopular'] == true;
-          final savings = plan['savings'] as String?;
+        // Plans List (Fetched dynamically from /api/subscription/list)
+        Obx(() {
+          final isLoading = _vendorController.isLoading.value;
+          final plans = _availablePlans;
 
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedPlan = plan['id'] as String;
-                _isSubscriptionPaid = false;
-              });
-              _syncPlan(plan['id'] as String);
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.primary
-                      : isPopular
-                          ? AppColors.primary.withValues(alpha: 0.35)
-                          : AppColors.grey.withValues(alpha: 0.25),
-                  width: isSelected ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+          if (isLoading && plans.isEmpty) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 36),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Loading live subscription plans from server...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.darkGrey,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
+            );
+          }
+
+          if (plans.isEmpty) {
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.offWhite,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.grey.withValues(alpha: 0.3)),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (isPopular)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.star_rounded, size: 14, color: AppColors.cream),
-                          SizedBox(width: 4),
-                          Text(
-                            'MOST POPULAR CHOICE • SAVE 15%',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.cream,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (savings != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF8B1A2E),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.diamond_rounded, size: 14, color: AppColors.cream),
-                          const SizedBox(width: 4),
-                          Text(
-                            'BEST VALUE • $savings ON ANNUAL',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.cream,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
+                  const Icon(Icons.cloud_off_rounded, color: AppColors.darkGrey, size: 36),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'No active plans returned by server',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Tap below to reload dynamic subscription plans from http://192.168.1.100:5174/api/subscription/list',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.darkGrey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: () => _vendorController.fetchSubscriptions(forceRefresh: true),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Retry Fetching Plans'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
                     ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: plans.map((plan) {
+              final isSelected = _selectedPlan == plan['id'];
+              final price = _getPlanPrice(plan);
+              final isPopular = plan['isPopular'] == true;
+              final savings = plan['savings'] as String?;
+              final status = (plan['status'] as String?) ?? 'Active';
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedPlan = plan['id'] as String;
+                    _isSubscriptionPaid = false;
+                  });
+                  _syncPlan(plan['id'] as String);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : isPopular
+                              ? AppColors.primary.withValues(alpha: 0.35)
+                              : AppColors.grey.withValues(alpha: 0.25),
+                      width: isSelected ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isPopular)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.star_rounded, size: 14, color: AppColors.cream),
+                              SizedBox(width: 4),
+                              Text(
+                                'MOST POPULAR CHOICE • SAVE 15%',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.cream,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (savings != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF8B1A2E),
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.diamond_rounded, size: 14, color: AppColors.cream),
+                              const SizedBox(width: 4),
+                              Text(
+                                'BEST VALUE • $savings ON ANNUAL',
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.cream,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: (plan['color'] as Color).withValues(alpha: 0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    plan['icon'] as IconData,
-                                    color: plan['color'] as Color,
-                                    size: 20,
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: (plan['color'] as Color).withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          plan['icon'] as IconData,
+                                          color: plan['color'] as Color,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    plan['name'] as String,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: AppColors.black,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: (plan['color'] as Color).withValues(alpha: 0.12),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    plan['badge'] as String,
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: plan['color'] as Color,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.success.withValues(alpha: 0.12),
+                                                    borderRadius: BorderRadius.circular(5),
+                                                  ),
+                                                  child: Text(
+                                                    '● $status',
+                                                    style: const TextStyle(
+                                                      fontSize: 8.5,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: AppColors.success,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Text(
+                                              plan['tagline'] as String,
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                color: AppColors.darkGrey,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          plan['name'] as String,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: (plan['color'] as Color).withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            plan['badge'] as String,
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w800,
-                                              color: plan['color'] as Color,
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : AppColors.grey.withValues(alpha: 0.5),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? Center(
+                                          child: Container(
+                                            width: 12,
+                                            height: 12,
+                                            decoration: const BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: AppColors.primary,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '₹$price',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '/ ${plan['duration']}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.darkGrey,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '(₹${plan['monthlyRate']}/mo)',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF2E7D32),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(height: 1),
+                            const SizedBox(height: 12),
+                            // Features
+                            ...((plan['features'] as List<String>).map((feat) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 2, right: 8),
+                                      child: Icon(
+                                        Icons.check_circle_rounded,
+                                        color: AppColors.success,
+                                        size: 15,
+                                      ),
                                     ),
-                                    Text(
-                                      plan['tagline'] as String,
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
-                                        color: AppColors.darkGrey,
+                                    Expanded(
+                                      child: Text(
+                                        feat,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          color: AppColors.black,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.35,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
+                              );
+                            })),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedPlan = plan['id'] as String;
+                                    _isSubscriptionPaid = false;
+                                  });
+                                  _syncPlan(plan['id'] as String);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: isSelected
                                       ? AppColors.primary
-                                      : AppColors.grey.withValues(alpha: 0.5),
-                                  width: 2,
+                                      : Colors.transparent,
+                                  side: BorderSide(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.primary.withValues(alpha: 0.5),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                              ),
-                              child: isSelected
-                                  ? Center(
-                                      child: Container(
-                                        width: 12,
-                                        height: 12,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              '₹$price',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '/ ${plan['duration']}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.darkGrey,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '(₹${plan['monthlyRate']}/mo)',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF2E7D32),
-                                fontWeight: FontWeight.w700,
+                                child: Text(
+                                  isSelected ? 'Selected Plan ✓' : 'Select ${plan['name']}',
+                                  style: TextStyle(
+                                    color: isSelected ? Colors.white : AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
-                        // Features
-                        ...((plan['features'] as List<String>).map((feat) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 2, right: 8),
-                                  child: Icon(
-                                    Icons.check_circle_rounded,
-                                    color: AppColors.success,
-                                    size: 15,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    feat,
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      color: AppColors.black,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        })),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 40,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedPlan = plan['id'] as String;
-                                _isSubscriptionPaid = false;
-                              });
-                              _syncPlan(plan['id'] as String);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: isSelected
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.primary.withValues(alpha: 0.5),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              isSelected ? 'Selected Plan ✓' : 'Select ${plan['name']}',
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            }).toList(),
           );
         }),
 
@@ -2554,7 +2956,7 @@ class _VendorRegistrationWizardScreenState
         const SizedBox(height: 10),
 
         // Buy / Status Card
-        if (_isSubscriptionPaid)
+        if (_isSubscriptionPaid && activePlan != null)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -2582,9 +2984,9 @@ class _VendorRegistrationWizardScreenState
                             ),
                           ),
                           const SizedBox(height: 2),
-                          const Text(
-                            'Payment Successful • Txn ID: RWZ-2025-9842',
-                            style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                          Text(
+                            'Payment Successful • Plan ID: ${activePlan['id']}',
+                            style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
                           ),
                         ],
                       ),
@@ -2680,11 +3082,19 @@ class _VendorRegistrationWizardScreenState
     if (_currentStep == 5) {
       final activePlan = _getSelectedPlan();
       final activePrice = _getPlanPrice(activePlan);
+      final planName = activePlan?['name'] ?? 'Plan';
       buttonText = _isSubscriptionPaid
           ? 'Complete Registration'
-          : 'Buy ${activePlan['name']} (₹$activePrice)';
+          : (activePlan != null
+              ? 'Buy $planName (₹$activePrice)'
+              : 'Choose a Plan');
     } else if (_currentStep == 4) {
       buttonText = 'Save Details & View Plans';
+    } else if (_currentStep == 3) {
+      final uploadedCount = _getUploadedRequiredDocsCount();
+      buttonText = uploadedCount == 4
+          ? 'Continue to Review (4/4 Uploaded ✓)'
+          : 'Upload Required Documents ($uploadedCount/4)';
     } else {
       buttonText = 'Continue';
     }

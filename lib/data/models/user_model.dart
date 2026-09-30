@@ -106,7 +106,7 @@ class UserModel {
   }
 
   bool get isCustomer => roleId == 2;
-  bool get isVendor => roleId == 4;
+  bool get isVendor => roleId == 3 || roleId == 4;
 
   /// The bearer token to attach to Authorization header
   String? get bearerToken => accessToken ?? token;

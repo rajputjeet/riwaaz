@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final user = res.data!;
-    final isVendorRole = user.roleId == 4;
+    final isVendorRole = user.roleId == 3 || user.roleId == 4 || user.isVendor;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

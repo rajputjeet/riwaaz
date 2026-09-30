@@ -104,8 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 700));
       if (!mounted) return;
       final roleId = storage.getRoleId();
-      if (roleId == 4) {
-        // Vendor Partner
+      if (roleId == 3 || roleId == 4) {
+        // Vendor Partner (roleId: 3 per docs, 4 legacy)
         Navigator.of(context).pushReplacement(
           FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
         );

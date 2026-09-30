@@ -126,4 +126,81 @@ class AuthApiProvider {
       );
     }
   }
+
+  // 5. Forgot Password (PUT /api/auth/forgot-password)
+  Future<DataResponse<dynamic>> forgotPassword({
+    required String identifier,
+    required String newPassword,
+  }) async {
+    final isEmail = identifier.contains('@');
+    final payload = {
+      if (isEmail) 'email': identifier else 'phone': identifier,
+      'newPassword': newPassword,
+    };
+
+    try {
+      final response = await _dio.put(
+        ApiConstants.forgotPassword,
+        data: payload,
+      );
+
+      return DataResponse<dynamic>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => json,
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<dynamic>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // 6. Refresh Token (POST /api/auth/refresh-token)
+  Future<DataResponse<UserModel>> refreshToken({
+    required String refreshToken,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+
+      return DataResponse<UserModel>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => UserModel.fromJson(json as Map<String, dynamic>),
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<UserModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // 7. Logout (POST /api/auth/logout)
+  Future<DataResponse<dynamic>> logOut() async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.logout,
+        options: Injector.getHeaderToken(),
+      );
+
+      return DataResponse<dynamic>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => json,
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<dynamic>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
 }

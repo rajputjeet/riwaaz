@@ -4,9 +4,9 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../vendor_registration/vendor_registration_wizard_screen.dart';
 import 'controllers/auth_controller.dart';
 import 'login_screen.dart';
-import 'vendor_otp_verification_screen.dart';
 
 class VendorSignupScreen extends StatefulWidget {
   const VendorSignupScreen({super.key});
@@ -46,28 +46,57 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
         : Get.put(AuthController());
 
     final businessName = _nameController.text.trim();
-    final res = await authController.signUp(
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    final res = await authController.signUpAndSignIn(
       fullName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim(),
-      password: _passwordController.text,
-      roleId: 4, // 4 = Vendor Partner
+      email: email,
+      phone: phone,
+      password: password,
+      roleId: 3, // 3 = Vendor Partner (per FLUTTER_AUTH_API_DOCUMENTATION.md)
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (res.isSuccess == true) {
-      Navigator.of(context).push(
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Welcome, ${businessName.isNotEmpty ? businessName : "Partner"}! Partner account created.',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(milliseconds: 1600),
+        ),
+      );
+
+      // Navigate directly into vendor onboarding wizard without OTP
+      Navigator.of(context).pushAndRemoveUntil(
         FadeScaleRoute(
-          page: VendorOtpVerificationScreen(
-            businessName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
-            ownerName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
-            email: _emailController.text.trim(),
-            phone: _phoneController.text.trim(),
-            initialOtp: res.data?.otp,
+          page: const VendorRegistrationWizardScreen(
+            initialStep: 1,
+            initialCategory: 'Photography & Videography',
           ),
         ),
+        (route) => false,
       );
     }
   }
@@ -358,7 +387,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 const Spacer(),
                 const SizedBox(height: 24),
 
-                // Continue Button
+                // Register Business Button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -386,7 +415,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Continue to Verification',
+                                'Register Business',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,

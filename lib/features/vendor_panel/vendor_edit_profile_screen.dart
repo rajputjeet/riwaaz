@@ -665,9 +665,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                           children: [
                             ServiceIconWrap(
                               item: item,
-                              size: 42,
-                              iconSize: 20,
-                              borderRadius: 12,
+                              size: 52,
+                              iconSize: 30,
+                              borderRadius: 14,
                               isSelected: isSelected,
                             ),
                             const SizedBox(width: 12),

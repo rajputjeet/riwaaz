@@ -23,8 +23,8 @@ class ServiceIconWrap extends StatelessWidget {
   const ServiceIconWrap({
     super.key,
     required this.item,
-    this.size = 70,
-    this.iconSize = 30,
+    this.size = 74,
+    this.iconSize = 38,
     this.borderRadius = 18,
     this.isSelected = false,
   });
@@ -139,7 +139,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: SizedBox(
-        height: 108,
+        height: 128,
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
@@ -151,8 +151,8 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 62,
-                  height: 62,
+                  width: 74,
+                  height: 74,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
@@ -237,7 +237,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           SizedBox(
-            height: 108,
+            height: 128,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -261,25 +261,25 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                     }
                   },
                   child: SizedBox(
-                    width: 86,
+                    width: 92,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ServiceIconWrap(
                           item: cat,
-                          size: 62,
-                          iconSize: 26,
-                          borderRadius: 16,
+                          size: 74,
+                          iconSize: 40,
+                          borderRadius: 18,
                           isSelected: isSelected,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           cat.title,
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.cormorantGaramond(
-                            fontSize: 12,
+                            fontSize: 12.5,
                             fontWeight:
                                 isSelected ? FontWeight.w700 : FontWeight.w600,
                             color: isSelected

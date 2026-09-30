@@ -223,7 +223,7 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ChoiceChip(
-                    label: const Text('Phone OTP'),
+                    label: const Text('Phone Number'),
                     selected: _usePhoneAuth,
                     onSelected: (val) => setState(() => _usePhoneAuth = true),
                     selectedColor: AppColors.gold.withValues(alpha: 0.2),
@@ -385,7 +385,7 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
                         )
                       : Text(
                           _isLogin
-                              ? (_usePhoneAuth ? 'Send OTP' : 'Login')
+                              ? (_usePhoneAuth ? 'Continue' : 'Login')
                               : 'Create Account & Continue',
                           style: const TextStyle(
                             fontSize: 16,

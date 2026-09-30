@@ -408,8 +408,8 @@ class _ExploreBodyState extends State<ExploreBody> {
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 10,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.90,
+              mainAxisSpacing: 10,
+              childAspectRatio: 0.76,
             ),
             itemCount: displayedCategories.length,
             itemBuilder: (context, i) {
@@ -429,10 +429,10 @@ class _ExploreBodyState extends State<ExploreBody> {
                   },
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: AppColors.grey.withValues(alpha: 0.22),
                         width: 1,
@@ -440,7 +440,7 @@ class _ExploreBodyState extends State<ExploreBody> {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 4,
+                          blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -450,20 +450,20 @@ class _ExploreBodyState extends State<ExploreBody> {
                       children: [
                         ServiceIconWrap(
                           item: cat,
-                          size: 46,
-                          iconSize: 22,
-                          borderRadius: 12,
+                          size: 64,
+                          iconSize: 38,
+                          borderRadius: 16,
                           isSelected: false,
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 7),
                         Text(
                           cat.title,
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.cormorantGaramond(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.black,
                             height: 1.15,
                           ),

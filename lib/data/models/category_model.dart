@@ -38,6 +38,10 @@ class CategoryModel {
     if (rawUrl == null || rawUrl.trim().isEmpty) return '';
     rawUrl = rawUrl.trim();
     if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      final base = (baseUrl ?? ApiConstants.baseUrl).replaceAll(RegExp(r'/+$'), '');
+      if (rawUrl.contains('localhost:5174') || rawUrl.contains('127.0.0.1:5174')) {
+        return rawUrl.replaceAll(RegExp(r'https?://(localhost|127\.0\.0\.1):5174'), base);
+      }
       return rawUrl;
     }
     if (rawUrl.startsWith('assets/')) {

@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../vendor_registration/controllers/vendor_registration_controller.dart';
 
-class VendorVerificationScreen extends StatelessWidget {
+class VendorVerificationScreen extends StatefulWidget {
   const VendorVerificationScreen({super.key});
+
+  @override
+  State<VendorVerificationScreen> createState() =>
+      _VendorVerificationScreenState();
+}
+
+class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
+  late final VendorRegistrationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+    _controller.fetchApplicationStatus();
+  }
 
   @override
   Widget build(BuildContext context) {
     final storage = StorageHelper();
     final businessName = storage.getUserName()?.trim();
-    final appId = storage.getApplicationId() ?? 'RWZ-2026-8841';
-    final appStatus = storage.getApplicationStatus() ?? 'Active';
-    final isVerified = storage.getIsVerified();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -33,86 +49,115 @@ class VendorVerificationScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          children: [
-            // Gold Verification Badge Hero Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, Color(0xFF6B1D28)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.gold, width: 2),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => _controller.fetchApplicationStatus(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            children: [
+              // Gold Verification Badge Hero Card
+              Obx(() {
+                final liveAppId = _controller.applicationData.value?.applicationId;
+                final savedId = storage.getApplicationId();
+                final appId = (liveAppId != null && liveAppId.trim().isNotEmpty)
+                    ? liveAppId.trim()
+                    : ((savedId != null && savedId.trim().isNotEmpty && savedId != 'RWZ-2026-8841')
+                        ? savedId.trim()
+                        : 'IN VERIFICATION');
+
+                final appStatus = _controller.currentStatus.value;
+                final isVerified = _controller.isVerified.value;
+                final isApproved = isVerified || appStatus == 'Approved' || appStatus == 'Active';
+                final isRejected = appStatus == 'Rejected';
+
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, Color(0xFF6B1D28)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: const Icon(Icons.verified_rounded,
-                        color: AppColors.gold, size: 40),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    isVerified || appStatus == 'Approved' || appStatus == 'Active'
-                        ? '100% Verified Partner'
-                        : 'Application Under Review',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${(businessName != null && businessName.isNotEmpty) ? businessName : 'Partner'} • Partner ID: $appId',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.cream,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isVerified || appStatus == 'Approved' || appStatus == 'Active'
-                          ? AppColors.success
-                          : AppColors.warning,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isVerified || appStatus == 'Approved' || appStatus == 'Active'
-                          ? 'STATUS: ACTIVE & TRUSTED'
-                          : 'STATUS: ${appStatus.toUpperCase()}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: AppColors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.gold, width: 2),
+                        ),
+                        child: Icon(
+                          isApproved
+                              ? Icons.verified_rounded
+                              : (isRejected
+                                  ? Icons.cancel_rounded
+                                  : Icons.hourglass_top_rounded),
+                          color: AppColors.gold,
+                          size: 40,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        isApproved
+                            ? '100% Verified Partner'
+                            : (isRejected
+                                ? 'Application Under Review'
+                                : 'Application Under Review'),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${(businessName != null && businessName.isNotEmpty) ? businessName : 'Partner'} • Partner ID: $appId',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.cream,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isApproved
+                              ? AppColors.success
+                              : (isRejected ? AppColors.error : AppColors.warning),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isApproved
+                              ? 'STATUS: ACTIVE & TRUSTED'
+                              : 'STATUS: ${appStatus.toUpperCase()}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
 
             const SizedBox(height: 20),
 
@@ -249,8 +294,9 @@ class VendorVerificationScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDocCard({
     required IconData icon,

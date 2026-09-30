@@ -55,8 +55,14 @@ class CachedImageView extends StatelessWidget {
     if (raw == null || raw.trim().isEmpty) return '';
     final trimmed = raw.trim();
     if (trimmed.startsWith('http://') ||
-        trimmed.startsWith('https://') ||
-        trimmed.startsWith('assets/')) {
+        trimmed.startsWith('https://')) {
+      final base = ApiConstants.baseUrl.replaceAll(RegExp(r'/+$'), '');
+      if (trimmed.contains('localhost:5174') || trimmed.contains('127.0.0.1:5174')) {
+        return trimmed.replaceAll(RegExp(r'https?://(localhost|127\.0\.0\.1):5174'), base);
+      }
+      return trimmed;
+    }
+    if (trimmed.startsWith('assets/')) {
       return trimmed;
     }
     final base = ApiConstants.baseUrl.replaceAll(RegExp(r'/+$'), '');

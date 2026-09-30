@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../vendor_panel/vendor_shell.dart';
+import 'controllers/vendor_registration_controller.dart';
 import 'vendor_verification_tracker_screen.dart';
 
-class VendorSubmittedScreen extends StatelessWidget {
+class VendorSubmittedScreen extends StatefulWidget {
   final String businessName;
   final String businessType;
   final String ownerName;
@@ -17,17 +19,46 @@ class VendorSubmittedScreen extends StatelessWidget {
     super.key,
     this.businessName = 'Royal Click Studio',
     this.businessType = 'Photography',
-    this.ownerName = 'Aman Verma',
+    this.ownerName = 'Partner',
     this.applicationId,
   });
 
-  String get _effectiveApplicationId =>
-      (applicationId != null && applicationId!.trim().isNotEmpty)
-          ? applicationId!
-          : (StorageHelper().getApplicationId() ?? 'WDV12345678');
+  @override
+  State<VendorSubmittedScreen> createState() => _VendorSubmittedScreenState();
+}
+
+class _VendorSubmittedScreenState extends State<VendorSubmittedScreen> {
+  late final VendorRegistrationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+    _controller.fetchApplicationStatus();
+  }
+
+  String get _effectiveApplicationId {
+    final liveAppId = _controller.applicationData.value?.applicationId;
+    if (liveAppId != null && liveAppId.trim().isNotEmpty) return liveAppId.trim();
+    if (widget.applicationId != null &&
+        widget.applicationId!.trim().isNotEmpty &&
+        widget.applicationId != 'WDV12345678') {
+      return widget.applicationId!.trim();
+    }
+    final savedId = StorageHelper().getApplicationId();
+    if (savedId != null && savedId.trim().isNotEmpty && savedId != 'WDV12345678') {
+      return savedId.trim();
+    }
+    return 'IN VERIFICATION';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final effectiveBusiness = widget.businessName.isNotEmpty && widget.businessName != 'Royal Click Studio'
+        ? widget.businessName
+        : (StorageHelper().getUserName() ?? widget.businessName);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
@@ -87,7 +118,7 @@ class VendorSubmittedScreen extends StatelessWidget {
 
               // Subtitle
               Text(
-                'Your application for $businessName has been submitted successfully. Our team will verify your details and activate your account soon.',
+                'Your application for $effectiveBusiness has been submitted successfully. Our team will verify your details and activate your account soon.',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.darkGrey,
@@ -95,7 +126,7 @@ class VendorSubmittedScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Application ID Card
               Container(
@@ -153,11 +184,51 @@ class VendorSubmittedScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    // Dynamic live status from server
+                    Obx(() {
+                      final status = _controller.currentStatus.value;
+                      final isVerified = _controller.isVerified.value;
+                      final isApproved = isVerified || status == 'Approved' || status == 'Active';
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isApproved
+                              ? AppColors.success.withValues(alpha: 0.12)
+                              : AppColors.warning.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isApproved ? AppColors.success : AppColors.warning,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isApproved ? Icons.verified_rounded : Icons.hourglass_top_rounded,
+                              size: 13,
+                              color: isApproved ? AppColors.success : AppColors.warning,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'SERVER STATUS: ${status.toUpperCase()}',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: isApproved ? AppColors.success : AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Notification note badge
               Container(

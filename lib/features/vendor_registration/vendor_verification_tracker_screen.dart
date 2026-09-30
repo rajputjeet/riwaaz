@@ -5,17 +5,34 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/cached_image_view.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../vendor_panel/vendor_shell.dart';
 import 'controllers/vendor_registration_controller.dart';
 
-class VendorVerificationTrackerScreen extends StatelessWidget {
+class VendorVerificationTrackerScreen extends StatefulWidget {
   const VendorVerificationTrackerScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.isRegistered<VendorRegistrationController>()
+  State<VendorVerificationTrackerScreen> createState() =>
+      _VendorVerificationTrackerScreenState();
+}
+
+class _VendorVerificationTrackerScreenState
+    extends State<VendorVerificationTrackerScreen> {
+  late final VendorRegistrationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = Get.isRegistered<VendorRegistrationController>()
         ? Get.find<VendorRegistrationController>()
         : Get.put(VendorRegistrationController());
+    _controller.fetchApplicationStatus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -56,10 +73,19 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
               children: [
                 // Live Application Status Header
                 Obx(() {
-                  final appId = controller.applicationData.value?.applicationId ??
-                      'WDV12345678';
+                  final isLoading = controller.isLoading.value;
+                  final liveAppId = controller.applicationData.value?.applicationId;
+                  final savedAppId = StorageHelper().getApplicationId();
+                  final appId = (liveAppId != null && liveAppId.trim().isNotEmpty)
+                      ? liveAppId.trim()
+                      : ((savedAppId != null && savedAppId.trim().isNotEmpty && savedAppId != 'WDV12345678')
+                          ? savedAppId.trim()
+                          : 'IN VERIFICATION');
+
                   final status = controller.currentStatus.value;
                   final isVerified = controller.isVerified.value;
+                  final isApproved = isVerified || status == 'Approved' || status == 'Active';
+                  final isRejected = status == 'Rejected';
 
                   return Container(
                     width: double.infinity,
@@ -101,27 +127,42 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isVerified || status == 'Approved'
+                            color: isApproved
                                 ? AppColors.success.withValues(alpha: 0.12)
-                                : AppColors.warning.withValues(alpha: 0.15),
+                                : (isRejected
+                                    ? AppColors.error.withValues(alpha: 0.12)
+                                    : AppColors.warning.withValues(alpha: 0.15)),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isVerified || status == 'Approved'
+                              color: isApproved
                                   ? AppColors.success
-                                  : AppColors.warning,
+                                  : (isRejected ? AppColors.error : AppColors.warning),
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (isLoading) ...[
+                                const SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
                               Icon(
-                                isVerified || status == 'Approved'
+                                isApproved
                                     ? Icons.check_circle_rounded
-                                    : Icons.hourglass_empty_rounded,
+                                    : (isRejected
+                                        ? Icons.cancel_rounded
+                                        : Icons.hourglass_empty_rounded),
                                 size: 14,
-                                color: isVerified || status == 'Approved'
+                                color: isApproved
                                     ? AppColors.success
-                                    : AppColors.warning,
+                                    : (isRejected ? AppColors.error : AppColors.warning),
                               ),
                               const SizedBox(width: 5),
                               Text(
@@ -129,9 +170,9 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: isVerified || status == 'Approved'
+                                  color: isApproved
                                       ? AppColors.success
-                                      : AppColors.warning,
+                                      : (isRejected ? AppColors.error : AppColors.warning),
                                 ),
                               ),
                             ],
@@ -143,7 +184,7 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                 }),
 
                 // Stepper Timeline (Horizontal/Vertical)
-                _buildTimelineStepper(),
+                Obx(() => _buildTimelineStepper(controller.currentStatus.value, controller.isVerified.value)),
 
               const SizedBox(height: 28),
 
@@ -326,31 +367,47 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimelineStepper() {
+  Widget _buildTimelineStepper(String status, bool isVerified) {
+    final normStatus = status.trim().toLowerCase();
+    final bool isApproved = isVerified || normStatus == 'approved' || normStatus == 'active';
+    final bool isRejected = normStatus == 'rejected';
+
     final steps = [
       {
         'title': 'Submitted',
-        'sub': 'Application\nsubmitted\n20 May, 2024',
-        'state': 'done', // done, current, pending
+        'sub': 'Application\nreceived',
+        'state': 'done', // done, current, pending, error
         'icon': Icons.download_done_rounded,
       },
       {
         'title': 'Under Review',
-        'sub': 'Our team is\nverifying docs\n20 May, 2024',
-        'state': 'current',
-        'icon': Icons.hourglass_top_rounded,
+        'sub': isApproved
+            ? 'Documents\nverified'
+            : (isRejected ? 'Review\nconcluded' : 'Verifying\ndocuments'),
+        'state': isApproved ? 'done' : (isRejected ? 'done' : 'current'),
+        'icon': isApproved
+            ? Icons.check_circle_rounded
+            : (isRejected ? Icons.highlight_off_rounded : Icons.hourglass_top_rounded),
       },
       {
-        'title': 'Verified',
-        'sub': 'Account\nverified',
-        'state': 'pending',
-        'icon': Icons.verified_outlined,
+        'title': isRejected ? 'Rejected' : 'Verified',
+        'sub': isApproved
+            ? 'Account\nverified'
+            : (isRejected ? 'Application\ndeclined' : 'Pending\nverification'),
+        'state': isApproved ? 'done' : (isRejected ? 'error' : 'pending'),
+        'icon': isApproved
+            ? Icons.verified_rounded
+            : (isRejected ? Icons.cancel_outlined : Icons.verified_outlined),
       },
       {
         'title': 'Approved',
-        'sub': 'Live on\nWidoora',
-        'state': 'pending',
-        'icon': Icons.celebration_outlined,
+        'sub': isApproved
+            ? 'Live on\nWidoora'
+            : (isRejected ? 'Declined' : 'Live on\nWidoora'),
+        'state': isApproved ? 'done' : 'pending',
+        'icon': isApproved
+            ? Icons.celebration_rounded
+            : Icons.celebration_outlined,
       },
     ];
 
@@ -373,6 +430,10 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
           iconBg = AppColors.warning;
           iconColor = AppColors.white;
           titleColor = AppColors.warning;
+        } else if (state == 'error') {
+          iconBg = AppColors.error;
+          iconColor = AppColors.white;
+          titleColor = AppColors.error;
         } else {
           iconBg = AppColors.lightGrey;
           iconColor = AppColors.grey;
@@ -410,7 +471,9 @@ class VendorVerificationTrackerScreen extends StatelessWidget {
                             height: 2,
                             color: (state == 'done' &&
                                     steps[i + 1]['state'] != 'pending')
-                                ? AppColors.warning
+                                ? (steps[i + 1]['state'] == 'done'
+                                    ? AppColors.success
+                                    : AppColors.warning)
                                 : AppColors.lightGrey,
                           ),
                   ),
