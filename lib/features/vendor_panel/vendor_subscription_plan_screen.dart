@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/api_provider/subscription_api_provider.dart';
+import '../../data/models/subscription_model.dart';
 
 class VendorSubscriptionPlanScreen extends StatefulWidget {
   final String currentPlanId;
@@ -19,6 +22,26 @@ class _VendorSubscriptionPlanScreenState
     extends State<VendorSubscriptionPlanScreen> {
   late String _activePlanId;
   String _selectedPaymentMethod = 'UPI';
+  // ignore: unused_field
+  String _activePlanServerId = '';
+  // ignore: unused_field
+  bool _isLoadingPlans = false;
+  List<SubscriptionModel> _serverPlans = [];
+
+  // Map local plan key -> server _id (populated after API fetch)
+  String _getServerPlanId(String localId) {
+    if (_serverPlans.isEmpty) return '';
+    const monthsMap = {'3_months': 3, '6_months': 6, '12_months': 12};
+    final months = monthsMap[localId];
+    if (months == null) return _serverPlans.first.id ?? '';
+    return _serverPlans
+            .firstWhere(
+              (p) => p.durationInMonths == months,
+              orElse: () => _serverPlans.first,
+            )
+            .id ??
+        '';
+  }
 
   final List<Map<String, dynamic>> _plans = [
     {
@@ -100,6 +123,28 @@ class _VendorSubscriptionPlanScreenState
   void initState() {
     super.initState();
     _activePlanId = widget.currentPlanId;
+    _loadServerData();
+  }
+
+  Future<void> _loadServerData() async {
+    setState(() => _isLoadingPlans = true);
+    try {
+      final plansResult = await SubscriptionApiProvider().getSubscriptionList();
+      final planResult = await VendorApiProvider().getActivePlan();
+      if (!mounted) return;
+      setState(() {
+        if (plansResult.isSuccess == true && plansResult.data != null) {
+          _serverPlans = plansResult.data!;
+        }
+        if (planResult.isSuccess == true && planResult.data != null) {
+          _activePlanServerId =
+              planResult.data!.subscriptionPlan?.id ?? '';
+        }
+        _isLoadingPlans = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingPlans = false);
+    }
   }
 
   void _showCheckoutSheet(Map<String, dynamic> plan) {
@@ -295,46 +340,75 @@ class _VendorSubscriptionPlanScreenState
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: isProcessing
+                   onPressed: isProcessing
                       ? null
                       : () async {
                           final nav = Navigator.of(ctx);
                           final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                          // Get the real server plan ID
+                          final serverPlanId = _getServerPlanId(plan['id'] as String);
+                          if (serverPlanId.isEmpty) {
+                            scaffoldMessenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Plan ID not found. Please retry.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           setSheetState(() => isProcessing = true);
-                          await Future.delayed(const Duration(milliseconds: 900));
+
+                          final result = await VendorApiProvider().buyPlan(
+                            subscriptionPlanId: serverPlanId,
+                            paymentMethod: _selectedPaymentMethod,
+                          );
+
                           if (!mounted) return;
 
-                          setState(() {
-                            _activePlanId = plan['id'] as String;
-                          });
-                          nav.pop();
-
-                          scaffoldMessenger.showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle_rounded,
-                                      color: Colors.white, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Plan Activated! You are now on the ${plan['name']}.',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
+                          if (result.isSuccess == true) {
+                            setState(() {
+                              _activePlanId = plan['id'] as String;
+                              _activePlanServerId = serverPlanId;
+                            });
+                            nav.pop();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: Colors.white, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Plan Activated! You are now on the ${plan['name']}.',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                backgroundColor: AppColors.success,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                duration: const Duration(seconds: 3),
                               ),
-                              backgroundColor: AppColors.success,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                            );
+                          } else {
+                            setSheetState(() => isProcessing = false);
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    result.message ?? 'Payment failed. Please try again.'),
+                                backgroundColor: Colors.red,
                               ),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
+                            );
+                          }
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

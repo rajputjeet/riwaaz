@@ -2,16 +2,30 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/dashboard_stats_model.dart';
+import '../../data/models/active_plan_model.dart';
 import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
 import '../../core/services/booking_service.dart';
 
-class VendorDashboardTab extends StatelessWidget {
+class VendorDashboardTab extends StatefulWidget {
   final void Function(int tabIndex)? onNavigateTab;
 
   const VendorDashboardTab({super.key, this.onNavigateTab});
+
+  @override
+  State<VendorDashboardTab> createState() => _VendorDashboardTabState();
+}
+
+class _VendorDashboardTabState extends State<VendorDashboardTab> {
+  final _vendorApi = VendorApiProvider();
+
+  DashboardStatsModel? _stats;
+  ActivePlanModel? _activePlan;
+  bool _isLoading = true;
 
   /// Reads business/owner name from storage for the greeting
   String _vendorDisplayName() {
@@ -20,15 +34,60 @@ class VendorDashboardTab extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _vendorApi.getDashboardStats(),
+        _vendorApi.getActivePlan(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        final statsResult = results[0];
+        final planResult = results[1];
+        if (statsResult.isSuccess == true && statsResult.data != null) {
+          _stats = statsResult.data as DashboardStatsModel;
+        }
+        if (planResult.isSuccess == true && planResult.data != null) {
+          _activePlan = planResult.data as ActivePlanModel;
+        }
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void Function(int tabIndex)? get onNavigateTab => widget.onNavigateTab;
+
+  String _formatRevenue(num value) {
+    if (value >= 100000) {
+      final lakh = value / 100000;
+      return '${lakh.toStringAsFixed(lakh.truncateToDouble() == lakh ? 0 : 1)}L';
+    } else if (value >= 1000) {
+      final k = value / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}K';
+    }
+    return value.toStringAsFixed(0);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: AppBookingService.instance,
       builder: (context, _) {
         final bookingService = AppBookingService.instance;
-        final pendingCount = bookingService.pendingCount;
-        final confirmedCount = bookingService.confirmedCount;
-        final completedCount = bookingService.completedCount;
-        final totalCount = bookingService.totalCount;
+        // Use live API stats when available, fallback to local service
+        final pendingCount = _stats?.bookingsCount.pending ?? bookingService.pendingCount;
+        final confirmedCount = _stats?.bookingsCount.upcoming ?? bookingService.confirmedCount;
+        final completedCount = _stats?.bookingsCount.completed ?? bookingService.completedCount;
+        final totalCount = _stats?.bookingsCount.all ?? bookingService.totalCount;
 
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -280,6 +339,27 @@ class VendorDashboardTab extends StatelessWidget {
   }
 
   Widget _buildMembershipBanner(BuildContext context) {
+    // Use live active plan data when available
+    final plan = _activePlan;
+    final planTitle = plan?.subscriptionPlan?.title ??
+        _stats?.subscription?.planTitle ?? '—';
+    final isActive =
+        plan?.isSubscriptionActive ?? _stats?.subscription?.isSubscriptionActive ?? false;
+    final daysRemaining =
+        plan?.daysRemaining ?? _stats?.subscription?.daysRemaining ?? 0;
+    final isExpired =
+        plan?.isExpired ?? _stats?.subscription?.isExpired ?? true;
+
+    final statusLabel = isActive ? 'Active' : (isExpired ? 'Expired' : 'Inactive');
+    final statusColor = isActive
+        ? const Color(0xFF81C784)
+        : (isExpired ? const Color(0xFFEF5350) : const Color(0xFFFFB74D));
+    final statusBg = isActive
+        ? AppColors.success.withValues(alpha: 0.25)
+        : (isExpired
+            ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+            : const Color(0xFFFFB74D).withValues(alpha: 0.2));
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -320,37 +400,44 @@ class VendorDashboardTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text(
-                      '6 Months Plan',
-                      style: TextStyle(
+                    Text(
+                      _isLoading ? 'Loading...' : planTitle,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'Active',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF81C784),
+                    if (!_isLoading)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          statusLabel,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Active Membership • 84 Days Remaining',
-                  style: TextStyle(
+                Text(
+                  _isLoading
+                      ? 'Fetching plan info...'
+                      : (isActive
+                          ? 'Active Membership • $daysRemaining Days Remaining'
+                          : (isExpired
+                              ? 'Plan Expired — Please renew to continue'
+                              : 'No active plan')),
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppColors.cream,
                   ),
@@ -446,18 +533,20 @@ class VendorDashboardTab extends StatelessWidget {
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    '₹ 1,25,000',
-                    style: TextStyle(
+                    _isLoading
+                        ? '—'
+                        : '₹ ${_formatRevenue(_stats?.financials.totalRevenue ?? 0)}',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       color: AppColors.black,
                     ),
                   ),
                   Text(
-                    'vs ₹97,200 last month',
-                    style: TextStyle(fontSize: 10, color: AppColors.grey),
+                    _isLoading ? 'Loading...' : 'Total Revenue',
+                    style: const TextStyle(fontSize: 10, color: AppColors.grey),
                   ),
                 ],
               ),

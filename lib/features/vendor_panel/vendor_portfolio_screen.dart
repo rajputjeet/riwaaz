@@ -284,7 +284,7 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
 
                 // Category selector
                 DropdownButtonFormField<String>(
-                  initialValue: eventType,
+                  value: eventType,
                   decoration: InputDecoration(
                     labelText: 'Event Category',
                     prefixIcon: const Icon(Icons.category_rounded,
