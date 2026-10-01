@@ -44,19 +44,27 @@ abstract class ApiConstants {
   static String vendorPortfolioDelete(String id) =>
       "/api/users/vendor/portfolio/delete/$id";
 
-  // 8. Vendor Package APIs
-  static const String vendorPackageAdd = "/api/users/vendor/package/add";
-  static String vendorPackageEdit(String id) =>
-      "/api/users/vendor/package/edit/$id";
-  static String vendorPackageDelete(String id) =>
-      "/api/users/vendor/package/delete/$id";
+  // 8. Vendor Services & Packages Unified APIs
+  static const String vendorServicePackageAdd =
+      "/api/users/vendor/service-package/add";
+  static String vendorServicePackageEdit(String id) =>
+      "/api/users/vendor/service-package/edit/$id";
+  static String vendorServicePackageDelete(String id) =>
+      "/api/users/vendor/service-package/delete/$id";
+  static const String vendorServicePackageList =
+      "/api/users/vendor/service-package/list";
 
-  // 9. Vendor Service APIs
-  static const String vendorServiceAdd = "/api/users/vendor/service/add";
-  static String vendorServiceEdit(String id) =>
-      "/api/users/vendor/service/edit/$id";
+  // Backward compatibility aliases
+  static const String vendorPackageAdd = vendorServicePackageAdd;
+  static String vendorPackageEdit(String id) => vendorServicePackageEdit(id);
+  static String vendorPackageDelete(String id) =>
+      vendorServicePackageDelete(id);
+
+  // 9. Vendor Service APIs (Aliases to unified)
+  static const String vendorServiceAdd = vendorServicePackageAdd;
+  static String vendorServiceEdit(String id) => vendorServicePackageEdit(id);
   static String vendorServiceDelete(String id) =>
-      "/api/users/vendor/service/delete/$id";
+      vendorServicePackageDelete(id);
 
   // 10. Vendor Bookings APIs
   static const String vendorBookingsList = "/api/booking/list";

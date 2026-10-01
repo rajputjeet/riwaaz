@@ -247,7 +247,7 @@ class _VendorSubscriptionPlanScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isCurrent ? 'Renew Membership' : 'Activate Membership',
+                        isCurrent ? 'Renew Subscription' : 'Activate Subscription',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -542,7 +542,7 @@ class _VendorSubscriptionPlanScreenState
                 color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Vendor Membership Plans',
+          title: const Text('Subscription Plans',
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -550,7 +550,7 @@ class _VendorSubscriptionPlanScreenState
           centerTitle: true,
         ),
         body: const AppLoadingState(
-            message: 'Loading partnership membership plans...'),
+            message: 'Loading subscription plans...'),
       );
     }
 
@@ -565,7 +565,7 @@ class _VendorSubscriptionPlanScreenState
                 color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Vendor Membership Plans',
+          title: const Text('Subscription Plans',
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -587,7 +587,7 @@ class _VendorSubscriptionPlanScreenState
                 color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Vendor Membership Plans',
+          title: const Text('Subscription Plans',
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -610,7 +610,7 @@ class _VendorSubscriptionPlanScreenState
                 color: AppColors.primary, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Vendor Membership Plans',
+          title: const Text('Subscription Plans',
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -621,7 +621,7 @@ class _VendorSubscriptionPlanScreenState
           icon: Icons.card_membership_rounded,
           title: 'No Plans Available',
           subtitle:
-              'Partnership membership plans will appear here once configured by the platform.',
+              'Subscription plans will appear here once configured by the platform.',
         ),
       );
     }
@@ -642,7 +642,7 @@ class _VendorSubscriptionPlanScreenState
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Vendor Membership Plans',
+          'Subscription Plans',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -1053,7 +1053,7 @@ class _VendorSubscriptionPlanScreenState
                         color: AppColors.cream, size: 14),
                     SizedBox(width: 4),
                     Text(
-                      'ACTIVE MEMBERSHIP',
+                      'ACTIVE SUBSCRIPTION',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -1283,7 +1283,7 @@ class _VendorSubscriptionPlanScreenState
                   color: AppColors.primary, size: 20),
               SizedBox(width: 8),
               Text(
-                'Membership FAQs',
+                'Subscription FAQs',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,

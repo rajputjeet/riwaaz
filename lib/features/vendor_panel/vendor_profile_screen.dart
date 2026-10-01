@@ -126,7 +126,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
 
   String get _packagesSubtitle {
     final count = _stats?.portfolioStats.totalPackages ?? 0;
-    return count == 0 ? 'No packages yet' : '$count package${count == 1 ? '' : 's'} active';
+    return count == 0 ? 'No packages or services yet' : '$count item${count == 1 ? '' : 's'} active';
   }
 
   String get _portfolioSubtitle {
@@ -370,7 +370,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                             _buildMenuItem(
                               icon: Icons.workspace_premium_rounded,
                               iconColor: AppColors.goldDark,
-                              title: 'Vendor Membership Plans',
+                              title: 'Subscription Plans',
                               subtitle: _planSubtitle,
                               onTap: () => Navigator.of(context).push(
                                 FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
@@ -378,7 +378,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                             ),
                             _buildMenuItem(
                               icon: Icons.inventory_2_outlined,
-                              title: 'My Pricing Packages',
+                              title: 'My Packages & Services',
                               subtitle: _packagesSubtitle,
                               onTap: () => Navigator.of(context).push(
                                 FadeScaleRoute(page: const VendorPackagesScreen()),
@@ -946,7 +946,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   Text('• Portfolio photos, media & service packages',
                       style: TextStyle(fontSize: 12, color: Colors.red)),
                   SizedBox(height: 4),
-                  Text('• Active vendor membership plan & remaining days',
+                  Text('• Active vendor subscription plan & remaining days',
                       style: TextStyle(fontSize: 12, color: Colors.red)),
                   SizedBox(height: 4),
                   Text('• Client booking records & incoming requests',

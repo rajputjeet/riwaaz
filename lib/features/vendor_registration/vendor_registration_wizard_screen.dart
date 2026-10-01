@@ -95,7 +95,7 @@ class _VendorRegistrationWizardScreenState
         final duration = sub.type ??
             (sub.durationInMonths != null
                 ? '${sub.durationInMonths} Months'
-                : 'Membership');
+                : 'Subscription');
         final months = sub.durationInMonths ??
             (duration.contains('12')
                 ? 12
@@ -107,7 +107,7 @@ class _VendorRegistrationWizardScreenState
         final desc =
             (sub.description != null && sub.description!.trim().isNotEmpty)
                 ? sub.description!.trim()
-                : 'Vendor partner membership plan on Widoora';
+                : 'Vendor partner subscription plan on Widoora';
         final isPopular = months == 6 ||
             name.toLowerCase().contains('gold') ||
             name.toLowerCase().contains('popular');
@@ -836,7 +836,7 @@ class _VendorRegistrationWizardScreenState
                         ),
                       ),
                       Text(
-                        'Widoora Partner Membership',
+                        'Widoora Partner Subscription',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: AppColors.darkGrey,

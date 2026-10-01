@@ -9,6 +9,7 @@ import '../shared/data_response.dart';
 import '../../utils/helper/storage_helper.dart';
 import 'api_constant.dart';
 
+// Unified Vendor API Provider for Services, Packages, Plans, Portfolio, and Bookings
 class VendorApiProvider {
   late final Dio _dio;
 
@@ -213,16 +214,90 @@ class VendorApiProvider {
 
   // ─── Packages ──────────────────────────────────────────────────────────────
 
-  // POST /api/users/vendor/package/add
-  Future<DataResponse<dynamic>> addPackage(Map<String, dynamic> data) async {
+  // ─── Vendor Services & Packages (Unified API) ─────────────────────────────
+
+  // GET /api/users/vendor/service-package/list
+  Future<DataResponse<List<dynamic>>> getServicePackageList() async {
     try {
-      final response = await _dio.post(
-        ApiConstants.vendorPackageAdd,
-        data: data,
+      final response = await _dio.get(
+        ApiConstants.vendorServicePackageList,
         options: Injector.getHeaderToken(),
       );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final items = data['data'];
+        if (items is List) {
+          return DataResponse<List<dynamic>>(
+            isSuccess: data['success'] == true,
+            message: data['message']?.toString(),
+            data: items,
+          );
+        }
+      }
+      return DataResponse<List<dynamic>>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) => json is List ? json : [],
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<List<dynamic>>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // POST /api/users/vendor/service-package/add
+  Future<DataResponse<dynamic>> addServicePackage(dynamic data) async {
+    try {
+      final token = StorageHelper().getAccessToken();
+      final response = await _dio.post(
+        ApiConstants.vendorServicePackageAdd,
+        data: data,
+        options: data is FormData
+            ? Options(
+                contentType: null,
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              )
+            : Options(
+                contentType: 'application/json',
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              ),
+      );
+
+      final resMap = response.data is Map<String, dynamic>
+          ? (response.data as Map<String, dynamic>)
+          : (response.data is Map
+              ? Map<String, dynamic>.from(response.data as Map)
+              : <String, dynamic>{});
+
+      final bool isHttpOk =
+          (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
+      final statusVal = resMap['status'];
+      final bool isSuccess = resMap['success'] == true ||
+          resMap['isSuccess'] == true ||
+          statusVal == true ||
+          statusVal == 200 ||
+          statusVal == 201 ||
+          statusVal == '200' ||
+          statusVal == '201' ||
+          statusVal == 'success' ||
+          (isHttpOk && resMap['success'] != false);
+
+      return DataResponse<dynamic>(
+        isSuccess: isSuccess,
+        message: resMap['message']?.toString(),
+        data: resMap['data'] ?? resMap,
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -230,96 +305,134 @@ class VendorApiProvider {
     }
   }
 
-  // PUT /api/users/vendor/package/edit/:id
+  // PUT /api/users/vendor/service-package/edit/:id
+  Future<DataResponse<dynamic>> editServicePackage(
+    String id,
+    dynamic data,
+  ) async {
+    try {
+      final token = StorageHelper().getAccessToken();
+      final response = await _dio.put(
+        ApiConstants.vendorServicePackageEdit(id),
+        data: data,
+        options: data is FormData
+            ? Options(
+                contentType: null,
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              )
+            : Options(
+                contentType: 'application/json',
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              ),
+      );
+
+      final resMap = response.data is Map<String, dynamic>
+          ? (response.data as Map<String, dynamic>)
+          : (response.data is Map
+              ? Map<String, dynamic>.from(response.data as Map)
+              : <String, dynamic>{});
+
+      final bool isHttpOk =
+          (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
+      final statusVal = resMap['status'];
+      final bool isSuccess = resMap['success'] == true ||
+          resMap['isSuccess'] == true ||
+          statusVal == true ||
+          statusVal == 200 ||
+          statusVal == 201 ||
+          statusVal == '200' ||
+          statusVal == '201' ||
+          statusVal == 'success' ||
+          (isHttpOk && resMap['success'] != false);
+
+      return DataResponse<dynamic>(
+        isSuccess: isSuccess,
+        message: resMap['message']?.toString(),
+        data: resMap['data'] ?? resMap,
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
+    }
+  }
+
+  // DELETE /api/users/vendor/service-package/delete/:id
+  Future<DataResponse<dynamic>> deleteServicePackage(String id) async {
+    try {
+      final token = StorageHelper().getAccessToken();
+      final response = await _dio.delete(
+        ApiConstants.vendorServicePackageDelete(id),
+        options: Options(
+          headers: {
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      final resMap = response.data is Map<String, dynamic>
+          ? (response.data as Map<String, dynamic>)
+          : (response.data is Map
+              ? Map<String, dynamic>.from(response.data as Map)
+              : <String, dynamic>{});
+
+      final bool isHttpOk =
+          (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
+      final statusVal = resMap['status'];
+      final bool isSuccess = resMap['success'] == true ||
+          resMap['isSuccess'] == true ||
+          statusVal == true ||
+          statusVal == 200 ||
+          statusVal == 201 ||
+          statusVal == '200' ||
+          statusVal == '201' ||
+          statusVal == 'success' ||
+          (isHttpOk && resMap['success'] != false);
+
+      return DataResponse<dynamic>(
+        isSuccess: isSuccess,
+        message: resMap['message']?.toString(),
+        data: resMap['data'] ?? resMap,
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
+    }
+  }
+
+  // Aliases for backward compatibility
+  Future<DataResponse<dynamic>> addPackage(Map<String, dynamic> data) =>
+      addServicePackage(data);
+
   Future<DataResponse<dynamic>> editPackage(
     String packageId,
     Map<String, dynamic> data,
-  ) async {
-    try {
-      final response = await _dio.put(
-        ApiConstants.vendorPackageEdit(packageId),
-        data: data,
-        options: Injector.getHeaderToken(),
-      );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
-      );
-    } catch (e) {
-      final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
-    }
-  }
+  ) =>
+      editServicePackage(packageId, data);
 
-  // DELETE /api/users/vendor/package/delete/:id
-  Future<DataResponse<dynamic>> deletePackage(String packageId) async {
-    try {
-      final response = await _dio.delete(
-        ApiConstants.vendorPackageDelete(packageId),
-        options: Injector.getHeaderToken(),
-      );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
-      );
-    } catch (e) {
-      final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
-    }
-  }
+  Future<DataResponse<dynamic>> deletePackage(String packageId) =>
+      deleteServicePackage(packageId);
 
-  // ─── Services ──────────────────────────────────────────────────────────────
+  Future<DataResponse<dynamic>> addService(FormData formData) =>
+      addServicePackage(formData);
 
-  // POST /api/users/vendor/service/add
-  Future<DataResponse<dynamic>> addService(FormData formData) async {
-    try {
-      final response = await _dio.post(
-        ApiConstants.vendorServiceAdd,
-        data: formData,
-        options: Injector.getHeaderToken(),
-      );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
-      );
-    } catch (e) {
-      final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
-    }
-  }
-
-  // PUT /api/users/vendor/service/edit/:id
   Future<DataResponse<dynamic>> editService(
     String serviceId,
     FormData formData,
-  ) async {
-    try {
-      final response = await _dio.put(
-        ApiConstants.vendorServiceEdit(serviceId),
-        data: formData,
-        options: Injector.getHeaderToken(),
-      );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
-      );
-    } catch (e) {
-      final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
-    }
-  }
+  ) =>
+      editServicePackage(serviceId, formData);
 
-  // DELETE /api/users/vendor/service/delete/:id
-  Future<DataResponse<dynamic>> deleteService(String serviceId) async {
-    try {
-      final response = await _dio.delete(
-        ApiConstants.vendorServiceDelete(serviceId),
-        options: Injector.getHeaderToken(),
-      );
-      return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
-      );
-    } catch (e) {
-      final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
-    }
-  }
+  Future<DataResponse<dynamic>> deleteService(String serviceId) =>
+      deleteServicePackage(serviceId);
 
   // ─── Bookings ──────────────────────────────────────────────────────────────
 

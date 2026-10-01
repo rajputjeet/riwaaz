@@ -19,6 +19,10 @@ class DataResponse<TModel> {
     final bool statusSuccess = statusVal == true ||
         statusVal == 'success' ||
         statusVal == 1 ||
+        statusVal == 200 ||
+        statusVal == 201 ||
+        statusVal == '200' ||
+        statusVal == '201' ||
         statusVal == 'true';
 
     return DataResponse<TModel>(

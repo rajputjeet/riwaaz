@@ -493,7 +493,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                   _isLoading
                       ? 'Fetching plan info...'
                       : (isActive
-                          ? 'Active Membership • $daysRemaining Days Remaining'
+                          ? 'Active Subscription • $daysRemaining Days Remaining'
                           : (isExpired
                               ? 'Plan Expired — Please renew to continue'
                               : 'No active plan')),
@@ -954,7 +954,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    '• Flat Membership Model: You keep every rupee you earn from clients.',
+                    '• Flat Subscription Model: You keep every rupee you earn from clients.',
                     style: TextStyle(
                         fontSize: 12,
                         color: AppColors.darkGrey,
