@@ -10,6 +10,8 @@ import 'vendor_portfolio_screen.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
 import '../../core/services/booking_service.dart';
+import '../../shared/widgets/app_states.dart';
+import '../../utils/utils.dart';
 
 class VendorDashboardTab extends StatefulWidget {
   final void Function(int tabIndex)? onNavigateTab;
@@ -26,6 +28,8 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
   DashboardStatsModel? _stats;
   ActivePlanModel? _activePlan;
   bool _isLoading = true;
+  bool _isNoInternet = false;
+  String? _errorMsg;
 
   /// Reads business/owner name from storage for the greeting
   String _vendorDisplayName() {
@@ -41,7 +45,11 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
   Future<void> _loadData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isNoInternet = false;
+      _errorMsg = null;
+    });
     try {
       final results = await Future.wait([
         _vendorApi.getDashboardStats(),
@@ -58,9 +66,19 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
           _activePlan = planResult.data as ActivePlanModel;
         }
         _isLoading = false;
+        _isNoInternet = false;
+        _errorMsg = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (!mounted) return;
+      final isNet = e.toString().toLowerCase().contains('socket') ||
+          e.toString().toLowerCase().contains('connection') ||
+          e.toString().toLowerCase().contains('network');
+      setState(() {
+        _isNoInternet = isNet;
+        _errorMsg = isNet ? null : 'Could not load dashboard statistics.';
+        _isLoading = false;
+      });
     }
   }
 
@@ -79,6 +97,27 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && _stats == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppLoadingState(message: 'Loading business dashboard...'),
+      );
+    }
+
+    if (_isNoInternet) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppNoInternetState(onRetry: _loadData),
+      );
+    }
+
+    if (_errorMsg != null && _stats == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppErrorState(message: _errorMsg!, onRetry: _loadData),
+      );
+    }
+
     return AnimatedBuilder(
       animation: AppBookingService.instance,
       builder: (context, _) {
@@ -89,15 +128,18 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
         final completedCount = _stats?.bookingsCount.completed ?? bookingService.completedCount;
         final totalCount = _stats?.bookingsCount.all ?? bookingService.totalCount;
 
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        return RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: _loadData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Greeting & Subtitle
               Text(
-                'Hello, ${_vendorDisplayName()} 👑',
+                'Hello, ${_vendorDisplayName()}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -224,20 +266,6 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
           const SizedBox(height: 20),
 
-          // Quick Actions 8-Icon Grid
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildQuickActionsGrid(context),
-
-          const SizedBox(height: 20),
-
           // Recent Booking Requests & Clients Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -266,24 +294,56 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
           const SizedBox(height: 6),
 
-          ...bookingService.bookings.take(3).map(
-                (b) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _buildRecentEnquiryCard(
-                    clientName: b.clientName,
-                    event: '${b.eventType} • ${b.package}',
-                    budget: b.total,
-                    date: b.date,
-                    venue: b.venue,
-                    timeAgo: b.status,
-                  ),
-                ),
-              ),
+          Builder(
+            builder: (_) {
+              if (bookingService.bookings.isNotEmpty) {
+                return Column(
+                  children: bookingService.bookings.take(3).map(
+                        (b) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildRecentEnquiryCard(
+                            clientName: b.clientName,
+                            event: '${b.eventType} • ${b.package}',
+                            budget: b.total,
+                            date: b.date,
+                            venue: b.venue,
+                            timeAgo: b.status,
+                          ),
+                        ),
+                      ).toList(),
+                );
+              }
+              final serverRecent = _stats?.recentBookings ?? [];
+              if (serverRecent.isNotEmpty) {
+                return Column(
+                  children: serverRecent.take(3).map(
+                        (rb) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildRecentEnquiryCard(
+                            clientName: rb.customerName ?? 'Client',
+                            event: rb.serviceName ?? 'Package',
+                            budget: rb.totalAmount != null ? '₹${rb.totalAmount}' : 'Custom',
+                            date: rb.eventDate ?? 'Upcoming',
+                            venue: 'Venue TBD',
+                            timeAgo: rb.status ?? 'Pending',
+                          ),
+                        ),
+                      ).toList(),
+                );
+              }
+              return const AppEmptyState(
+                icon: Icons.calendar_today_outlined,
+                title: 'No Recent Bookings',
+                subtitle: 'Incoming customer booking requests will appear here.',
+              );
+            },
+          ),
 
           const SizedBox(height: 20),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -564,6 +624,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildQuickActionsGrid(BuildContext context) {
     final actions = [
       (
@@ -926,13 +987,6 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
   }
 
   void _showAvailabilitySheet(BuildContext context) {
-    final bookedDates = [
-      ('18 Dec 2026', 'Aman & Simran Wedding', 'Booked Full Day'),
-      ('04 Nov 2026', 'Pooja & Rohan Engagement', 'Booked Evening'),
-      ('22 Jan 2027', 'Kavita & Nitin Sangeet', 'Booked Full Day'),
-      ('14 Feb 2027', 'Valentine Special Wedding', 'Slot Reserved'),
-    ];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -998,74 +1052,93 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
-            Expanded(
-              child: ListView.separated(
-                itemCount: bookedDates.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                itemBuilder: (ctx, i) {
-                  final b = bookedDates[i];
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.offWhite,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.grey.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.event_busy_rounded,
-                              color: AppColors.primary, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                b.$1,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                              Text(
-                                b.$2,
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppColors.darkGrey),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.warningLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            b.$3,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.warning,
-                            ),
-                          ),
-                        ),
-                      ],
+            Builder(
+              builder: (ctx) {
+                final booked = AppBookingService.instance.bookings
+                    .where((b) => b.isAccepted)
+                    .toList();
+                if (booked.isEmpty) {
+                  return const Expanded(
+                    child: AppEmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'All Dates Available',
+                      subtitle:
+                          'You currently have no confirmed bookings blocking your calendar dates.',
                     ),
                   );
-                },
-              ),
+                }
+                return Expanded(
+                  child: ListView.separated(
+                    itemCount: booked.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
+                    itemBuilder: (ctx, i) {
+                      final b = booked[i];
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.offWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.grey.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.event_busy_rounded,
+                                  color: AppColors.primary, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    b.date,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${b.clientName} • ${b.eventName}',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.darkGrey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.warningLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Booked',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.warning,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -1074,12 +1147,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Date blocked on your public calendar!'),
-                      backgroundColor: AppColors.primary,
-                    ),
-                  );
+                  Utils.showSuccess('Date blocked on your public calendar!');
                 },
                 icon: const Icon(Icons.block_rounded, size: 16),
                 label: const Text('Block New Date / Vacation'),
@@ -1099,27 +1167,6 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
   }
 
   void _showReviewsSheet(BuildContext context) {
-    final reviews = [
-      (
-        'Simran & Rahul',
-        '28 Dec 2025',
-        5,
-        'Royal Click Studio captured our wedding day with so much emotion and perfection! The drone shots were unbelievable.',
-      ),
-      (
-        'Pooja & Aman',
-        '14 Nov 2025',
-        5,
-        'Very punctual, professional crew and premium hardbound album quality. Highly recommended for couples in Chandigarh!',
-      ),
-      (
-        'Kavita & Nitin',
-        '02 Oct 2025',
-        4.8,
-        'Loved the cinematic teaser video. Our families were overjoyed watching the highlights!',
-      ),
-    ];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1160,7 +1207,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                       ),
                     ),
                     Text(
-                      '4.9 Rating ★ (84 Verified Reviews)',
+                      'Verified Client Feedback',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.goldDark,
@@ -1176,66 +1223,12 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
               ],
             ),
             const Divider(height: 20),
-            Expanded(
-              child: ListView.separated(
-                itemCount: reviews.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (ctx, i) {
-                  final r = reviews[i];
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.offWhite,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              r.$1,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.black,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.star_rounded,
-                                    color: AppColors.gold, size: 16),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '${r.$3}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Text(
-                          r.$2,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          r.$4,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.darkGrey,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            const Expanded(
+              child: AppEmptyState(
+                icon: Icons.star_border_rounded,
+                title: 'No Client Reviews Yet',
+                subtitle:
+                    'Ratings and reviews from clients will show up here after completing and delivering booked wedding events.',
               ),
             ),
           ],

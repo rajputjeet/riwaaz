@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
+import '../vendor_registration/controllers/vendor_registration_controller.dart';
 import 'vendor_dashboard_tab.dart';
 import 'vendor_bookings_tab.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_notifications_screen.dart';
+import 'vendor_verification_screen.dart';
 
 class VendorShell extends StatefulWidget {
   final int initialIndex;
@@ -19,16 +23,25 @@ class VendorShell extends StatefulWidget {
 class _VendorShellState extends State<VendorShell> {
   late int _currentIndex;
   bool _showApprovalWarning = true;
+  final _profileKey = GlobalKey<VendorProfileScreenState>();
+  late final VendorRegistrationController _regController;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _regController = Get.isRegistered<VendorRegistrationController>()
+        ? Get.find<VendorRegistrationController>()
+        : Get.put(VendorRegistrationController());
+    _regController.fetchApplicationStatus();
   }
 
   void _onTabTap(int index) {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
+    if (index == 2) {
+      _profileKey.currentState?.loadAll(silent: true);
+    }
   }
 
   @override
@@ -109,7 +122,7 @@ class _VendorShellState extends State<VendorShell> {
         children: [
           VendorDashboardTab(onNavigateTab: (idx) => _onTabTap(idx)),
           const VendorBookingsTab(key: ValueKey('vendor_bookings_tab_v2')),
-          const VendorProfileScreen(),
+          VendorProfileScreen(key: _profileKey),
         ],
       ),
       bottomNavigationBar: Column(
@@ -160,140 +173,209 @@ class _VendorShellState extends State<VendorShell> {
   }
 
   Widget _buildApprovalWarningSnackBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF26180B),
-            Color(0xFF1A1108),
+    if (!_showApprovalWarning) return const SizedBox.shrink();
+
+    return Obx(() {
+      final appStatus = _regController.currentStatus.value.trim();
+      final isVerified = _regController.isVerified.value || StorageHelper().getIsVerified();
+      final normalized = appStatus.toLowerCase();
+      final isApproved = isVerified || normalized == 'approved' || normalized == 'active';
+      final isRejected = normalized == 'rejected' || normalized == 'declined';
+      final isUnderReview = normalized == 'under review' ||
+          normalized == 'under_review' ||
+          normalized == 'in verification' ||
+          normalized == 'submitted';
+
+      // If approved or verified, do not show warning banner
+      if (isApproved) {
+        return const SizedBox.shrink();
+      }
+
+      final Color borderColor;
+      final Color iconBgColor;
+      final Color iconColor;
+      final Color badgeBgColor;
+      final Color badgeTextColor;
+      final Color titleColor;
+      final String title;
+      final String badgeText;
+      final String subtitle;
+      final IconData iconData;
+      final List<Color> gradientColors;
+
+      if (isRejected) {
+        borderColor = AppColors.error.withValues(alpha: 0.6);
+        iconBgColor = AppColors.error.withValues(alpha: 0.2);
+        iconColor = const Color(0xFFEF5350);
+        badgeBgColor = AppColors.error.withValues(alpha: 0.25);
+        badgeTextColor = const Color(0xFFEF5350);
+        titleColor = const Color(0xFFFFCDD2);
+        title = 'Verification Action Required';
+        badgeText = 'DECLINED';
+        subtitle = 'Your verification needs updates. Tap to review & resubmit.';
+        iconData = Icons.error_outline_rounded;
+        gradientColors = const [Color(0xFF330C12), Color(0xFF1F050A)];
+      } else if (isUnderReview) {
+        borderColor = const Color(0xFFF59E0B).withValues(alpha: 0.5);
+        iconBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.18);
+        iconColor = const Color(0xFFFBBF24);
+        badgeBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.25);
+        badgeTextColor = const Color(0xFFFBBF24);
+        titleColor = const Color(0xFFFDE68A);
+        title = 'Profile Under Review';
+        badgeText = 'IN REVIEW';
+        subtitle = 'Documents are being verified by admin. Features unlock upon approval.';
+        iconData = Icons.hourglass_top_rounded;
+        gradientColors = const [Color(0xFF26180B), Color(0xFF1A1108)];
+      } else {
+        borderColor = const Color(0xFFF59E0B).withValues(alpha: 0.5);
+        iconBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.18);
+        iconColor = const Color(0xFFFBBF24);
+        badgeBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.25);
+        badgeTextColor = const Color(0xFFFBBF24);
+        titleColor = const Color(0xFFFDE68A);
+        title = 'Verification Incomplete';
+        badgeText = 'PENDING';
+        subtitle = 'Please upload all 4 KYC documents to unlock your vendor account.';
+        iconData = Icons.pending_actions_rounded;
+        gradientColors = const [Color(0xFF26180B), Color(0xFF1A1108)];
+      }
+
+      return Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: borderColor,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                    width: 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorVerificationScreen()),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: borderColor,
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        iconData,
+                        color: iconColor,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.warning_amber_rounded,
-                    color: Color(0xFFFBBF24),
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 2,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Profile Under Review',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFFDE68A),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFFF59E0B).withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'PENDING',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFFBBF24),
-                              letterSpacing: 0.5,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: titleColor,
+                                letterSpacing: 0.2,
+                              ),
                             ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: badgeBgColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: badgeTextColor,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFFF3F4F6),
+                            height: 1.25,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'All features will unlock after admin approves your profile.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFFF3F4F6),
-                        height: 1.25,
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      setState(() {
+                        _showApprovalWarning = false;
+                      });
+                    },
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Color(0xFFD1D5DB),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showApprovalWarning = false;
-                  });
-                },
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 16,
-                    color: Color(0xFFD1D5DB),
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

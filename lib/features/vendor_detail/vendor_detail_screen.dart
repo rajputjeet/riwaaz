@@ -7,7 +7,9 @@ import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
 import '../../core/services/booking_service.dart';
 import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/portfolio_video_player.dart';
 import '../shell/main_shell.dart';
+import '../../utils/utils.dart';
 
 class VendorDetailScreen extends StatefulWidget {
   final String vendorName;
@@ -660,13 +662,14 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildPortfolio() {
-    final portfolioImages = [
-      AppImages.vendorRoyalClick,
-      AppImages.vendorMemories,
-      AppImages.vendorShutter,
-      AppImages.vendorCandid,
-      AppImages.vendorLensArt,
-      AppImages.weddingHero,
+    // Portfolio items: type = 'image' or 'video', url = asset path or network url
+    final portfolioItems = [
+      {'type': 'image', 'url': AppImages.vendorRoyalClick, 'title': ''},
+      {'type': 'image', 'url': AppImages.vendorMemories, 'title': ''},
+      {'type': 'image', 'url': AppImages.vendorShutter, 'title': ''},
+      {'type': 'image', 'url': AppImages.vendorCandid, 'title': ''},
+      {'type': 'image', 'url': AppImages.vendorLensArt, 'title': ''},
+      {'type': 'image', 'url': AppImages.weddingHero, 'title': ''},
     ];
 
     return Padding(
@@ -680,18 +683,52 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           mainAxisSpacing: 10,
           childAspectRatio: 1,
         ),
-        itemCount: portfolioImages.length,
-        itemBuilder: (_, i) => ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedImageView(
-            imageUrl: portfolioImages[i],
-            fit: BoxFit.cover,
-            fallbackIcon: Icons.photo_rounded,
-            iconColor: Colors.white54,
-            iconSize: 32,
-            backgroundColor: AppColors.primaryDark,
-          ),
-        ),
+        itemCount: portfolioItems.length,
+        itemBuilder: (_, i) {
+          final item = portfolioItems[i];
+          final url = item['url'] ?? '';
+          final isVideo = item['type'] == 'video' || CachedImageView.isVideoUrl(url);
+          final rawThumb = (item['thumbnail'] ?? item['thumbnailUrl'] ?? '').toString();
+          final thumbUrl = CachedImageView.isVideoUrl(rawThumb) ? '' : rawThumb;
+          final title = item['title'] ?? '';
+
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: isVideo
+                ? PortfolioVideoThumbnail(
+                    videoUrl: url,
+                    title: title,
+                    thumbnailUrl: thumbUrl.isNotEmpty ? thumbUrl : null,
+                  )
+                : GestureDetector(
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        insetPadding: const EdgeInsets.all(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: CachedImageView(
+                            imageUrl: url,
+                            fit: BoxFit.contain,
+                            fallbackIcon: Icons.image_rounded,
+                            iconColor: Colors.white54,
+                            backgroundColor: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                    child: CachedImageView(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      fallbackIcon: Icons.photo_rounded,
+                      iconColor: Colors.white54,
+                      iconSize: 32,
+                      backgroundColor: AppColors.primaryDark,
+                    ),
+                  ),
+          );
+        },
       ),
     );
   }
@@ -797,13 +834,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
               // Contact Locked Indicator Button
               AnimatedTapWidget(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Direct Call & WhatsApp details unlock once the vendor accepts your booking request.',
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  Utils.showInfo(
+                    'Direct Call & WhatsApp details unlock once the vendor accepts your booking request.',
                   );
                 },
                 child: Container(
@@ -1101,16 +1133,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   inclusions: pkg.features,
                 );
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'Booking request sent! Direct Call & WhatsApp will unlock once accepted by ${widget.vendorName}. 🎉'),
-                    backgroundColor: AppColors.success,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
+                Utils.showSuccess(
+                  'Booking request sent! Direct Call & WhatsApp will unlock once accepted by ${widget.vendorName}. 🎉',
                 );
               },
               child: Container(

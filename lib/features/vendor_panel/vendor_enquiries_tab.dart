@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/booking_service.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/booking_model.dart';
+import '../../shared/widgets/app_states.dart';
+import '../../utils/utils.dart';
 
 class VendorEnquiriesTab extends StatefulWidget {
   const VendorEnquiriesTab({super.key});
@@ -9,64 +14,151 @@ class VendorEnquiriesTab extends StatefulWidget {
 }
 
 class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
-  final List<Map<String, dynamic>> _enquiries = [
-    {
-      'name': 'Simran & Aman',
-      'service': 'Wedding Photography + Cinematography',
-      'budget': '₹75,000',
-      'date': '18 Dec 2026',
-      'location': 'The Grand Palace, Chandigarh',
-      'status': 'New Lead',
-      'message':
-          'Hi Royal Click team, we love your royal portraits! Are you available for a 2-day wedding in Chandigarh this December?',
-      'time': '10 min ago',
-    },
-    {
-      'name': 'Pooja & Rohan',
-      'service': 'Pre-Wedding Shoot & Teaser',
-      'budget': '₹45,000',
-      'date': '04 Nov 2026',
-      'location': 'Kasauli Resort, HP',
-      'status': 'Responded',
-      'message':
-          'Looking for scenic candid shoot in mountains with drone coverage.',
-      'time': '1 hour ago',
-    },
-    {
-      'name': 'Kavita & Nitin',
-      'service': 'Full 3-Day Wedding Coverage',
-      'budget': '₹1,20,000',
-      'date': '22 Jan 2027',
-      'location': 'Hyatt Regency, Ludhiana',
-      'status': 'Quote Sent',
-      'message':
-          'We need complete photography and videography for Mehendi, Sangeet & Reception.',
-      'time': 'Yesterday',
-    },
-    {
-      'name': 'Harpreet & Gurjot',
-      'service': 'Anand Karaj & Reception',
-      'budget': '₹90,000',
-      'date': '14 Feb 2027',
-      'location': 'Mohali Convention Centre',
-      'status': 'New Lead',
-      'message': 'Please share availability and customized packages.',
-      'time': '2 days ago',
-    },
-  ];
+  final _vendorApi = VendorApiProvider();
+  List<BookingModel> _enquiries = [];
+  bool _isLoading = true;
+  bool _isNoInternet = false;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    AppBookingService.instance.addListener(_onLocalChanged);
+    _loadEnquiries();
+  }
+
+  @override
+  void dispose() {
+    AppBookingService.instance.removeListener(_onLocalChanged);
+    super.dispose();
+  }
+
+  void _onLocalChanged() {
+    if (mounted) _loadEnquiries(silent: true);
+  }
+
+  Future<void> _loadEnquiries({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _isNoInternet = false;
+        _errorMsg = null;
+      });
+    }
+
+    try {
+      final res = await _vendorApi.getBookings(limit: 50);
+      if (!mounted) return;
+
+      if (res.isSuccess == true && res.data != null) {
+        setState(() {
+          _enquiries = res.data!.bookings;
+          _isLoading = false;
+          _isNoInternet = false;
+          _errorMsg = null;
+        });
+      } else {
+        setState(() {
+          _errorMsg = res.message ?? 'Could not load enquiries from server.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final isNet = e.toString().toLowerCase().contains('socket') ||
+          e.toString().toLowerCase().contains('connection') ||
+          e.toString().toLowerCase().contains('network');
+      setState(() {
+        _isNoInternet = isNet;
+        _errorMsg = isNet ? null : 'Failed to connect. Please try again.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleStatusUpdate(BookingModel b, bool accept) async {
+    final id = b.id ?? b.bookingId ?? '';
+    if (id.isEmpty) return;
+
+    final res = await _vendorApi.updateBookingStatus(
+      bookingId: id,
+      accept: accept,
+      notes: accept ? 'Accepted by vendor' : 'Declined by vendor',
+    );
+
+    if (!mounted) return;
+    if (res.isSuccess == true) {
+      if (accept) {
+        Utils.showSuccess('Enquiry accepted for ${b.customerName ?? 'Client'}!');
+      } else {
+        Utils.showInfo('Enquiry declined.');
+      }
+      _loadEnquiries();
+    } else {
+      Utils.showError(res.message ?? 'Action failed');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: ListView.separated(
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const AppLoadingState(message: 'Loading client enquiries & leads...');
+    }
+
+    if (_isNoInternet) {
+      return AppNoInternetState(onRetry: () => _loadEnquiries());
+    }
+
+    if (_errorMsg != null) {
+      return AppErrorState(
+        message: _errorMsg!,
+        onRetry: () => _loadEnquiries(),
+      );
+    }
+
+    if (_enquiries.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _loadEnquiries(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: const AppEmptyState(
+              icon: Icons.mark_email_unread_outlined,
+              title: 'No Inquiries Yet',
+              subtitle:
+                  'When couples or event planners send you booking inquiries and lead requests, they will show up here instantly.',
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _loadEnquiries(),
+      child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        physics: const BouncingScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         itemCount: _enquiries.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final e = _enquiries[index];
-          final isNew = e['status'] == 'New Lead';
+          final isPending = e.isPending;
+          final name = e.customerName ?? 'Prospective Client';
+          final service = e.serviceName ?? 'Wedding Package';
+          final amount = e.totalAmount != null ? '₹${e.totalAmount}' : 'Custom';
+          final date = e.eventDate ?? 'Date to be confirmed';
+          final notes = e.notes ?? '';
 
           return Container(
             padding: const EdgeInsets.all(16),
@@ -74,10 +166,10 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
               color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isNew
+                color: isPending
                     ? AppColors.primary.withValues(alpha: 0.4)
                     : AppColors.grey.withValues(alpha: 0.2),
-                width: isNew ? 1.5 : 1,
+                width: isPending ? 1.5 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -93,39 +185,44 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          e['name'],
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        if (isNew) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'NEW',
-                              style: TextStyle(
-                                fontSize: 9,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 15,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.white,
+                                color: AppColors.black,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isPending) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'NEW LEAD',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.white,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     Text(
-                      e['budget'],
+                      amount,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -136,29 +233,32 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  e['service'],
+                  service,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: AppColors.goldDark,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.offWhite,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '"${e['message']}"',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: AppColors.darkGrey,
+                if (notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.offWhite,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '"$notes"',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.darkGrey,
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -166,74 +266,63 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
                         size: 13, color: AppColors.grey),
                     const SizedBox(width: 4),
                     Text(
-                      e['date'],
+                      date,
                       style: const TextStyle(
                           fontSize: 11, color: AppColors.darkGrey),
                     ),
                     const SizedBox(width: 14),
-                    const Icon(Icons.location_on_outlined,
+                    const Icon(Icons.info_outline_rounded,
                         size: 13, color: AppColors.grey),
                     const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        e['location'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.darkGrey),
+                    Text(
+                      e.status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isPending ? AppColors.warning : AppColors.success,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Instant quote sent to ${e['name']}!'),
+                if (isPending) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _handleStatusUpdate(e, true),
+                          icon: const Icon(Icons.check_rounded, size: 14),
+                          label: const Text('Accept Lead'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: AppColors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.send_rounded, size: 14),
-                        label: const Text('Send Quote'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('Opening WhatsApp chat with ${e['name']}...'),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _handleStatusUpdate(e, false),
+                          icon: const Icon(Icons.close_rounded, size: 14),
+                          label: const Text('Decline'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.chat_bubble_outline_rounded,
-                            size: 14),
-                        label: const Text('WhatsApp'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.success,
-                          side: const BorderSide(color: AppColors.success),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           );

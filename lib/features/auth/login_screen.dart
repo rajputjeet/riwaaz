@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
 import '../vendor_panel/vendor_shell.dart';
@@ -60,31 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final user = res.data!;
     final isVendorRole = user.roleId == 3 || user.roleId == 4 || user.isVendor;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                isVendorRole
-                    ? 'Welcome back, ${user.fullName ?? 'Partner'}! Widoora Partner Portal.'
-                    : 'Welcome back, ${user.fullName ?? 'User'}!',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(milliseconds: 1400),
-      ),
+    Utils.showSuccess(
+      isVendorRole
+          ? 'Welcome back, ${user.fullName ?? 'Partner'}! Widoora Partner Portal.'
+          : 'Welcome back, ${user.fullName ?? 'User'}!',
+      title: 'Welcome Back',
     );
 
     // Redirect to the appropriate flow based on detected role
@@ -290,18 +271,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Password reset instructions sent to your registered contact.',
-                                    style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white),
-                                  ),
-                                  backgroundColor: AppColors.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
+                              Utils.showInfo(
+                                'Password reset instructions sent to your registered contact.',
                               );
                             },
                             style: TextButton.styleFrom(

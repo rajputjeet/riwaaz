@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/api_provider/subscription_api_provider.dart';
 import '../../data/models/subscription_model.dart';
+import '../../shared/widgets/app_states.dart';
+import '../../utils/utils.dart';
 
 class VendorSubscriptionPlanScreen extends StatefulWidget {
   final String currentPlanId;
@@ -24,8 +25,9 @@ class _VendorSubscriptionPlanScreenState
   String _selectedPaymentMethod = 'UPI';
   // ignore: unused_field
   String _activePlanServerId = '';
-  // ignore: unused_field
   bool _isLoadingPlans = false;
+  bool _isNoInternet = false;
+  String? _errorMsg;
   List<SubscriptionModel> _serverPlans = [];
 
   // Map local plan key -> server _id (populated after API fetch)
@@ -127,7 +129,11 @@ class _VendorSubscriptionPlanScreenState
   }
 
   Future<void> _loadServerData() async {
-    setState(() => _isLoadingPlans = true);
+    setState(() {
+      _isLoadingPlans = true;
+      _isNoInternet = false;
+      _errorMsg = null;
+    });
     try {
       final plansResult = await SubscriptionApiProvider().getSubscriptionList();
       final planResult = await VendorApiProvider().getActivePlan();
@@ -141,10 +147,61 @@ class _VendorSubscriptionPlanScreenState
               planResult.data!.subscriptionPlan?.id ?? '';
         }
         _isLoadingPlans = false;
+        _isNoInternet = false;
+        _errorMsg = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _isLoadingPlans = false);
+    } catch (e) {
+      if (!mounted) return;
+      final isNet = e.toString().toLowerCase().contains('socket') ||
+          e.toString().toLowerCase().contains('connection') ||
+          e.toString().toLowerCase().contains('network');
+      setState(() {
+        _isNoInternet = isNet;
+        _errorMsg = isNet ? null : 'Failed to load subscription plans.';
+        _isLoadingPlans = false;
+      });
     }
+  }
+
+  List<Map<String, dynamic>> get _effectivePlans {
+    if (_serverPlans.isEmpty) return _plans;
+    return _serverPlans.map((sp) {
+      final months = sp.durationInMonths ?? 3;
+      final price = sp.planPrice > 0 ? sp.planPrice : 2999;
+      final monthly = months > 0 ? (price / months).round() : price;
+      final isPopular = months == 6;
+      final isBest = months >= 12;
+      return {
+        'id': sp.id ?? '${months}_months',
+        'serverPlanId': sp.id,
+        'name': sp.displayName,
+        'duration': '$months Months',
+        'months': months,
+        'price': price,
+        'monthlyRate': monthly,
+        'badge': isPopular ? 'MOST POPULAR' : (isBest ? 'BEST VALUE' : 'PARTNER'),
+        'savings': isBest ? 'SAVE 25%' : (isPopular ? 'SAVE 15%' : null),
+        'tagline': sp.description?.isNotEmpty == true
+            ? sp.description!
+            : 'Vendor partner subscription access',
+        'color': isBest
+            ? const Color(0xFF8B1A2E)
+            : (isPopular ? AppColors.primary : const Color(0xFF5A6270)),
+        'icon': isBest
+            ? Icons.diamond_rounded
+            : (isPopular ? Icons.stars_rounded : Icons.calendar_today_rounded),
+        'isPopular': isPopular,
+        'features': [
+          'Verified Vendor Profile badge for $months months',
+          '${months * 15} Verified Client Inquiries / month',
+          'Direct WhatsApp & Call inquiries',
+          'Portfolio photo & video showcase',
+          'Category priority search ranking',
+          'Real-time inquiry alerts & direct customer leads',
+        ],
+        'highlight': '$months Months Access',
+      };
+    }).toList();
   }
 
   void _showCheckoutSheet(Map<String, dynamic> plan) {
@@ -344,17 +401,11 @@ class _VendorSubscriptionPlanScreenState
                       ? null
                       : () async {
                           final nav = Navigator.of(ctx);
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                           // Get the real server plan ID
                           final serverPlanId = _getServerPlanId(plan['id'] as String);
                           if (serverPlanId.isEmpty) {
-                            scaffoldMessenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Plan ID not found. Please retry.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            Utils.showError('Plan ID not found. Please retry.');
                             return;
                           }
 
@@ -373,41 +424,10 @@ class _VendorSubscriptionPlanScreenState
                               _activePlanServerId = serverPlanId;
                             });
                             nav.pop();
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    const Icon(Icons.check_circle_rounded,
-                                        color: Colors.white, size: 20),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        'Plan Activated! You are now on the ${plan['name']}.',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                backgroundColor: AppColors.success,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                duration: const Duration(seconds: 3),
-                              ),
-                            );
+                            Utils.showSuccess('Plan Activated! You are now on the ${plan['name']}.');
                           } else {
                             setSheetState(() => isProcessing = false);
-                            scaffoldMessenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    result.message ?? 'Payment failed. Please try again.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            Utils.showError(result.message ?? 'Payment failed. Please try again.');
                           }
                         },
                   style: ElevatedButton.styleFrom(
@@ -511,9 +531,104 @@ class _VendorSubscriptionPlanScreenState
 
   @override
   Widget build(BuildContext context) {
-    final activePlan = _plans.firstWhere(
+    if (_isLoadingPlans && _serverPlans.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Vendor Membership Plans',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black)),
+          centerTitle: true,
+        ),
+        body: const AppLoadingState(
+            message: 'Loading partnership membership plans...'),
+      );
+    }
+
+    if (_isNoInternet) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Vendor Membership Plans',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black)),
+          centerTitle: true,
+        ),
+        body: AppNoInternetState(onRetry: _loadServerData),
+      );
+    }
+
+    if (_errorMsg != null && _serverPlans.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Vendor Membership Plans',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black)),
+          centerTitle: true,
+        ),
+        body: AppErrorState(message: _errorMsg!, onRetry: _loadServerData),
+      );
+    }
+
+    final plansToDisplay = _effectivePlans;
+    if (plansToDisplay.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Vendor Membership Plans',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black)),
+          centerTitle: true,
+        ),
+        body: const AppEmptyState(
+          icon: Icons.card_membership_rounded,
+          title: 'No Plans Available',
+          subtitle:
+              'Partnership membership plans will appear here once configured by the platform.',
+        ),
+      );
+    }
+
+    final activePlan = plansToDisplay.firstWhere(
       (p) => p['id'] == _activePlanId,
-      orElse: () => _plans[1],
+      orElse: () => plansToDisplay.first,
     );
 
     return Scaffold(
@@ -563,8 +678,8 @@ class _VendorSubscriptionPlanScreenState
             ),
             const SizedBox(height: 14),
 
-            // 3 Plan Cards (3 Months, 6 Months, 12 Months)
-            ..._plans.map((plan) {
+            // Plan Cards
+            ...plansToDisplay.map((plan) {
               final isCurrent = plan['id'] == _activePlanId;
               final isPopular = plan['isPopular'] == true;
               final savings = plan['savings'] as String?;

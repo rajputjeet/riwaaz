@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
@@ -14,6 +15,17 @@ import '../../core/services/booking_service.dart';
 import '../vendor_panel/vendor_shell.dart';
 import '../profile/customer_edit_profile_screen.dart';
 import '../notifications/customer_notifications_screen.dart';
+import '../../data/api_provider/user_api_provider.dart';
+import '../../data/api_provider/cms_api_provider.dart';
+import '../../data/api_provider/faq_api_provider.dart';
+import '../../data/models/user_model.dart';
+import '../../data/models/cms_model.dart';
+import '../../data/models/faq_model.dart';
+import '../../data/shared/data_response.dart';
+import '../../shared/widgets/app_states.dart';
+import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/app_html_content_view.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 
 /// The main navigation shell — holds all customer tabs in an [IndexedStack]
 class MainShell extends StatefulWidget {
@@ -28,6 +40,8 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int _currentIndex;
 
+  final _customerProfileKey = GlobalKey<_CustomerProfileTabState>();
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +51,9 @@ class _MainShellState extends State<MainShell> {
   void _onTabTap(int index) {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
+    if (index == 4) {
+      _customerProfileKey.currentState?.loadProfile(silent: true);
+    }
   }
 
   @override
@@ -53,12 +70,12 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _currentIndex,
         sizing: StackFit.expand,
-        children: const [
-          DashboardBody(),
-          ExploreBody(),
-          _CustomerWeddingTab(),
-          _CustomerBookingsTab(),
-          _CustomerProfileTab(),
+        children: [
+          const DashboardBody(),
+          const ExploreBody(),
+          const _CustomerWeddingTab(),
+          const _CustomerBookingsTab(),
+          _CustomerProfileTab(key: _customerProfileKey),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -224,11 +241,61 @@ class _MainShellState extends State<MainShell> {
 
 // ─── Customer Wedding Tab ───────────────────────────────────────────────────
 
-class _CustomerWeddingTab extends StatelessWidget {
+class _CustomerWeddingTab extends StatefulWidget {
   const _CustomerWeddingTab();
 
   @override
+  State<_CustomerWeddingTab> createState() => _CustomerWeddingTabState();
+}
+
+class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
+  List<Map<String, dynamic>> _events = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  void _loadEvents() {
+    setState(() {
+      _events = StorageHelper().getWeddingEvents() ?? [];
+    });
+  }
+
+  void _saveEvents() {
+    StorageHelper().saveWeddingEvents(_events);
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return (month >= 1 && month <= 12) ? months[month - 1] : '';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final savedDateStr = StorageHelper().getWeddingDate();
+    final weddingDate = (savedDateStr != null && DateTime.tryParse(savedDateStr) != null)
+        ? DateTime.parse(savedDateStr)
+        : null;
+    final now = DateTime.now();
+    final diff = weddingDate?.difference(now);
+    final days = (diff != null && !diff.isNegative) ? diff.inDays : 0;
+    final hours = (diff != null && !diff.isNegative) ? (diff.inHours % 24) : 0;
+    final mins = (diff != null && !diff.isNegative) ? (diff.inMinutes % 60) : 0;
+
+    final savedLoc = StorageHelper().getWeddingLocation();
+    final location = (savedLoc != null && savedLoc.isNotEmpty) ? savedLoc : 'Chandigarh';
+    final dateDisplay = weddingDate != null
+        ? '${weddingDate.day} ${_getMonthName(weddingDate.month)} ${weddingDate.year}'
+        : 'Set Wedding Date';
+    final userName = StorageHelper().getUserName()?.trim().isNotEmpty == true
+        ? StorageHelper().getUserName()!
+        : 'Your Event';
+
     return SafeArea(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -252,7 +319,7 @@ class _CustomerWeddingTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${StorageHelper().getUserName()?.trim().isNotEmpty == true ? StorageHelper().getUserName()! : 'Your'} • 28 Dec 2026 • Chandigarh',
+                      '$userName • $dateDisplay • $location',
                       style: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
                     ),
                   ],
@@ -260,10 +327,11 @@ class _CustomerWeddingTab extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.edit_note_rounded,
                       color: AppColors.primary, size: 28),
-                  onPressed: () {
-                    Navigator.of(context).push(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
                       FadeScaleRoute(page: const WeddingDetailsScreen()),
                     );
+                    if (mounted) setState(() {});
                   },
                 ),
               ],
@@ -272,10 +340,11 @@ class _CustomerWeddingTab extends StatelessWidget {
 
             // Countdown Card
             GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
+              onTap: () async {
+                await Navigator.of(context).push(
                   FadeScaleRoute(page: const WeddingDetailsScreen()),
                 );
+                if (mounted) setState(() {});
               },
               child: Container(
                 width: double.infinity,
@@ -303,14 +372,34 @@ class _CustomerWeddingTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildTimerBlock('118', 'DAYS'),
-                        _buildTimerBlock('14', 'HOURS'),
-                        _buildTimerBlock('32', 'MINS'),
-                      ],
-                    ),
+                    if (weddingDate != null)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildTimerBlock('$days', 'DAYS'),
+                          _buildTimerBlock('$hours', 'HOURS'),
+                          _buildTimerBlock('$mins', 'MINS'),
+                        ],
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.calendar_month_rounded, color: AppColors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Tap to set wedding date',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -342,38 +431,34 @@ class _CustomerWeddingTab extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            _buildEventRow(
-                context,
-                'Mehendi & Sangeet',
-                '26 Dec 2026',
-                '6:00 PM',
-                'The Grand Palace, Chandigarh',
-                Icons.music_note_rounded,
-                const Color(0xFF8B1A2E)),
-            _buildEventRow(
-                context,
-                'Haldi Ceremony',
-                '27 Dec 2026',
-                '10:00 AM',
-                'Home Lawn, Sector 9',
-                Icons.spa_rounded,
-                const Color(0xFFD4A017)),
-            _buildEventRow(
-                context,
-                'Wedding & Anand Karaj',
-                '28 Dec 2026',
-                '11:00 AM',
-                'Heritage Haveli Resort',
-                Icons.favorite_rounded,
-                const Color(0xFFAD1457)),
-            _buildEventRow(
-                context,
-                'Grand Reception',
-                '29 Dec 2026',
-                '7:30 PM',
-                'Hyatt Regency Ballroom',
-                Icons.celebration_rounded,
-                const Color(0xFF1565C0)),
+            if (_events.isEmpty)
+              AppEmptyState(
+                icon: Icons.event_note_rounded,
+                title: 'No Events Scheduled',
+                subtitle: 'Add your Sangeet, Mehendi, Haldi, or Reception ceremonies to plan your schedule.',
+                actionLabel: 'Add Function',
+                onAction: () => _showAddEventSheet(context),
+              )
+            else
+              ..._events.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final ev = entry.value;
+                return _buildEventRow(
+                  context,
+                  ev['title']?.toString() ?? 'Event',
+                  ev['date']?.toString() ?? '',
+                  ev['time']?.toString() ?? '',
+                  ev['location']?.toString() ?? '',
+                  Icons.favorite_rounded,
+                  AppColors.primary,
+                  onDelete: () {
+                    setState(() {
+                      _events.removeAt(idx);
+                    });
+                    _saveEvents();
+                  },
+                );
+              }),
           ],
         ),
       ),
@@ -473,13 +558,20 @@ class _CustomerWeddingTab extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
+                    final newTitle = titleCtrl.text.trim();
+                    if (newTitle.isEmpty) return;
+                    final newEvent = {
+                      'title': newTitle,
+                      'date': dateCtrl.text.trim(),
+                      'time': timeCtrl.text.trim(),
+                      'location': venueCtrl.text.trim().isEmpty ? 'Chandigarh' : venueCtrl.text.trim(),
+                    };
+                    setState(() {
+                      _events.add(newEvent);
+                    });
+                    _saveEvents();
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Added ${titleCtrl.text.isEmpty ? "Event" : titleCtrl.text} to Schedule!'),
-                      ),
-                    );
+                    Utils.showSuccess('Added $newTitle to Schedule!');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -536,8 +628,9 @@ class _CustomerWeddingTab extends StatelessWidget {
     String time,
     String location,
     IconData icon,
-    Color iconColor,
-  ) {
+    Color iconColor, {
+    VoidCallback? onDelete,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -608,71 +701,59 @@ class _CustomerWeddingTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_rounded,
-                          size: 18, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          location,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.black,
-                          ),
-                        ),
+                  const Icon(Icons.location_on_rounded,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      location.isEmpty ? 'Venue To Be Finalized' : location,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: const [
-                      Icon(Icons.people_outline_rounded,
-                          size: 18, color: AppColors.primary),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Estimated Attendees: 450 Guests',
-                          style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: const [
-                      Icon(Icons.check_circle_outline_rounded,
-                          size: 18, color: AppColors.success),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Vendor coordination in progress • Pay in person',
-                          style: TextStyle(fontSize: 12, color: AppColors.success),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            Row(
+              children: [
+                if (onDelete != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        onDelete();
+                      },
+                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                if (onDelete != null) const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Close'),
                   ),
                 ),
-                child: const Text('Close'),
-              ),
+              ],
             ),
             const SizedBox(height: 8),
           ],
@@ -688,8 +769,9 @@ class _CustomerWeddingTab extends StatelessWidget {
     String time,
     String location,
     IconData icon,
-    Color iconColor,
-  ) {
+    Color iconColor, {
+    VoidCallback? onDelete,
+  }) {
     return GestureDetector(
       onTap: () => _showEventDetailsSheet(
         context,
@@ -699,6 +781,7 @@ class _CustomerWeddingTab extends StatelessWidget {
         location,
         icon,
         iconColor,
+        onDelete: onDelete,
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -1054,9 +1137,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Calling $name ($phone)...')),
-                        );
+                        Utils.showInfo('Calling $name ($phone)...');
                       },
                       icon: const Icon(Icons.phone_rounded, size: 16),
                       label: const Text('Call'),
@@ -1075,13 +1156,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Opening WhatsApp with $name ($phone)...'),
-                            backgroundColor: const Color(0xFF25D366),
-                          ),
-                        );
+                        Utils.showSuccess('Opening WhatsApp with $name ($phone)...');
                       },
                       icon: const Icon(Icons.phone_android_rounded, size: 16),
                       label: const Text('WhatsApp'),
@@ -1630,12 +1705,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                 flex: 4,
                                 child: OutlinedButton.icon(
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Calling $phone...'),
-                                      ),
-                                    );
+                                    Utils.showInfo('Calling $phone...');
                                   },
                                   icon: const Icon(Icons.phone_rounded, size: 12),
                                   label: const Text('Call', style: TextStyle(fontSize: 11)),
@@ -1657,14 +1727,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                 flex: 6,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Opening WhatsApp with $vendorName ($phone)...'),
-                                        backgroundColor: const Color(0xFF25D366),
-                                      ),
-                                    );
+                                    Utils.showSuccess('Opening WhatsApp with $vendorName ($phone)...');
                                   },
                                   icon: const Icon(Icons.phone_android_rounded, size: 12),
                                   label: const Text(
@@ -1795,111 +1858,94 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
 
 // ─── Customer Profile Tab ───────────────────────────────────────────────────
 
-class _CustomerProfileTab extends StatelessWidget {
-  const _CustomerProfileTab();
+class _CustomerProfileTab extends StatefulWidget {
+  const _CustomerProfileTab({super.key});
 
-  void _showChecklistSheet(BuildContext context) {
-    final tasks = [
-      ('Book Wedding Photographer', true),
-      ('Finalize Venue & Banquet Hall', true),
-      ('Select Floral Decor Theme', true),
-      ('Book Bridal Makeup Artist', false),
-      ('Order Custom Wedding Invitations', false),
-      ('Arrange Luxury Wedding Car', false),
-      ('Finalize Sangeet DJ & Sound', false),
-      ('Book Catering Tasting Session', false),
-    ];
+  @override
+  State<_CustomerProfileTab> createState() => _CustomerProfileTabState();
+}
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Wedding Checklist & Tasks',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.black,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Track all key milestones before the big day',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-              ),
-              const Divider(height: 24),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: tasks.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (ctx, i) {
-                    final item = tasks[i];
-                    return CheckboxListTile(
-                      value: item.$2,
-                      title: Text(
-                        item.$1,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          decoration:
-                              item.$2 ? TextDecoration.lineThrough : null,
-                          color: item.$2 ? AppColors.grey : AppColors.black,
-                        ),
-                      ),
-                      activeColor: AppColors.primary,
-                      onChanged: (val) {
-                        setSheetState(() {
-                          tasks[i] = (item.$1, val ?? false);
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+class _CustomerProfileTabState extends State<_CustomerProfileTab> {
+  final _userApi = UserApiProvider();
+  final _cmsApi = CmsApiProvider();
+  final _faqApi = FaqApiProvider();
+
+  UserModel? _profile;
+  bool _isLoading = true;
+  bool _isNoInternet = false;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
   }
 
-  void _showBudgetSheet(BuildContext context) {
-    final categories = [
-      ('Venue & Banquet', '₹3,50,000', 'Agreed • Pay In Person', 0.8),
-      ('Decoration & Floral', '₹1,50,000', 'Agreed • Pay In Person', 0.6),
-      ('Photography & Cinema', '₹75,000', 'Agreed • Pay In Person', 0.9),
-      ('Catering & Buffet', '₹2,00,000', 'Planned • Pay In Person', 0.0),
-      ('Bridal Wear & Jewellery', '₹1,25,000', 'Planned • In-Store', 0.0),
-    ];
+  Future<void> loadProfile({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent && _profile == null) {
+      setState(() {
+        _isLoading = true;
+        _isNoInternet = false;
+        _errorMsg = null;
+      });
+    } else {
+      // Instantly trigger re-render with latest stored credentials
+      setState(() {});
+    }
 
+    try {
+      final res = await _userApi.getProfile();
+      if (!mounted) return;
+      if (res.isSuccess == true) {
+        setState(() {
+          _profile = res.data;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final isNet = e.toString().toLowerCase().contains('socket') ||
+          e.toString().toLowerCase().contains('connection') ||
+          e.toString().toLowerCase().contains('network');
+      setState(() {
+        if (_profile == null) {
+          _isNoInternet = isNet;
+          _errorMsg = isNet ? null : 'Failed to connect to server. Please try again.';
+        }
+        _isLoading = false;
+      });
+    }
+  }
+
+  String get _displayName {
+    final stored = StorageHelper().getUserName();
+    if (stored?.trim().isNotEmpty == true) return stored!.trim();
+    if (_profile?.fullName?.trim().isNotEmpty == true) return _profile!.fullName!.trim();
+    return 'Customer';
+  }
+
+  String get _displayContact {
+    final email = StorageHelper().getUserEmail();
+    if (email?.trim().isNotEmpty == true) return email!.trim();
+    if (_profile?.email?.trim().isNotEmpty == true) return _profile!.email!.trim();
+    final mobile = StorageHelper().getUserMobile();
+    if (mobile?.trim().isNotEmpty == true) return mobile!.trim();
+    if (_profile?.mobile?.trim().isNotEmpty == true) return _profile!.mobile!.trim();
+    return 'Event Organizer';
+  }
+
+  void _showChecklistSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.65,
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.white,
@@ -1919,69 +1965,96 @@ class _CustomerProfileTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Wedding Budget Planner',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.black,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Wedding Checklist & Tasks',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
             const Text(
-              'Total Budget: ₹9,00,000 • Booked: ₹5,75,000',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700),
+              'Track your preparations and milestones',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
-            Expanded(
-              child: ListView.separated(
-                itemCount: categories.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (ctx, i) {
-                  final cat = categories[i];
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.offWhite,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              cat.$1,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.black,
-                              ),
-                            ),
-                            Text(
-                              cat.$2,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          cat.$3,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.darkGrey),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            const Expanded(
+              child: AppEmptyState(
+                icon: Icons.checklist_rounded,
+                title: 'No Checklist Tasks',
+                subtitle:
+                    'You haven\'t added any event planning tasks yet. Custom milestones will appear here.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBudgetSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.65,
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Wedding Budget Planner',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Manage and allocate funds across all vendor categories',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            const Expanded(
+              child: AppEmptyState(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'No Budget Items Added',
+                subtitle:
+                    'Start allocating your celebration budget across photography, venues, catering and more.',
               ),
             ),
           ],
@@ -1991,20 +2064,12 @@ class _CustomerProfileTab extends StatelessWidget {
   }
 
   void _showSavedVendorsSheet(BuildContext context) {
-    final saved = [
-      ('Royal Click Studio', 'Photography', '4.9 ★', '₹35,000'),
-      ('Memories Forever', 'Photography', '4.8 ★', '₹28,000'),
-      ('Royal Mandap Decor', 'Decoration', '4.9 ★', '₹50,000'),
-      ('Flavours of Punjab Catering', 'Catering', '4.7 ★', '₹850/plate'),
-      ('Heritage Haveli Resort', 'Venue', '4.9 ★', '₹2,50,000'),
-    ];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.65,
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.white,
@@ -2024,56 +2089,132 @@ class _CustomerProfileTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Saved Vendors (5)',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.black,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Saved Vendors',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
             const Text(
               'Your shortlisted professionals for quick access',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
-            Expanded(
-              child: ListView.separated(
-                itemCount: saved.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
-                itemBuilder: (ctx, i) {
-                  final s = saved[i];
-                  return ListTile(
-                    tileColor: AppColors.offWhite,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    leading: const CircleAvatar(
-                      backgroundColor: AppColors.primary,
-                      child: Icon(Icons.favorite_rounded,
-                          color: AppColors.gold, size: 18),
-                    ),
-                    title: Text(
-                      s.$1,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                    subtitle: Text('${s.$2} • ${s.$3}'),
-                    trailing: Text(
-                      s.$4,
-                      style: const TextStyle(
-                        fontSize: 13,
+            const Expanded(
+              child: AppEmptyState(
+                icon: Icons.bookmark_outline_rounded,
+                title: 'No Saved Vendors',
+                subtitle:
+                    'Browse categories and tap the bookmark icon on vendor profiles to save them here.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFaqSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.88,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.help_rounded, color: AppColors.primary, size: 24),
+                    SizedBox(width: 10),
+                    Text(
+                      'FAQs',
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
+                        color: AppColors.black,
                       ),
                     ),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.of(context).push(
-                        FadeScaleRoute(
-                          page: ServiceListingScreen(category: s.$2),
-                        ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Frequently Asked Questions • Widoora Help Center',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: FutureBuilder<DataResponse<List<FaqModel>>>(
+                future: _faqApi.getFaqList(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading FAQs...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  if (response == null || response.isSuccess != true) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load FAQs from server.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final faqs = response.data ?? [];
+                  if (faqs.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.help_outline_rounded,
+                      title: 'No FAQs Available',
+                      subtitle: 'Frequently asked questions will appear here shortly.',
+                    );
+                  }
+                  return ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: faqs.length,
+                    itemBuilder: (context, i) {
+                      final faq = faqs[i];
+                      return _FaqTile(
+                        question: faq.question ?? 'FAQ',
+                        answer: faq.answer ?? '',
                       );
                     },
                   );
@@ -2142,58 +2283,40 @@ class _CustomerProfileTab extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Widoora User Privacy',
+              'Official Platform Privacy Policy',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildPolicySection(
-                    icon: Icons.shield_rounded,
-                    title: '1. Commitment to User Privacy',
-                    content:
-                        'Widoora values your personal privacy. We collect only essential information required to help you discover, coordinate, and organize your wedding and special events seamlessly.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.person_search_rounded,
-                    title: '2. Information We Collect',
-                    content:
-                        'We collect your basic profile details (name, phone number, email address), event milestones (celebration type, date, venue location), and your saved vendor shortlist or checklist items.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.handshake_rounded,
-                    title: '3. In-Person Payments & No Banking Data Collection',
-                    content:
-                        'Clients do NOT pay vendors through the Widoora application. All event transactions, advance deposits, and final settlements happen directly in person between you and the vendor. Widoora does not collect, process, or store your credit card, debit card, or net banking credentials.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.phone_forwarded_rounded,
-                    title: '4. Direct Communication via Call & WhatsApp',
-                    content:
-                        'The Widoora application does not support built-in chat. When a booking request is accepted by a vendor, direct contact details (Phone Call and WhatsApp) are unlocked so you can coordinate directly.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.lock_outline_rounded,
-                    title: '5. Security & Data Protection',
-                    content:
-                        'Your account data is secured using industry-standard encryption protocols. We do not sell your personal data to unauthorized third-party advertisers.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.delete_forever_rounded,
-                    title: '6. Your Rights & Account Deletion',
-                    content:
-                        'You maintain complete control over your information. You can request a data copy or permanently delete your account and all associated planning data anytime from your profile screen.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.contact_support_rounded,
-                    title: '7. Privacy Inquiries & Support',
-                    content:
-                        'For any privacy concerns, data inquiries, or grievance redressal, reach out to our privacy officer at privacy@widooraweddings.in.',
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('privacy'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Privacy Policy...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Privacy Policy.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Privacy Policy Pending',
+                      subtitle: 'The privacy terms will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
               ),
             ),
           ],
@@ -2202,7 +2325,7 @@ class _CustomerProfileTab extends StatelessWidget {
     );
   }
 
-  void _showTermsAndConditionsSheet(BuildContext context) {
+  void _showTermsOfServiceSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2239,7 +2362,7 @@ class _CustomerProfileTab extends StatelessWidget {
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'Terms & Conditions',
+                          'Terms of Service',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -2258,63 +2381,151 @@ class _CustomerProfileTab extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Platform Usage Agreement',
+              'Platform Usage Agreement • Customer Terms',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildPolicySection(
-                    icon: Icons.check_circle_outline_rounded,
-                    title: '1. Acceptance of Terms',
-                    content:
-                        'By downloading, accessing, or using the Widoora app, you agree to comply with and be legally bound by these Terms and Conditions.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.storefront_rounded,
-                    title: '2. Platform Marketplace Role',
-                    content:
-                        'Widoora is a discovery platform connecting event organizers, couples, and hosts with independent event professionals (venues, photographers, decorators, caterers, DJs, etc.). Widoora is not an employer or principal of any vendor.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.payments_outlined,
-                    title: '3. In-Person Payments & Direct Contracts',
-                    content:
-                        'Widoora is an event discovery and booking connection platform. The application does not support built-in chat or app money transfers. Once a vendor accepts your booking, their direct Call and WhatsApp contact details are unlocked. All service contracts and package fees are settled directly in person between you and the vendor.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.assignment_turned_in_rounded,
-                    title: '4. Service Delivery & Vendor Responsibility',
-                    content:
-                        'Vendors are solely responsible for the execution, quality, and punctuality of their deliverables. Clients are advised to inspect sample work and finalize formal agreements directly with vendors.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.event_repeat_rounded,
-                    title: '5. Cancellations & Rescheduling',
-                    content:
-                        'Policies regarding date rescheduling, cancellations, and advance retention are determined strictly by mutual contract between the host and vendor. Widoora is not liable for vendor refund disputes.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.person_remove_rounded,
-                    title: '6. Account Termination & Deletion',
-                    content:
-                        'You may terminate your account at any time using the "Delete Account" feature in your profile settings. Upon deletion, all your stored event planning data is permanently erased.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.balance_rounded,
-                    title: '7. Limitation of Liability & Jurisdiction',
-                    content:
-                        'Widoora provides vendor listings on an "as-is" basis. Any disputes arising out of the use of the platform shall be governed by the laws of India and subject to the jurisdiction of courts in Chandigarh.',
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('terms'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Terms of Service...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Terms of Service.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.gavel_rounded,
+                      title: 'Terms of Service Pending',
+                      subtitle: 'The terms and conditions will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showCancellationPolicySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: const [
+                      Icon(Icons.assignment_return_outlined,
+                          color: AppColors.primary, size: 24),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'Cancellation Policy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Official Booking Cancellation & Direct Refund Guidelines',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('refund'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Cancellation Policy...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Cancellation Policy.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.assignment_return_outlined,
+                      title: 'Cancellation Policy Pending',
+                      subtitle: 'The cancellation policy will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSupportSheet(BuildContext context) {
+    AppSupportSheet.show(
+      context,
+      isVendor: false,
+      onOpenFaq: () => _showFaqSheet(context),
     );
   }
 
@@ -2436,13 +2647,7 @@ class _CustomerProfileTab extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Your account has been deleted successfully.'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              Utils.showSuccess('Your account has been deleted successfully.');
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,
@@ -2462,291 +2667,319 @@ class _CustomerProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPolicySection({
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  content,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.darkGrey,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (_isNoInternet) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppNoInternetState(onRetry: loadProfile),
+      );
+    }
+
+    if (_errorMsg != null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppErrorState(message: _errorMsg!, onRetry: loadProfile),
+      );
+    }
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: AppLoadingState(message: 'Loading profile...'),
+      );
+    }
+
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Header Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+      child: RefreshIndicator(
+        onRefresh: loadProfile,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // User Header Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.3),
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      const CircleAvatar(
-                        radius: 36,
-                        backgroundColor: AppColors.primary,
-                        child: Icon(Icons.favorite_rounded,
-                            color: AppColors.gold, size: 36),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: InkWell(
-                          onTap: () => Navigator.of(context).push(
-                            FadeScaleRoute(
-                              page: const CustomerEditProfileScreen(),
-                            ),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: const BoxDecoration(
-                              color: AppColors.gold,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.edit_rounded,
-                                color: AppColors.white, size: 13),
-                          ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.gold, width: 2),
+                        ),
+                        child: ClipOval(
+                          child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
+                                  (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
+                              ? CachedImageView(
+                                  imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
+                                  fit: BoxFit.cover,
+                                  width: 72,
+                                  height: 72,
+                                  isCircle: true,
+                                  fallbackIcon: Icons.favorite_rounded,
+                                )
+                              : const CircleAvatar(
+                                  radius: 36,
+                                  backgroundColor: AppColors.primary,
+                                  child: Icon(Icons.favorite_rounded,
+                                      color: AppColors.gold, size: 36),
+                                ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Simran & Rahul 💍',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: InkWell(
+                            onTap: () async {
+                              final updated = await Navigator.of(context).push<bool>(
+                                FadeScaleRoute(
+                                  page: const CustomerEditProfileScreen(),
+                                ),
+                              );
+                              if (updated == true || mounted) {
+                                loadProfile();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: AppColors.gold,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit_rounded,
+                                  color: AppColors.white, size: 13),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Wedding Date: 28 Dec 2026 • Chandigarh',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.darkGrey,
+                    const SizedBox(height: 12),
+                    Text(
+                      _displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            const Text(
-              'EVENT PLANNING TOOLS',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.8,
-                color: AppColors.darkGrey,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            _buildActionItem(
-              context: context,
-              icon: Icons.edit_note_rounded,
-              title: 'Edit Wedding & Host Profile',
-              subtitle: 'Update names, celebration date, city & guest count',
-              onTap: () => Navigator.of(context).push(
-                FadeScaleRoute(
-                  page: const CustomerEditProfileScreen(),
+                    const SizedBox(height: 4),
+                    Text(
+                      _displayContact,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.darkGrey,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.notifications_active_outlined,
-              title: 'Notifications & Alerts',
-              subtitle: 'Booking confirmations, milestones & reminders',
-              onTap: () => Navigator.of(context).push(
-                FadeScaleRoute(
-                  page: const CustomerNotificationsScreen(),
-                ),
-              ),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.checklist_rounded,
-              title: 'Wedding Checklist & Tasks',
-              subtitle: '12 of 24 tasks completed',
-              onTap: () => _showChecklistSheet(context),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Wedding Budget Tracker',
-              subtitle: '₹9,00,000 budget • ₹5,75,000 booked',
-              onTap: () => _showBudgetSheet(context),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.bookmark_outline_rounded,
-              title: 'Saved Vendors (5)',
-              subtitle: 'Photographers, Decorators, Caterers',
-              onTap: () => _showSavedVendorsSheet(context),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.storefront_rounded,
-              title: 'Vendor Partner Portal',
-              subtitle: 'Switch to vendor panel, incoming bookings & inquiries',
-              onTap: () {
-                Navigator.of(context).push(
-                  FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
-                );
-              },
-            ),
 
-            const SizedBox(height: 18),
+              const SizedBox(height: 22),
 
-            const Text(
-              'LEGAL & POLICIES',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.8,
-                color: AppColors.darkGrey,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            _buildActionItem(
-              context: context,
-              icon: Icons.privacy_tip_outlined,
-              title: 'Privacy Policy',
-              subtitle: 'Data protection & direct payment privacy',
-              onTap: () => _showPrivacyPolicySheet(context),
-            ),
-            _buildActionItem(
-              context: context,
-              icon: Icons.gavel_rounded,
-              title: 'Terms & Conditions',
-              subtitle: 'Platform agreement & in-person terms',
-              onTap: () => _showTermsAndConditionsSheet(context),
-            ),
-
-            const SizedBox(height: 28),
-
-            // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () => _showLogoutDialog(context),
-                icon: const Icon(Icons.logout_rounded,
-                    color: AppColors.primary, size: 18),
-                label: const Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Center(
-              child: TextButton.icon(
-                onPressed: () => _showDeleteAccountDialog(context),
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 16),
-                label: const Text(
-                  'Delete Account',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Widoora v1.0.4 • Direct Celebrations Marketplace',
+              const Text(
+                'EVENT PLANNING TOOLS',
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.grey.withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                  color: AppColors.darkGrey,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 10),
+
+              _buildActionItem(
+                context: context,
+                icon: Icons.edit_note_rounded,
+                title: 'Edit Wedding & Host Profile',
+                subtitle: 'Update names, celebration date, city & guest count',
+                onTap: () async {
+                  final updated = await Navigator.of(context).push<bool>(
+                    FadeScaleRoute(
+                      page: const CustomerEditProfileScreen(),
+                    ),
+                  );
+                  if (updated == true || mounted) {
+                    loadProfile();
+                  }
+                },
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.notifications_active_outlined,
+                title: 'Notifications & Alerts',
+                subtitle: 'Booking confirmations, milestones & reminders',
+                onTap: () => Navigator.of(context).push(
+                  FadeScaleRoute(
+                    page: const CustomerNotificationsScreen(),
+                  ),
+                ),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.checklist_rounded,
+                title: 'Wedding Checklist & Tasks',
+                subtitle: 'Track wedding milestones and preparation tasks',
+                onTap: () => _showChecklistSheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Wedding Budget Tracker',
+                subtitle: 'Manage budget allocations and planned expenses',
+                onTap: () => _showBudgetSheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.bookmark_outline_rounded,
+                title: 'Saved Vendors',
+                subtitle: 'Shortlisted photographers, decorators & caterers',
+                onTap: () => _showSavedVendorsSheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.storefront_rounded,
+                title: 'Vendor Partner Portal',
+                subtitle: 'Switch to vendor panel, incoming bookings & inquiries',
+                onTap: () {
+                  Navigator.of(context).push(
+                    FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 18),
+
+              const Text(
+                'LEGAL & POLICIES',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                  color: AppColors.darkGrey,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              _buildActionItem(
+                context: context,
+                icon: Icons.headset_mic_rounded,
+                title: 'Help & Support',
+                subtitle: 'Direct Call & WhatsApp assistance',
+                onTap: () => _showSupportSheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.gavel_rounded,
+                title: 'Terms of Service',
+                subtitle: 'Platform agreement & service terms',
+                onTap: () => _showTermsOfServiceSheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.assignment_return_outlined,
+                title: 'Cancellation Policy',
+                subtitle: 'Booking cancellation & refund guidelines',
+                onTap: () => _showCancellationPolicySheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                subtitle: 'Data protection & direct payment privacy',
+                onTap: () => _showPrivacyPolicySheet(context),
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.help_outline_rounded,
+                title: 'FAQs',
+                subtitle: 'Frequently asked questions & help',
+                onTap: () => _showFaqSheet(context),
+              ),
+
+              const SizedBox(height: 28),
+
+              // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showLogoutDialog(context),
+                  icon: const Icon(Icons.logout_rounded,
+                      color: AppColors.primary, size: 18),
+                  label: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _showDeleteAccountDialog(context),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.red, size: 16),
+                  label: const Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Widoora v1.0.4 • Direct Celebrations Marketplace',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.grey.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -2793,6 +3026,64 @@ class _CustomerProfileTab extends StatelessWidget {
         ),
         trailing: const Icon(Icons.arrow_forward_ios_rounded,
             size: 14, color: AppColors.grey),
+      ),
+    );
+  }
+}
+
+/// Reusable expandable FAQ tile used by both customer and vendor profiles
+class _FaqTile extends StatelessWidget {
+  final String question;
+  final String answer;
+
+  const _FaqTile({required this.question, required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.offWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.grey.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const RoundedRectangleBorder(
+            side: BorderSide.none,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          collapsedShape: const RoundedRectangleBorder(
+            side: BorderSide.none,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          iconColor: AppColors.primary,
+          collapsedIconColor: AppColors.grey,
+          title: Text(
+            question,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
+          children: [
+            Text(
+              answer,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.darkGrey,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

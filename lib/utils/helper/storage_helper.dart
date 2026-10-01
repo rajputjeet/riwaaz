@@ -13,10 +13,14 @@ class StorageHelper {
   static const String _userEmail        = "userEmail";
   static const String _userMobile       = "userMobile";
   static const String _userName         = "userName";
+  static const String _userProfileImg   = "userProfileImg";
   static const String _applicationId    = "applicationId";
   static const String _applicationStatus= "applicationStatus";
   static const String _userModel        = "userModel";
   static const String _vendorDraft      = "vendorDraft";
+  static const String _weddingDate      = "weddingDate";
+  static const String _weddingLocation  = "weddingLocation";
+  static const String _weddingEvents    = "weddingEvents";
 
   static final StorageHelper _singleton = StorageHelper._internal();
 
@@ -95,6 +99,13 @@ class StorageHelper {
   Future<void> saveUserName(String? name) async => _savePref(_userName, name);
   String? getUserName() => _prefsInstance?.getString(_userName);
 
+  Future<void> saveUserProfileImg(String? img) async =>
+      _savePref(_userProfileImg, (img != null && img.trim().isNotEmpty) ? img.trim() : null);
+  String? getUserProfileImg() {
+    final img = _prefsInstance?.getString(_userProfileImg);
+    return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
+  }
+
   // ── Vendor Application ─────────────────────────────────────────────────────
 
   Future<void> saveApplicationId(String? appId) async =>
@@ -148,6 +159,32 @@ class StorageHelper {
   Future<void> clearVendorDraft() async {
     if (_prefsInstance == null) return;
     await _prefsInstance!.remove(_vendorDraft);
+  }
+
+  // ── Wedding Details ────────────────────────────────────────────────────────
+  Future<void> saveWeddingDate(String? date) async => _savePref(_weddingDate, date);
+  String? getWeddingDate() => _prefsInstance?.getString(_weddingDate);
+
+  Future<void> saveWeddingLocation(String? loc) async => _savePref(_weddingLocation, loc);
+  String? getWeddingLocation() => _prefsInstance?.getString(_weddingLocation);
+
+  Future<void> saveWeddingEvents(List<Map<String, dynamic>>? events) async {
+    if (events == null) {
+      await _savePref(_weddingEvents, null);
+    } else {
+      await _savePref(_weddingEvents, jsonEncode(events));
+    }
+  }
+
+  List<Map<String, dynamic>>? getWeddingEvents() {
+    final raw = _prefsInstance?.getString(_weddingEvents);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Session Clear ──────────────────────────────────────────────────────────

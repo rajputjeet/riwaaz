@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/utils.dart';
 import '../shell/main_shell.dart';
 import 'controllers/auth_controller.dart';
 import 'login_screen.dart';
@@ -62,30 +63,9 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     setState(() => _isLoading = false);
 
     if (res.isSuccess == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded,
-                  color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Welcome, $fullName! Your account has been created.',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(milliseconds: 1500),
-        ),
+      Utils.showSuccess(
+        'Welcome, $fullName! Your account has been created.',
+        title: 'Account Created',
       );
 
       // Directly enter MainShell without OTP
@@ -488,15 +468,28 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
 );
   }
 
-  Widget _buildFieldLabel(String label) {
+  Widget _buildFieldLabel(String label, {bool isRequired = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 7, left: 2),
-      child: Text(
-        label,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 13.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.black,
+      child: RichText(
+        text: TextSpan(
+          text: label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.black,
+          ),
+          children: [
+            if (isRequired)
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -531,6 +524,20 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(
           color: AppColors.primary,
+          width: 2,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(
+          color: AppColors.error,
+          width: 1.2,
+        ),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(
+          color: AppColors.error,
           width: 2,
         ),
       ),

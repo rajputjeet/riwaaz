@@ -71,4 +71,7 @@ abstract class ApiConstants {
   static const String faqList = "/api/faq/list";
   static const String cmsList = "/api/cms/list";
   static String cmsData(String type) => "/api/cms/data/$type";
+
+  // 13. System Settings API
+  static const String settingCheck = "/api/setting/check";
 }

@@ -10,6 +10,8 @@ import '../shell/main_shell.dart';
 import '../service_listing/service_listing_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
 import '../notifications/customer_notifications_screen.dart';
+import '../../core/services/booking_service.dart';
+import '../../shared/widgets/app_states.dart';
 
 /// Standalone Dashboard screen wrapper that launches MainShell at tab index 0
 class DashboardScreen extends StatelessWidget {
@@ -35,79 +37,51 @@ class _DashboardBodyState extends State<DashboardBody> {
   Timer? _autoScrollTimer;
   int _currentEventIndex = 0;
 
-  static const List<_WeddingEvent> _createdEvents = [
-    _WeddingEvent(
-      title: 'TechCorp Annual Gala 2026',
-      ceremonyType: 'Office Party',
-      date: '15 Jan 2027',
-      time: '5:00 PM',
-      venue: 'JW Marriott Grand Ballroom, Chandigarh',
-      guests: '450 Team Members',
-      daysLeft: '142',
-      hoursLeft: '18',
-      minLeft: '30',
-      gradientColors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
-      icon: Icons.business_center_rounded,
-    ),
-    _WeddingEvent(
-      title: 'Reyansh 5th Birthday Bash',
-      ceremonyType: 'Birthday Party',
-      date: '10 Jan 2027',
-      time: '4:30 PM',
-      venue: 'Forest Hill Resort Clubhouse, Mohali',
-      guests: '120 Guests',
-      daysLeft: '137',
-      hoursLeft: '14',
-      minLeft: '15',
-      gradientColors: [Color(0xFF7C2D12), Color(0xFFD97706)],
-      icon: Icons.cake_rounded,
-    ),
-    _WeddingEvent(
-      title: 'Neon Music & Cocktail Night',
-      ceremonyType: 'Private Party',
-      date: '31 Dec 2026',
-      time: '8:30 PM',
-      venue: 'The Lalit Sky Lounge, Chandigarh',
-      guests: '200 Guests',
-      daysLeft: '127',
-      hoursLeft: '21',
-      minLeft: '00',
-      gradientColors: [Color(0xFF3B0764), Color(0xFF7E22CE)],
-      icon: Icons.nightlife_rounded,
-    ),
-    _WeddingEvent(
-      title: 'Grand Royal Vivah & Reception',
-      ceremonyType: 'Wedding Vivah',
-      date: '28 Dec 2026',
-      time: '7:00 PM',
-      venue: 'The Oberoi Sukhvilas, New Chandigarh',
-      guests: '550 Guests',
-      daysLeft: '124',
-      hoursLeft: '16',
-      minLeft: '42',
-      gradientColors: [Color(0xFF5E1B33), Color(0xFF380C1D)],
-      icon: Icons.celebration_rounded,
-    ),
-    _WeddingEvent(
-      title: 'Silver Jubilee Anniversary Gala',
-      ceremonyType: 'Anniversary',
-      date: '05 Jan 2027',
-      time: '7:30 PM',
-      venue: 'Noorani Lawns, Zirakpur',
-      guests: '280 Guests',
-      daysLeft: '132',
-      hoursLeft: '19',
-      minLeft: '20',
-      gradientColors: [Color(0xFF134E4A), Color(0xFF0D9488)],
-      icon: Icons.favorite_rounded,
-    ),
-  ];
+  List<_WeddingEvent> get _createdEvents {
+    final rawEvents = StorageHelper().getWeddingEvents() ?? [];
+    final weddingDateStr = StorageHelper().getWeddingDate();
+    final weddingDate = (weddingDateStr != null && DateTime.tryParse(weddingDateStr) != null)
+        ? DateTime.parse(weddingDateStr)
+        : null;
+    final now = DateTime.now();
+
+    return rawEvents.map((e) {
+      final title = e['title']?.toString() ?? 'Wedding Event';
+      final date = e['date']?.toString() ?? 'Upcoming';
+      final time = e['time']?.toString() ?? '';
+      final venue = e['location']?.toString() ?? 'TBD';
+
+      final diff = weddingDate?.difference(now);
+      final days = (diff != null && !diff.isNegative) ? '${diff.inDays}' : '0';
+      final hours = (diff != null && !diff.isNegative) ? '${diff.inHours % 24}' : '0';
+      final mins = (diff != null && !diff.isNegative) ? '${diff.inMinutes % 60}' : '0';
+
+      return _WeddingEvent(
+        title: title,
+        ceremonyType: 'Ceremony',
+        date: date,
+        time: time,
+        venue: venue,
+        guests: 'Event Function',
+        daysLeft: days,
+        hoursLeft: hours,
+        minLeft: mins,
+        gradientColors: const [Color(0xFF5E1B33), Color(0xFF380C1D)],
+        icon: Icons.celebration_rounded,
+      );
+    }).toList();
+  }
 
   @override
   void initState() {
     super.initState();
     _eventsPageController = PageController(viewportFraction: 0.91);
+    AppBookingService.instance.addListener(_onBookingsChanged);
     _startAutoScroll();
+  }
+
+  void _onBookingsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _startAutoScroll() {
@@ -119,7 +93,7 @@ class _DashboardBodyState extends State<DashboardBody> {
     }
     _autoScrollTimer?.cancel();
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!_eventsPageController.hasClients) return;
+      if (!_eventsPageController.hasClients || _createdEvents.isEmpty) return;
       final nextIndex = (_currentEventIndex + 1) % _createdEvents.length;
       _eventsPageController.animateToPage(
         nextIndex,
@@ -131,6 +105,7 @@ class _DashboardBodyState extends State<DashboardBody> {
 
   @override
   void dispose() {
+    AppBookingService.instance.removeListener(_onBookingsChanged);
     _autoScrollTimer?.cancel();
     _eventsPageController.dispose();
     super.dispose();
@@ -289,13 +264,14 @@ class _DashboardBodyState extends State<DashboardBody> {
           ],
         ),
         GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
+          onTap: () async {
+            await Navigator.of(context).push(
               FadeScaleRoute(page: const WeddingDetailsScreen()),
             );
+            if (mounted) setState(() {});
           },
           child: const Text(
-            'View All',
+            'Plan Event',
             style: TextStyle(
               color: AppColors.primary,
               fontSize: 12.5,
@@ -309,6 +285,143 @@ class _DashboardBodyState extends State<DashboardBody> {
 
   /// Full-width carousel so adjacent cards peek at the edges
   Widget _buildEventsCarousel() {
+    if (_createdEvents.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.gold.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () async {
+              await Navigator.of(context).push(
+                FadeScaleRoute(page: const WeddingDetailsScreen()),
+              );
+              if (mounted) setState(() {});
+            },
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -24,
+                  top: -24,
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.primary.withValues(alpha: 0.15),
+                                  AppColors.gold.withValues(alpha: 0.25),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.event_note_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'No Events Planned Yet',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.black,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Start organizing your special days',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Set your wedding date, Sangeet, Mehendi, Haldi, or Reception ceremonies to begin your countdown and itinerary.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.darkGrey,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 38,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
+                              FadeScaleRoute(page: const WeddingDetailsScreen()),
+                            );
+                            if (mounted) setState(() {});
+                          },
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text(
+                            'Plan Wedding Event',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       height: 205,
       child: PageView.builder(
@@ -327,6 +440,7 @@ class _DashboardBodyState extends State<DashboardBody> {
 
   /// Dot indicators
   Widget _buildEventsDots() {
+    if (_createdEvents.isEmpty) return const SizedBox.shrink();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -586,56 +700,7 @@ class _DashboardBodyState extends State<DashboardBody> {
 
 
   Widget _buildBookingsSection() {
-    final recentBookings = [
-      {
-        'name': 'Grand Stage Crafters & AV Tech',
-        'event': 'TechCorp Office Gala',
-        'eventType': 'Office Party',
-        'service': 'Corporate 4K LED & Audio Setup',
-        'date': '15 Jan 2027',
-        'status': 'Confirmed',
-        'price': '₹1,20,000',
-        'paid': '₹60,000 Paid',
-        'icon': Icons.business_center_rounded,
-        'color': const Color(0xFF1E3A8A),
-      },
-      {
-        'name': 'Rainbow Balloon & Themes',
-        'event': 'Reyansh 5th Birthday',
-        'eventType': 'Birthday Party',
-        'service': 'Kids Carnival Balloon Stage',
-        'date': '10 Jan 2027',
-        'status': 'Confirmed',
-        'price': '₹35,000',
-        'paid': '₹35,000 Paid (Full)',
-        'icon': Icons.cake_rounded,
-        'color': const Color(0xFFD97706),
-      },
-      {
-        'name': 'DJ Sandy Beats & Sound',
-        'event': 'Neon Cocktail Bash',
-        'eventType': 'Private Party',
-        'service': 'Club Sound & Laser FX',
-        'date': '31 Dec 2026',
-        'status': 'Confirmed',
-        'price': '₹45,000',
-        'paid': '₹20,000 Paid',
-        'icon': Icons.nightlife_rounded,
-        'color': const Color(0xFF7E22CE),
-      },
-      {
-        'name': 'Royal Click Studio',
-        'event': 'Grand Royal Wedding',
-        'eventType': 'Wedding',
-        'service': 'Photography & 4K Cinema',
-        'date': '28 Dec 2026',
-        'status': 'Confirmed',
-        'price': '₹75,000',
-        'paid': '₹25,000 Paid',
-        'icon': Icons.camera_alt_rounded,
-        'color': const Color(0xFF8B1A2E),
-      },
-    ];
+    final recentBookings = AppBookingService.instance.customerBookings;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,124 +732,143 @@ class _DashboardBodyState extends State<DashboardBody> {
           ],
         ),
         const SizedBox(height: 10),
-        ...recentBookings.map((b) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.3),
+        if (recentBookings.isEmpty)
+          AppEmptyState(
+            icon: Icons.event_busy_rounded,
+            title: 'No Bookings Yet',
+            subtitle: 'Browse and book top wedding photographers, venues, and caterers.',
+            actionLabel: 'Explore Vendors',
+            onAction: () {
+              Navigator.of(context).push(
+                FadeScaleRoute(
+                  page: const ServiceListingScreen(category: 'Photography'),
+                ),
+              );
+            },
+          )
+        else
+          ...recentBookings.map((b) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: (b['color'] as Color).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    b['icon'] as IconData,
-                    color: b['color'] as Color,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (b['color'] as Color).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              b['event'] as String,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: b['color'] as Color,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        b['name'] as String,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Text(
-                        b['service'] as String,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.darkGrey,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            b['paid'] as String,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.success,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '• ${b['date']}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.successLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Confirmed',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.success,
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: b.eventColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      b.eventIcon,
+                      color: b.eventColor,
+                      size: 22,
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        }),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: b.eventColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                b.eventName,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: b.eventColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          b.vendorName,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        Text(
+                          b.package,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.darkGrey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              b.total,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.success,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '• ${b.date}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: b.isAccepted
+                          ? AppColors.successLight
+                          : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      b.status,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: b.isAccepted
+                            ? AppColors.success
+                            : const Color(0xFFD97706),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }

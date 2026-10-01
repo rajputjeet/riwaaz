@@ -116,7 +116,7 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
                         isApproved
                             ? '100% Verified Partner'
                             : (isRejected
-                                ? 'Application Under Review'
+                                ? 'Application Declined'
                                 : 'Application Under Review'),
                         style: const TextStyle(
                           fontSize: 20,
@@ -159,66 +159,88 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
                 );
               }),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'VERIFIED CREDENTIALS & AUDIT',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: AppColors.darkGrey,
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'VERIFIED CREDENTIALS & AUDIT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            _buildDocCard(
-              icon: Icons.badge_outlined,
-              title: 'Government Identity Proof',
-              subtitle: 'Aadhaar & PAN card of registered owner',
-              idNumber: 'UIDAI-XXXX-4921',
-              status: 'Approved ✓',
-              date: 'Verified on 15 Jan 2026',
-            ),
+              // Doc cards — status badge strictly reflects live server approval status
+              Obx(() {
+                final appStatus = _controller.currentStatus.value;
+                final isVerified = _controller.isVerified.value;
+                final isApproved =
+                    isVerified || appStatus == 'Approved' || appStatus == 'Active';
+                final isRejected = appStatus == 'Rejected';
 
-            _buildDocCard(
-              icon: Icons.receipt_long_outlined,
-              title: 'Business Registration & Tax',
-              subtitle: 'GSTIN / MSME trade certification',
-              idNumber: '04AABCR8841M1Z5',
-              status: 'Approved ✓',
-              date: 'Valid till 31 Mar 2027',
-            ),
-
-            _buildDocCard(
-              icon: Icons.handshake_outlined,
-              title: 'Direct Settlement Agreement',
-              subtitle: 'Pay In Person policy & zero platform commission',
-              idNumber: 'DIRECT-AGR-2026',
-              status: 'Certified ✓',
-              date: 'Signed & active',
-            ),
-
-            _buildDocCard(
-              icon: Icons.camera_enhance_outlined,
-              title: 'Studio Gear & Deliverables Audit',
-              subtitle: '4K Cinema cameras, prime lenses, gimbal gear',
-              idNumber: 'GEAR-AUDIT-PASS',
-              status: 'Approved ✓',
-              date: 'Verified by Widoora QA',
-            ),
-
-            _buildDocCard(
-              icon: Icons.star_half_rounded,
-              title: 'Client Trust & Review History',
-              subtitle: '4.9 ★ rating across 84 completed weddings',
-              idNumber: 'TRUST-TIER-TOP',
-              status: 'Top Rated ✓',
-              date: 'Updated daily',
-            ),
+                return Column(
+                  children: [
+                    _buildDocCard(
+                      icon: Icons.badge_outlined,
+                      title: 'Government Identity Proof',
+                      subtitle: 'Aadhaar & PAN card of registered owner',
+                      idNumber: isApproved ? 'UIDAI-VERIFIED' : 'KYC-PENDING',
+                      isApproved: isApproved,
+                      isRejected: isRejected,
+                      date: isApproved
+                          ? 'Verified by Admin'
+                          : (isRejected
+                              ? 'Requires re-upload'
+                              : 'Under admin review'),
+                    ),
+                    _buildDocCard(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Business Registration & Tax',
+                      subtitle: 'GSTIN / MSME trade certification',
+                      idNumber: isApproved ? 'REG-VERIFIED' : 'TAX-PENDING',
+                      isApproved: isApproved,
+                      isRejected: isRejected,
+                      date: isApproved
+                          ? 'Valid Partner Listing'
+                          : (isRejected
+                              ? 'Verification declined'
+                              : 'Pending document audit'),
+                    ),
+                    _buildDocCard(
+                      icon: Icons.handshake_outlined,
+                      title: 'Direct Settlement Agreement',
+                      subtitle:
+                          'Pay In Person policy & zero platform commission',
+                      idNumber: isApproved
+                          ? 'DIRECT-ACTIVE'
+                          : 'AGREEMENT-PENDING',
+                      isApproved: isApproved,
+                      isRejected: isRejected,
+                      date: isApproved
+                          ? 'Signed & active'
+                          : (isRejected ? 'Declined' : 'Pending activation'),
+                    ),
+                    _buildDocCard(
+                      icon: Icons.camera_enhance_outlined,
+                      title: 'Studio Gear & Deliverables Audit',
+                      subtitle:
+                          'Professional photography & cinema equipment check',
+                      idNumber:
+                          isApproved ? 'GEAR-AUDIT-PASS' : 'AUDIT-PENDING',
+                      isApproved: isApproved,
+                      isRejected: isRejected,
+                      date: isApproved
+                          ? 'Audited by Widoora QA'
+                          : (isRejected ? 'Audit failed' : 'Audit in queue'),
+                    ),
+                  ],
+                );
+              }),
 
             const SizedBox(height: 20),
 
@@ -244,7 +266,7 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    '• Verified Gold Crown 👑 badge displayed on search cards\n'
+                    '• Verified Gold badge displayed on search cards\n'
                     '• Priority ranking in Chandigarh and Punjab regional filters\n'
                     '• 100% Direct in-person client payments with zero platform commission\n'
                     '• Instant client connection with direct Call & WhatsApp unlocked on acceptance',
@@ -258,39 +280,7 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Verification documents are up to date!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.refresh_rounded,
-                    color: AppColors.primary, size: 18),
-                label: const Text(
-                  'Request Document Re-audit',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -303,9 +293,22 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
     required String title,
     required String subtitle,
     required String idNumber,
-    required String status,
+    required bool isApproved,
+    bool isRejected = false,
     required String date,
   }) {
+    final statusText = isApproved
+        ? 'Approved ✓'
+        : (isRejected ? 'Rejected ✗' : 'Pending');
+    final statusBg = isApproved
+        ? AppColors.successLight
+        : (isRejected
+            ? AppColors.error.withValues(alpha: 0.12)
+            : const Color(0xFFFEF3C7));
+    final statusColor = isApproved
+        ? AppColors.success
+        : (isRejected ? AppColors.error : const Color(0xFFD97706));
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -354,15 +357,15 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.successLight,
+                        color: statusBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        status,
-                        style: const TextStyle(
+                        statusText,
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.success,
+                          color: statusColor,
                         ),
                       ),
                     ),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../shell/main_shell.dart';
 
 class WeddingDetailsScreen extends StatefulWidget {
@@ -18,7 +19,7 @@ class _WeddingDetailsScreenState extends State<WeddingDetailsScreen>
   late AnimationController _formController;
 
   String _selectedWeddingType = 'Wedding';
-  DateTime _selectedDate = DateTime(2026, 12, 28);
+  late DateTime _selectedDate;
   String _selectedLocation = 'Mohali, Punjab';
   double _guestCount = 500;
   double _budget = 500000;
@@ -34,6 +35,17 @@ class _WeddingDetailsScreenState extends State<WeddingDetailsScreen>
   @override
   void initState() {
     super.initState();
+    final savedDate = StorageHelper().getWeddingDate();
+    if (savedDate != null && DateTime.tryParse(savedDate) != null) {
+      _selectedDate = DateTime.parse(savedDate);
+    } else {
+      _selectedDate = DateTime.now().add(const Duration(days: 90));
+    }
+    final savedLoc = StorageHelper().getWeddingLocation();
+    if (savedLoc != null && savedLoc.isNotEmpty) {
+      _selectedLocation = savedLoc;
+    }
+
     _formController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -51,7 +63,10 @@ class _WeddingDetailsScreenState extends State<WeddingDetailsScreen>
     super.dispose();
   }
 
-  void _navigateToDashboard() {
+  void _navigateToDashboard() async {
+    await StorageHelper().saveWeddingDate(_selectedDate.toIso8601String());
+    await StorageHelper().saveWeddingLocation(_selectedLocation);
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       FadeScaleRoute(page: const MainShell(initialIndex: 0)),
     );

@@ -36,9 +36,7 @@ class UserApiProvider {
       final response = await _dio.put(
         ApiConstants.editProfile,
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
-        ),
+        options: Injector.getHeaderToken(),
       );
 
       return DataResponse<UserModel>.fromJson(

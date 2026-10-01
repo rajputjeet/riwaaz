@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
+import '../../shared/widgets/app_states.dart';
+import '../../utils/utils.dart';
 
 class VendorNotificationsScreen extends StatefulWidget {
   const VendorNotificationsScreen({super.key});
@@ -12,42 +14,7 @@ class VendorNotificationsScreen extends StatefulWidget {
 
 class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
   int _selectedFilter = 0; // 0: All, 1: Bookings, 2: Updates
-
-  final List<Map<String, dynamic>> _staticNotifications = [
-    {
-      'id': 'notif_1',
-      'title': 'Gold Partner Badge Active',
-      'message':
-          'Your business profile is 100% verified. You now appear in top search results in Chandigarh.',
-      'time': '2 hours ago',
-      'icon': Icons.verified_rounded,
-      'color': AppColors.goldDark,
-      'isRead': false,
-      'category': 'Updates',
-    },
-    {
-      'id': 'notif_2',
-      'title': 'Direct Settlement Reminder',
-      'message':
-          'Widoora charges 0% commission. Collect 100% of your service fee directly from clients in person.',
-      'time': 'Yesterday',
-      'icon': Icons.handshake_rounded,
-      'color': AppColors.success,
-      'isRead': true,
-      'category': 'Updates',
-    },
-    {
-      'id': 'notif_3',
-      'title': 'New 5-Star Review Received',
-      'message':
-          '"Royal Click Studio captured our wedding beautifully!" — Neha Sharma rated 5.0 ★',
-      'time': '2 days ago',
-      'icon': Icons.star_rounded,
-      'color': AppColors.gold,
-      'isRead': true,
-      'category': 'Updates',
-    },
-  ];
+  final Set<String> _readIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +40,7 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
             'time': 'Just now',
             'icon': Icons.notifications_active_rounded,
             'color': AppColors.error,
-            'isRead': false,
+            'isRead': _readIds.contains('pending_${b.id}'),
             'category': 'Bookings',
             'bookingId': b.id,
             'isPending': true,
@@ -96,7 +63,7 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
           });
         }
 
-        final allItems = [...bookingNotifs, ..._staticNotifications];
+        final allItems = bookingNotifs;
 
         final filteredItems = allItems.where((item) {
           if (_selectedFilter == 1) return item['category'] == 'Bookings';
@@ -130,8 +97,9 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      for (final item in _staticNotifications) {
-                        item['isRead'] = true;
+                      for (final item in allItems) {
+                        final id = item['id']?.toString();
+                        if (id != null) _readIds.add(id);
                       }
                     });
                   },
@@ -162,9 +130,6 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
                       const SizedBox(width: 8),
                       _buildFilterChip(
                           1, 'Bookings (${bookingNotifs.length})'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                          2, 'Updates (${_staticNotifications.length})'),
                     ],
                   ),
                 ),
@@ -173,24 +138,11 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
               // Notification List
               Expanded(
                 child: filteredItems.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_off_outlined,
-                                size: 54,
-                                color: AppColors.grey.withValues(alpha: 0.5)),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'No notifications in this tab',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.darkGrey,
-                              ),
-                            ),
-                          ],
-                        ),
+                    ? const AppEmptyState(
+                        icon: Icons.notifications_none_rounded,
+                        title: 'No Notifications Yet',
+                        subtitle:
+                            'You have no pending requests or alerts at the moment.',
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),
@@ -291,15 +243,8 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
                                                     .acceptBooking(
                                                         item['bookingId']
                                                             as String);
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                        'Booking accepted! Client contact unlocked.'),
-                                                    backgroundColor:
-                                                        AppColors.success,
-                                                  ),
-                                                );
+                                                Utils.showSuccess(
+                                                    'Booking accepted! Client contact unlocked.');
                                               },
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor:

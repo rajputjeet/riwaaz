@@ -50,6 +50,19 @@ class CachedImageView extends StatelessWidget {
     this.alignment = Alignment.center,
   });
 
+  /// Returns true if the URL points to a video file (.mp4, .mov, .avi, etc.)
+  static bool isVideoUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return false;
+    final clean = url.split('?').first.trim().toLowerCase();
+    return clean.endsWith('.mp4') ||
+        clean.endsWith('.mov') ||
+        clean.endsWith('.avi') ||
+        clean.endsWith('.mkv') ||
+        clean.endsWith('.webm') ||
+        clean.endsWith('.3gp') ||
+        clean.endsWith('.m4v');
+  }
+
   /// Resolves any relative URL to an absolute URL using [ApiConstants.baseUrl]
   static String resolveUrl(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
@@ -73,11 +86,12 @@ class CachedImageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cleanUrl = resolveUrl(imageUrl);
+    final isVid = isVideoUrl(cleanUrl);
 
     Widget imageContent;
 
-    if (cleanUrl.isEmpty) {
-      imageContent = _buildFallback();
+    if (cleanUrl.isEmpty || isVid) {
+      imageContent = _buildFallback(isVidFallback: isVid);
     } else if (cleanUrl.startsWith('assets/')) {
       imageContent = Image.asset(
         cleanUrl,
@@ -176,7 +190,7 @@ class CachedImageView extends StatelessWidget {
     );
   }
 
-  Widget _buildFallback() {
+  Widget _buildFallback({bool isVidFallback = false}) {
     if (fallbackAsset != null && fallbackAsset!.isNotEmpty) {
       return Image.asset(
         fallbackAsset!,
@@ -184,20 +198,23 @@ class CachedImageView extends StatelessWidget {
         height: height,
         fit: fit,
         alignment: alignment,
-        errorBuilder: (context, error, stackTrace) => _buildFallbackIcon(),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildFallbackIcon(isVidFallback: isVidFallback),
       );
     }
-    return _buildFallbackIcon();
+    return _buildFallbackIcon(isVidFallback: isVidFallback);
   }
 
-  Widget _buildFallbackIcon() {
+  Widget _buildFallbackIcon({bool isVidFallback = false}) {
+    final effectiveIcon = fallbackIcon ??
+        (isVidFallback ? Icons.videocam_rounded : Icons.image_outlined);
     return Container(
       width: width,
       height: height,
       color: backgroundColor ?? AppColors.greyLight.withValues(alpha: 0.25),
       child: Center(
         child: Icon(
-          fallbackIcon ?? Icons.image_outlined,
+          effectiveIcon,
           color: iconColor ?? AppColors.grey,
           size: iconSize ??
               ((width != null && width! < 40)

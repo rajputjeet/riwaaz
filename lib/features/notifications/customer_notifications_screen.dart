@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
+import '../../shared/widgets/app_states.dart';
 
 class CustomerNotificationsScreen extends StatefulWidget {
   const CustomerNotificationsScreen({super.key});
@@ -13,42 +14,7 @@ class CustomerNotificationsScreen extends StatefulWidget {
 class _CustomerNotificationsScreenState
     extends State<CustomerNotificationsScreen> {
   int _selectedFilter = 0; // 0: All, 1: Bookings, 2: Planning
-
-  final List<Map<String, dynamic>> _staticNotifications = [
-    {
-      'id': 'cust_1',
-      'title': 'Wedding Checklist Milestone',
-      'message':
-          'Great progress! You have completed 12 of 24 wedding milestones. Next task: Finalize catering menu.',
-      'time': '3 hours ago',
-      'icon': Icons.checklist_rounded,
-      'color': AppColors.primary,
-      'isRead': false,
-      'category': 'Planning',
-    },
-    {
-      'id': 'cust_2',
-      'title': 'Pay In Person Reminder',
-      'message':
-          'Widoora protects your budget. No advance is paid on the app. Pay your vendor directly in cash, UPI, or bank transfer.',
-      'time': 'Yesterday',
-      'icon': Icons.handshake_rounded,
-      'color': AppColors.success,
-      'isRead': true,
-      'category': 'Planning',
-    },
-    {
-      'id': 'cust_3',
-      'title': 'Wedding Budget Summary',
-      'message':
-          '₹5,75,000 out of your ₹9,00,000 budget is booked across Photography, Venue & Decor.',
-      'time': '2 days ago',
-      'icon': Icons.account_balance_wallet_rounded,
-      'color': AppColors.goldDark,
-      'isRead': true,
-      'category': 'Planning',
-    },
-  ];
+  final Set<String> _readIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -74,12 +40,12 @@ class _CustomerNotificationsScreenState
                 ? Icons.hourglass_top_rounded
                 : Icons.check_circle_rounded,
             'color': isPending ? const Color(0xFFD97706) : AppColors.success,
-            'isRead': !isPending,
+            'isRead': !isPending || _readIds.contains('cust_booking_${b.id}'),
             'category': 'Bookings',
           });
         }
 
-        final allItems = [...bookingNotifs, ..._staticNotifications];
+        final allItems = bookingNotifs;
 
         final filteredItems = allItems.where((item) {
           if (_selectedFilter == 1) return item['category'] == 'Bookings';
@@ -113,8 +79,9 @@ class _CustomerNotificationsScreenState
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      for (final item in _staticNotifications) {
-                        item['isRead'] = true;
+                      for (final item in allItems) {
+                        final id = item['id']?.toString();
+                        if (id != null) _readIds.add(id);
                       }
                     });
                   },
@@ -143,33 +110,17 @@ class _CustomerNotificationsScreenState
                       const SizedBox(width: 8),
                       _buildFilterChip(
                           1, 'Bookings (${bookingNotifs.length})'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                          2, 'Planning (${_staticNotifications.length})'),
                     ],
                   ),
                 ),
               ),
               Expanded(
                 child: filteredItems.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_off_outlined,
-                                size: 54,
-                                color: AppColors.grey.withValues(alpha: 0.5)),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'No notifications',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.darkGrey,
-                              ),
-                            ),
-                          ],
-                        ),
+                    ? const AppEmptyState(
+                        icon: Icons.notifications_none_rounded,
+                        title: 'No Notifications Yet',
+                        subtitle:
+                            'You have no new updates or booking alerts right now.',
                       )
                     : ListView.separated(
                         physics: const BouncingScrollPhysics(),

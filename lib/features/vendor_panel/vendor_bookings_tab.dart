@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/booking_model.dart';
+import '../../utils/utils.dart';
 
 class VendorBookingsTab extends StatefulWidget {
   const VendorBookingsTab({super.key});
@@ -97,23 +98,12 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
 
     if (!mounted) return;
     if (result.isSuccess == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Booking accepted for ${booking.customerName ?? 'Client'}!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      Utils.showSuccess('Booking accepted for ${booking.customerName ?? 'Client'}!');
       _loadBookings(); // Refresh from server
     } else {
       // Revert on failure
       setState(() => booking.status = 'Pending');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message ?? 'Failed to accept booking'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Utils.showError(result.message ?? 'Failed to accept booking');
     }
   }
 
@@ -131,22 +121,11 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
 
     if (!mounted) return;
     if (result.isSuccess == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text('Booking declined for ${booking.customerName ?? 'Client'}.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Utils.showInfo('Booking declined for ${booking.customerName ?? 'Client'}.');
       _loadBookings();
     } else {
       setState(() => booking.status = 'Pending');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message ?? 'Failed to decline booking'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      Utils.showError(result.message ?? 'Failed to decline booking');
     }
   }
 
@@ -617,12 +596,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Calling $clientName ($clientPhone)...'),
-                        ),
-                      );
+                      Utils.showInfo('Calling $clientName ($clientPhone)...');
                     },
                     icon: const Icon(Icons.call_rounded, size: 14),
                     label: const Text('Call Client'),
@@ -641,13 +615,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Opening WhatsApp with $clientName...'),
-                          backgroundColor: const Color(0xFF25D366),
-                        ),
-                      );
+                      Utils.showSuccess('Opening WhatsApp with $clientName...');
                     },
                     icon: const Icon(Icons.phone_android_rounded, size: 14),
                     label: const Text('WhatsApp'),

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../vendor_registration/vendor_registration_wizard_screen.dart';
 
@@ -90,17 +91,8 @@ class _VendorOtpVerificationScreenState
   void _verifyOtp() async {
     final code = _otpCode;
     if (code.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please enter the complete 4-digit verification code',
-            style: GoogleFonts.plusJakartaSans(color: Colors.white),
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      Utils.showError(
+        'Please enter the complete 4-digit verification code',
       );
       return;
     }
@@ -125,31 +117,11 @@ class _VendorOtpVerificationScreenState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                (widget.businessName != null && widget.businessName!.isNotEmpty)
-                    ? 'Welcome, ${widget.businessName}! Business verified successfully.'
-                    : 'Account verified successfully!',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(milliseconds: 1600),
-      ),
+    Utils.showSuccess(
+      (widget.businessName != null && widget.businessName!.isNotEmpty)
+          ? 'Welcome, ${widget.businessName}! Business verified successfully.'
+          : 'Account verified successfully!',
+      title: 'Verified',
     );
 
     // Navigate into the 7-step vendor onboarding wizard (starting at step 1: Business Categories)

@@ -23,11 +23,17 @@ class VendorApiProvider {
     FormData formData,
   ) async {
     try {
+      final token = StorageHelper().getAccessToken();
       final response = await _dio.post(
         ApiConstants.vendorApplicationSubmit,
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
+        options: Options(
+          contentType: null,
+          headers: {
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
         ),
       );
 
@@ -138,11 +144,18 @@ class VendorApiProvider {
   // POST /api/users/vendor/portfolio/add
   Future<DataResponse<dynamic>> addPortfolioItem(FormData formData) async {
     try {
+      final token = StorageHelper().getAccessToken();
       final response = await _dio.post(
         ApiConstants.vendorPortfolioAdd,
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
+        options: Options(
+          // Must be null so Dio auto-sets multipart/form-data with boundary
+          contentType: null,
+          headers: {
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
         ),
       );
       return DataResponse<dynamic>.fromJson(
@@ -160,11 +173,17 @@ class VendorApiProvider {
     FormData formData,
   ) async {
     try {
+      final token = StorageHelper().getAccessToken();
       final response = await _dio.put(
         ApiConstants.vendorPortfolioEdit(portfolioId),
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
+        options: Options(
+          contentType: null,
+          headers: {
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
         ),
       );
       return DataResponse<dynamic>.fromJson(
@@ -255,9 +274,7 @@ class VendorApiProvider {
       final response = await _dio.post(
         ApiConstants.vendorServiceAdd,
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
-        ),
+        options: Injector.getHeaderToken(),
       );
       return DataResponse<dynamic>.fromJson(
         response.data as Map<String, dynamic>, (json) => json,
@@ -277,9 +294,7 @@ class VendorApiProvider {
       final response = await _dio.put(
         ApiConstants.vendorServiceEdit(serviceId),
         data: formData,
-        options: Injector.getHeaderToken(
-          extraHeaders: {'Content-Type': 'multipart/form-data'},
-        ),
+        options: Injector.getHeaderToken(),
       );
       return DataResponse<dynamic>.fromJson(
         response.data as Map<String, dynamic>, (json) => json,

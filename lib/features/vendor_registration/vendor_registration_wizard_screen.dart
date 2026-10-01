@@ -8,9 +8,10 @@ import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
-import '../../shared/widgets/service_categories_bar.dart';
 import '../../shared/widgets/app_search_bar.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../utils/utils.dart';
 import 'controllers/vendor_registration_controller.dart';
 import 'vendor_submitted_screen.dart';
 
@@ -179,6 +180,7 @@ class _VendorRegistrationWizardScreenState
   String? _businessCertPath;
   String? _addressProofPath;
   String? _gstDocPath;
+  bool _showStep2ValidationErrors = false;
   bool _showDocValidationErrors = false;
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -229,25 +231,12 @@ class _VendorRegistrationWizardScreenState
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Document selected: ${picked.name}'),
-              backgroundColor: AppColors.success,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(milliseconds: 1500),
-            ),
-          );
+          Utils.showSuccess('Document selected: ${picked.name}');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick document: $e'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Utils.showError('Could not pick document: $e');
       }
     }
   }
@@ -464,14 +453,8 @@ class _VendorRegistrationWizardScreenState
         _currentStep = 3;
         _showDocValidationErrors = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cannot save details: Required verification documents missing (${missing.join(', ')}).',
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+      Utils.showError(
+        'Cannot save details: Required verification documents missing (${missing.join(', ')}).',
       );
       return;
     }
@@ -479,26 +462,7 @@ class _VendorRegistrationWizardScreenState
     final categoryId = _resolveCategoryId();
     final planId = _resolvePlanId();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text('Saving application & documents to server...'),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.primary,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    Utils.showInfo('Saving application & documents to server...');
 
     final res = await _vendorController.submitApplication(
       ownerName: _ownerNameController.text.trim().isNotEmpty
@@ -530,22 +494,7 @@ class _VendorRegistrationWizardScreenState
     if (!mounted) return;
 
     if (res.isSuccess == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.cloud_done_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text('Profile details & documents uploaded to server!'),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.success,
-          duration: Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      Utils.showSuccess('Profile details & documents uploaded to server!');
     }
   }
 
@@ -607,20 +556,7 @@ class _VendorRegistrationWizardScreenState
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.history_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text('Restored your saved application progress'),
-                ],
-              ),
-              backgroundColor: AppColors.primaryDark,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          Utils.showInfo('Restored your saved application progress');
         }
       });
     } else {
@@ -693,26 +629,31 @@ class _VendorRegistrationWizardScreenState
 
     if (_currentStep == 1) {
       if (_selectedCategory.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select your business category to continue.'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Utils.showError('Please select your business category to continue.');
         return;
       }
     }
 
     if (_currentStep == 2) {
-      if (_businessNameController.text.trim().isEmpty ||
-          _ownerNameController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please fill in business name and owner name.'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
+      final ownerName = _ownerNameController.text.trim();
+      final businessName = _businessNameController.text.trim();
+      final desc = _descriptionController.text.trim();
+      final address = _addressController.text.trim();
+
+      final List<String> missingFields = [];
+      if (ownerName.length < 2) missingFields.add('Owner Full Name (min 2 chars)');
+      if (businessName.length < 2) missingFields.add('Business / Studio Name (min 2 chars)');
+      if (_experience.trim().isEmpty) missingFields.add('Years of Experience');
+      if (desc.length < 10) missingFields.add('Business Description (min 10 chars)');
+      if (address.length < 5) missingFields.add('Business Address / City (min 5 chars)');
+
+      if (missingFields.isNotEmpty) {
+        setState(() {
+          _showStep2ValidationErrors = true;
+        });
+        Utils.showError(
+          'Please fill in all mandatory basic details:\n• ${missingFields.join('\n• ')}',
+          duration: const Duration(seconds: 4),
         );
         return;
       }
@@ -725,24 +666,9 @@ class _VendorRegistrationWizardScreenState
         setState(() {
           _showDocValidationErrors = true;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Vendor cannot skip required verification documents:\n• ${missing.join('\n• ')}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        Utils.showError(
+          'Vendor cannot skip required verification documents:\n• ${missing.join('\n• ')}',
+          duration: const Duration(seconds: 4),
         );
         return;
       }
@@ -757,13 +683,7 @@ class _VendorRegistrationWizardScreenState
           _currentStep = 3;
           _showDocValidationErrors = true;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please upload all required verification documents first.'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        Utils.showError('Please upload all required verification documents first.');
         return;
       }
       await _uploadVendorDetailsToServer();
@@ -806,14 +726,8 @@ class _VendorRegistrationWizardScreenState
         _currentStep = 3;
         _showDocValidationErrors = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cannot submit: Required verification documents missing (${missing.join(', ')}).',
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+      Utils.showError(
+        'Cannot submit: Required verification documents missing (${missing.join(', ')}).',
       );
       return;
     }
@@ -872,17 +786,10 @@ class _VendorRegistrationWizardScreenState
       );
     }
   }
-  // Helper to open Buy Subscription Modal
   void _showPaymentSheet() {
     final plan = _getSelectedPlan();
     if (plan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please wait for active plans to load, or select a plan to continue.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      Utils.showError('Please wait for active plans to load, or select a plan to continue.');
       return;
     }
     final price = _getPlanPrice(plan);
@@ -1084,35 +991,12 @@ class _VendorRegistrationWizardScreenState
                       ? null
                       : () async {
                           final nav = Navigator.of(ctx);
-                          final messenger = ScaffoldMessenger.of(context);
                           setSheetState(() => isProcessing = true);
                           await Future.delayed(const Duration(milliseconds: 900));
                           if (!mounted) return;
                           setState(() => _isSubscriptionPaid = true);
                           nav.pop();
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      'Payment Successful! ${plan['name']} activated.',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: AppColors.success,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
+                          Utils.showSuccess('Payment Successful! ${plan['name']} activated.');
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -1400,7 +1284,7 @@ class _VendorRegistrationWizardScreenState
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? type.bgColor : AppColors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -1423,13 +1307,22 @@ class _VendorRegistrationWizardScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ServiceIconWrap(
-                      item: type,
-                      size: 64,
-                      iconSize: 36,
-                      borderRadius: 16,
-                      isSelected: isSelected,
-                    ),
+                    if (type.hasServerIcon)
+                      CachedImageView(
+                        imageUrl: type.iconUrl,
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.contain,
+                        fallbackIcon: type.icon,
+                        iconColor: type.color,
+                        iconSize: 48,
+                      )
+                    else
+                      Icon(
+                        type.icon,
+                        color: type.color,
+                        size: 48,
+                      ),
                     const SizedBox(height: 8),
                     Text(
                       type.title,
@@ -1437,7 +1330,7 @@ class _VendorRegistrationWizardScreenState
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.cormorantGaramond(
-                        fontSize: 12.5,
+                        fontSize: 13,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected ? type.color : AppColors.black,
@@ -1458,6 +1351,19 @@ class _VendorRegistrationWizardScreenState
   // STEP 2: BASIC INFO
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep2BasicInfo() {
+    final ownerNameErr = _showStep2ValidationErrors && _ownerNameController.text.trim().length < 2
+        ? 'Please enter owner / representative name (min 2 characters)'
+        : null;
+    final businessNameErr = _showStep2ValidationErrors && _businessNameController.text.trim().length < 2
+        ? 'Please enter business / studio name (min 2 characters)'
+        : null;
+    final descErr = _showStep2ValidationErrors && _descriptionController.text.trim().length < 10
+        ? 'Please describe your services (min 10 characters)'
+        : null;
+    final addressErr = _showStep2ValidationErrors && _addressController.text.trim().length < 5
+        ? 'Please enter complete business address / city (min 5 characters)'
+        : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1467,6 +1373,8 @@ class _VendorRegistrationWizardScreenState
           hint: 'e.g. Aman Verma',
           controller: _ownerNameController,
           icon: Icons.person_outline_rounded,
+          isRequired: true,
+          errorText: ownerNameErr,
         ),
         const SizedBox(height: 16),
 
@@ -1476,16 +1384,30 @@ class _VendorRegistrationWizardScreenState
           hint: 'e.g. Royal Click Studio',
           controller: _businessNameController,
           icon: Icons.business_outlined,
+          isRequired: true,
+          errorText: businessNameErr,
         ),
         const SizedBox(height: 16),
 
         // 3. Years of Experience
-        const Text(
-          'Years of Experience',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.black,
+        RichText(
+          text: const TextSpan(
+            text: 'Years of Experience',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.black,
+            ),
+            children: [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
@@ -1514,12 +1436,24 @@ class _VendorRegistrationWizardScreenState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Business Description',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.black,
+            RichText(
+              text: const TextSpan(
+                text: 'Business Description',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+                children: [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
             Text(
@@ -1539,7 +1473,12 @@ class _VendorRegistrationWizardScreenState
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.grey.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: descErr != null
+                  ? AppColors.error
+                  : AppColors.grey.withValues(alpha: 0.3),
+              width: descErr != null ? 1.4 : 1.0,
+            ),
           ),
           child: TextField(
             controller: _descriptionController,
@@ -1555,6 +1494,20 @@ class _VendorRegistrationWizardScreenState
             ),
           ),
         ),
+        if (descErr != null) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              descErr,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
 
         const SizedBox(height: 16),
 
@@ -1565,6 +1518,8 @@ class _VendorRegistrationWizardScreenState
           controller: _addressController,
           icon: Icons.location_on_outlined,
           maxLines: 2,
+          isRequired: true,
+          errorText: addressErr,
         ),
 
         const SizedBox(height: 16),
@@ -1575,6 +1530,7 @@ class _VendorRegistrationWizardScreenState
           hint: 'Enter GST number (e.g. 03AABCR1234F1Z8)',
           controller: _gstController,
           icon: Icons.receipt_long_outlined,
+          isRequired: false,
         ),
       ],
     );
@@ -3035,16 +2991,32 @@ class _VendorRegistrationWizardScreenState
     String? prefixText,
     int maxLines = 1,
     IconData? suffixIcon,
+    bool isRequired = false,
+    String? errorText,
   }) {
+    final hasError = errorText != null && errorText.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.black,
+        RichText(
+          text: TextSpan(
+            text: label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.black,
+            ),
+            children: [
+              if (isRequired)
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
@@ -3052,17 +3024,27 @@ class _VendorRegistrationWizardScreenState
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.grey.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: hasError
+                  ? AppColors.error
+                  : AppColors.grey.withValues(alpha: 0.3),
+              width: hasError ? 1.4 : 1.0,
+            ),
           ),
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
             maxLines: maxLines,
+            onChanged: (_) {
+              if (_showStep2ValidationErrors) {
+                setState(() {});
+              }
+            },
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(color: AppColors.grey, fontSize: 13),
               prefixIcon: icon != null
-                  ? Icon(icon, color: AppColors.primary, size: 18)
+                  ? Icon(icon, color: hasError ? AppColors.error : AppColors.primary, size: 18)
                   : null,
               prefixText: prefixText,
               suffixIcon: suffixIcon != null
@@ -3073,6 +3055,20 @@ class _VendorRegistrationWizardScreenState
             ),
           ),
         ),
+        if (hasError) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              errorText,
+              style: const TextStyle(
+                color: AppColors.error,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

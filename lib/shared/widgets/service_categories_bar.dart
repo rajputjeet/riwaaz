@@ -24,7 +24,7 @@ class ServiceIconWrap extends StatelessWidget {
     super.key,
     required this.item,
     this.size = 74,
-    this.iconSize = 38,
+    this.iconSize = 44,
     this.borderRadius = 18,
     this.isSelected = false,
   });
@@ -268,7 +268,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                         ServiceIconWrap(
                           item: cat,
                           size: 74,
-                          iconSize: 40,
+                          iconSize: 46,
                           borderRadius: 18,
                           isSelected: isSelected,
                         ),

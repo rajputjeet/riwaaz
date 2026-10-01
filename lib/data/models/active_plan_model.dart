@@ -18,6 +18,8 @@ class ActivePlanModel {
     this.subscriptionPlan,
   });
 
+  String? get planTitle => subscriptionPlan?.title;
+
   factory ActivePlanModel.fromJson(Map<String, dynamic> json) {
     return ActivePlanModel(
       isSubscriptionActive: json['isSubscriptionActive'] ?? false,

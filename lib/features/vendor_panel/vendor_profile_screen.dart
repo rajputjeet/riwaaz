@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../data/api_provider/user_api_provider.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/user_model.dart';
+import '../../data/models/active_plan_model.dart';
+import '../../data/models/dashboard_stats_model.dart';
+import '../../data/api_provider/cms_api_provider.dart';
+import '../../data/api_provider/faq_api_provider.dart';
+import '../../data/models/cms_model.dart';
+import '../../data/models/faq_model.dart';
+import '../../data/shared/data_response.dart';
+import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/app_html_content_view.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
 import '../auth/unified_login_screen.dart';
 import 'vendor_packages_screen.dart';
@@ -13,8 +26,126 @@ import 'vendor_subscription_plan_screen.dart';
 import 'vendor_edit_profile_screen.dart';
 import 'vendor_verification_screen.dart';
 
-class VendorProfileScreen extends StatelessWidget {
+class VendorProfileScreen extends StatefulWidget {
   const VendorProfileScreen({super.key});
+
+  @override
+  State<VendorProfileScreen> createState() => VendorProfileScreenState();
+}
+
+class VendorProfileScreenState extends State<VendorProfileScreen> {
+  final _userApi = UserApiProvider();
+  final _vendorApi = VendorApiProvider();
+  final _cmsApi = CmsApiProvider();
+  final _faqApi = FaqApiProvider();
+
+  UserModel? _profile;
+  ActivePlanModel? _activePlan;
+  DashboardStatsModel? _stats;
+  bool _isLoading = true;
+  bool _isNoInternet = false;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    loadAll();
+  }
+
+  Future<void> loadAll({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent && _profile == null) {
+      setState(() {
+        _isLoading = true;
+        _isNoInternet = false;
+        _errorMsg = null;
+      });
+    } else {
+      setState(() {});
+    }
+    try {
+      final results = await Future.wait([
+        _userApi.getProfile(),
+        _vendorApi.getActivePlan(),
+        _vendorApi.getDashboardStats(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        final profileRes = results[0];
+        final planRes = results[1];
+        final statsRes = results[2];
+        if (profileRes.isSuccess == true) _profile = profileRes.data as UserModel?;
+        if (planRes.isSuccess == true) _activePlan = planRes.data as ActivePlanModel?;
+        if (statsRes.isSuccess == true) _stats = statsRes.data as DashboardStatsModel?;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final isNet = e.toString().toLowerCase().contains('socket') ||
+          e.toString().toLowerCase().contains('connection') ||
+          e.toString().toLowerCase().contains('network');
+      setState(() {
+        if (_profile == null) {
+          _isNoInternet = isNet;
+          _errorMsg = isNet ? null : 'Could not load profile. Please try again.';
+        }
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadAll() => loadAll();
+
+  String get _displayName {
+    final biz = _profile?.vendorProfile?.businessName;
+    if (biz != null && biz.trim().isNotEmpty) return biz.trim();
+    if (_profile?.fullName?.trim().isNotEmpty == true) return _profile!.fullName!.trim();
+    final stored = StorageHelper().getUserName();
+    if (stored?.trim().isNotEmpty == true) return stored!.trim();
+    return 'Vendor Partner';
+  }
+
+  String get _displayEmail => _profile?.email ?? StorageHelper().getUserEmail() ?? '';
+  String get _displayMobile => _profile?.mobile ?? StorageHelper().getUserMobile() ?? '';
+
+  String get _appStatus {
+    final s = _stats?.applicationStatus ??
+        _profile?.vendorProfile?.applicationStatus ??
+        StorageHelper().getApplicationStatus() ?? '';
+    return s.isEmpty ? 'Pending' : s;
+  }
+
+  bool get _isVerifiedVendor => StorageHelper().getIsVerified();
+
+  String get _planSubtitle {
+    if (_activePlan == null) return 'No active plan • View plans';
+    final plan = _activePlan!;
+    if (plan.isExpired) return 'Plan expired • Renew now';
+    return '${plan.planTitle ?? 'Active Plan'} • ${plan.daysRemaining} days left';
+  }
+
+  String get _packagesSubtitle {
+    final count = _stats?.portfolioStats.totalPackages ?? 0;
+    return count == 0 ? 'No packages yet' : '$count package${count == 1 ? '' : 's'} active';
+  }
+
+  String get _portfolioSubtitle {
+    final count = _stats?.portfolioStats.totalPortfolioItems ?? 0;
+    return count == 0 ? 'No media uploaded yet' : '$count media item${count == 1 ? '' : 's'}';
+  }
+
+  String get _verificationSubtitle {
+    if (_isVerifiedVendor) return 'Documents approved ✓';
+    final s = _appStatus.toLowerCase().trim();
+    if (s == 'approved' || s == 'active') {
+      return 'Documents approved ✓';
+    } else if (s == 'under review' || s == 'under_review' || s == 'in verification' || s == 'submitted') {
+      return 'Under admin review...';
+    } else if (s == 'rejected' || s == 'declined') {
+      return 'Application rejected — resubmit';
+    }
+    return 'Pending verification';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,301 +174,381 @@ class VendorProfileScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              final updated = await Navigator.of(context).push<bool>(
                 FadeScaleRoute(
                   page: const VendorEditProfileScreen(),
                 ),
               );
+              if (updated == true || mounted) {
+                _loadAll();
+              }
             },
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          children: [
-            // Vendor Profile Header Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.gold,
-                            width: 2,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: CachedImageView(
-                            imageUrl: AppImages.vendorRoyalClick,
-                            fit: BoxFit.cover,
-                            fallbackIcon: Icons.camera_alt,
-                            iconColor: AppColors.white,
-                            iconSize: 36,
-                            backgroundColor: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppColors.success,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.verified_rounded,
-                              color: AppColors.white, size: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${StorageHelper().getUserName()?.trim().isNotEmpty == true ? StorageHelper().getUserName()! : 'Royal Click Studio'} 👑',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _loadAll,
+        child: _isLoading
+            ? const AppLoadingState(message: 'Loading your profile...')
+            : _isNoInternet
+                ? SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.75,
+                      child: AppNoInternetState(onRetry: _loadAll),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Wedding Photography & Cinematography',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.darkGrey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.star_rounded,
-                              color: AppColors.gold, size: 18),
-                          SizedBox(width: 4),
-                          Text(
-                            '4.9',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.black,
+                  )
+                : _errorMsg != null
+                    ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.75,
+                          child: AppErrorState(message: _errorMsg!, onRetry: _loadAll),
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        child: Column(
+                          children: [
+                            // ── Vendor Profile Header Card ──────────────────
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppColors.gold.withValues(alpha: 0.3),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Stack(
+                                    children: [
+                                      Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: AppColors.gold, width: 2),
+                                        ),
+                                        child: ClipOval(
+                                          child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
+                                                  (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
+                                              ? CachedImageView(
+                                                  imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
+                                                  fit: BoxFit.cover,
+                                                  width: 80,
+                                                  height: 80,
+                                                  isCircle: true,
+                                                  fallbackIcon: Icons.storefront_rounded,
+                                                )
+                                              : CircleAvatar(
+                                                  radius: 40,
+                                                  backgroundColor: AppColors.primary,
+                                                  child: Text(
+                                                    _displayName.isNotEmpty
+                                                        ? _displayName[0].toUpperCase()
+                                                        : 'V',
+                                                    style: const TextStyle(
+                                                      fontSize: 30,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: AppColors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                      if (_isVerifiedVendor)
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.success,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                                Icons.verified_rounded,
+                                                color: AppColors.white,
+                                                size: 16),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _displayName,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                  if (_displayEmail.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _displayEmail,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.darkGrey,
+                                      ),
+                                    ),
+                                  ],
+                                  if (_displayMobile.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _displayMobile,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 10),
+                                  _buildStatusBadge(_appStatus),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final updated = await Navigator.of(context).push<bool>(
+                                        FadeScaleRoute(page: const VendorEditProfileScreen()),
+                                      );
+                                      if (updated == true || mounted) {
+                                        _loadAll();
+                                      }
+                                    },
+                                    icon: const Icon(Icons.edit_rounded, size: 14),
+                                    label: const Text('Edit Profile'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                      visualDensity: VisualDensity.compact,
+                                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const Text(
-                        '(84 reviews)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.grey,
+
+                            const SizedBox(height: 18),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'BUSINESS MANAGEMENT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: AppColors.darkGrey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            _buildMenuItem(
+                              icon: Icons.verified_user_outlined,
+                              title: 'Verification Status',
+                              subtitle: _verificationSubtitle,
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(page: const VendorVerificationScreen()),
+                              ),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.workspace_premium_rounded,
+                              iconColor: AppColors.goldDark,
+                              title: 'Vendor Membership Plans',
+                              subtitle: _planSubtitle,
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+                              ),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.inventory_2_outlined,
+                              title: 'My Pricing Packages',
+                              subtitle: _packagesSubtitle,
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(page: const VendorPackagesScreen()),
+                              ),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.photo_library_outlined,
+                              title: 'Portfolio & Media',
+                              subtitle: _portfolioSubtitle,
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(page: const VendorPortfolioScreen()),
+                              ),
+                            ),
+
+                            const SizedBox(height: 18),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'LEGAL & POLICIES',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: AppColors.darkGrey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            _buildMenuItem(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'Privacy Policy',
+                              subtitle: 'Platform privacy & data protection',
+                              onTap: () => _showPrivacyPolicySheet(context),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.assignment_return_outlined,
+                              title: 'Cancellation Policy',
+                              subtitle: 'Booking cancellation & refund guidelines',
+                              onTap: () => _showCancellationPolicySheet(context),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.gavel_rounded,
+                              title: 'Terms of Service',
+                              subtitle: 'Platform terms & service agreement',
+                              onTap: () => _showTermsOfServiceSheet(context),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.help_outline_rounded,
+                              title: 'FAQs',
+                              subtitle: 'Frequently asked questions & help',
+                              onTap: () => _showVendorFaqSheet(context),
+                            ),
+                            _buildMenuItem(
+                              icon: Icons.headset_mic_rounded,
+                              title: 'Help & Support',
+                              subtitle: 'Direct Call & WhatsApp assistance',
+                              onTap: () => _showSupportSheet(context),
+                            ),
+
+                            const SizedBox(height: 28),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showLogoutDialog(context),
+                                icon: const Icon(Icons.logout_rounded,
+                                    color: AppColors.primary, size: 18),
+                                label: const Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.primary, width: 1.2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () => _showDeleteAccountDialog(context),
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: Colors.red, size: 16),
+                                label: const Text(
+                                  'Delete Account',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text(
+                                'Widoora Vendor Partner v1.0.4 • Direct Celebrations Marketplace',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.grey.withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'Verified Partner',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.success,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 18),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'BUSINESS MANAGEMENT',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // Profile Options Menu
-            _buildMenuItem(
-              icon: Icons.workspace_premium_rounded,
-              iconColor: AppColors.goldDark,
-              title: 'Vendor Membership Plans',
-              subtitle: '6 Months Plan Active • 3, 6 & 12 Month Plans',
-              onTap: () => Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
-              ),
-            ),
-            _buildMenuItem(
-              icon: Icons.inventory_2_outlined,
-              title: 'My Pricing Packages',
-              subtitle: '3 active packages',
-              onTap: () => Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorPackagesScreen()),
-              ),
-            ),
-            _buildMenuItem(
-              icon: Icons.photo_library_outlined,
-              title: 'Portfolio & Media',
-              subtitle: '12 photos, 4 videos',
-              onTap: () => Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorPortfolioScreen()),
-              ),
-            ),
-            _buildMenuItem(
-              icon: Icons.handshake_outlined,
-              title: 'In-Person Settlements',
-              subtitle: 'Direct client payment • Zero platform deductions',
-              onTap: () => _showDirectSettlementSheet(context),
-            ),
-            _buildMenuItem(
-              icon: Icons.verified_user_outlined,
-              title: 'Verification Status',
-              subtitle: 'Documents approved ✓',
-              onTap: () {
-                Navigator.of(context).push(
-                  FadeScaleRoute(
-                    page: const VendorVerificationScreen(),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 18),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'LEGAL & POLICIES',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            _buildMenuItem(
-              icon: Icons.privacy_tip_outlined,
-              title: 'Privacy Policy',
-              subtitle: 'Vendor data protection & listing privacy',
-              onTap: () => _showPrivacyPolicySheet(context),
-            ),
-            _buildMenuItem(
-              icon: Icons.gavel_rounded,
-              title: 'Terms & Conditions',
-              subtitle: 'Partner agreement & direct settlement terms',
-              onTap: () => _showTermsAndConditionsSheet(context),
-            ),
-
-            const SizedBox(height: 28),
-
-            // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () => _showLogoutDialog(context),
-                icon: const Icon(Icons.logout_rounded,
-                    color: AppColors.primary, size: 18),
-                label: const Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Center(
-              child: TextButton.icon(
-                onPressed: () => _showDeleteAccountDialog(context),
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 16),
-                label: const Text(
-                  'Delete Account',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Widoora Vendor Partner v1.0.4 • Direct Celebrations Marketplace',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.grey.withValues(alpha: 0.8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
+
+  Widget _buildStatusBadge(String status) {
+    Color bg, fg;
+    IconData ic;
+    final s = status.toLowerCase().trim();
+    if (s == 'approved' || s == 'active') {
+      bg = AppColors.successLight;
+      fg = AppColors.success;
+      ic = Icons.verified_rounded;
+    } else if (s == 'under review' || s == 'under_review' || s == 'in verification' || s == 'submitted') {
+      bg = const Color(0xFFFFF3E0);
+      fg = const Color(0xFFF57C00);
+      ic = Icons.hourglass_top_rounded;
+    } else if (s == 'rejected' || s == 'declined') {
+      bg = const Color(0xFFFFEBEE);
+      fg = AppColors.error;
+      ic = Icons.cancel_rounded;
+    } else {
+      bg = const Color(0xFFF5F5F5);
+      fg = AppColors.grey;
+      ic = Icons.pending_rounded;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(ic, size: 14, color: fg),
+          const SizedBox(width: 5),
+          Text(
+            status.isEmpty ? 'Pending' : status,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   void _showPrivacyPolicySheet(BuildContext context) {
     showModalBottomSheet(
@@ -376,7 +587,7 @@ class VendorProfileScreen extends StatelessWidget {
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'Vendor Privacy Policy',
+                          'Privacy Policy',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -395,58 +606,40 @@ class VendorProfileScreen extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Widoora Partner Privacy',
+              'Official Platform Privacy Policy & Data Protection',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildPolicySection(
-                    icon: Icons.shield_rounded,
-                    title: '1. Commitment to Partner Privacy',
-                    content:
-                        'Widoora values our vendor partners. We collect only necessary business data required to display your services, portfolio, and connect you with event hosts.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.storefront_rounded,
-                    title: '2. Business Profile & Portfolio Assets',
-                    content:
-                        'We display your business details, portfolio photographs, videos, package pricing, and verified credentials to help potential clients discover and book your services.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.handshake_rounded,
-                    title: '3. Direct In-Person Settlements & No Commission',
-                    content:
-                        'Widoora does not collect platform commissions from your event fees, nor do we process client booking funds. Clients settle 100% of agreed fees directly with you in person. We do not store your bank credentials.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.phone_forwarded_rounded,
-                    title: '4. Direct Client Coordination via Call & WhatsApp',
-                    content:
-                        'The application does not support built-in chat. Once you accept an incoming booking request, the client\'s direct contact numbers (Call & WhatsApp) are unlocked so you can coordinate event logistics directly.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.lock_outline_rounded,
-                    title: '5. Data Security & Storage',
-                    content:
-                        'All partner information and uploaded portfolio media are encrypted and stored securely. We never sell vendor partner contact numbers or business data to unauthorized third parties.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.delete_forever_rounded,
-                    title: '6. Partner Rights & Account Deletion',
-                    content:
-                        'You maintain complete control over your business listing. You can update your packages anytime or permanently delete your vendor account and all portfolio data directly from your profile settings.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.contact_support_rounded,
-                    title: '7. Partner Support & Grievances',
-                    content:
-                        'For inquiries regarding your listings, verification, or data privacy, contact our vendor relations team at partner-support@widooraweddings.in.',
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('privacy'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Privacy Policy...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Privacy Policy.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Privacy Policy Pending',
+                      subtitle: 'The privacy terms will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
               ),
             ),
           ],
@@ -455,7 +648,7 @@ class VendorProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showTermsAndConditionsSheet(BuildContext context) {
+  void _showTermsOfServiceSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -492,7 +685,7 @@ class VendorProfileScreen extends StatelessWidget {
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'Vendor Terms & Conditions',
+                          'Terms of Service',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -511,69 +704,151 @@ class VendorProfileScreen extends StatelessWidget {
               ],
             ),
             const Text(
-              'Last Updated: September 2026 • Partner Service Agreement',
+              'Official Platform Agreement & Service Terms',
               style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
             ),
             const Divider(height: 24),
             Expanded(
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildPolicySection(
-                    icon: Icons.handshake_outlined,
-                    title: '1. Vendor Partner Agreement',
-                    content:
-                        'By creating a vendor profile or purchasing a membership plan on Widoora, you agree to these Vendor Terms and Conditions and represent that you are an authorized representative of your business.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.verified_rounded,
-                    title: '2. Profile & Media Authenticity',
-                    content:
-                        'Vendors agree to upload only original portfolio photos, genuine pricing packages, and accurate service descriptions. Misrepresentation may result in profile de-listing.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.payments_outlined,
-                    title: '3. Direct In-Person Settlements & Zero Commission',
-                    content:
-                        'Widoora is an event discovery marketplace. All client bookings are contracted and paid directly between you and the client in person (cash, UPI, or bank transfer). Widoora does not deduct commission from your client payments.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.phone_forwarded_rounded,
-                    title: '4. Direct Contact & Booking Fulfillment',
-                    content:
-                        'When you accept a client\'s booking request, direct Call & WhatsApp contact details are unlocked. Vendors agree to provide punctual, professional, and courteous service as agreed with the client.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.event_repeat_rounded,
-                    title: '5. Rescheduling & Cancellation Terms',
-                    content:
-                        'Rescheduling, cancellation terms, and advance retainers are handled directly between you and the client according to your business policy. Widoora is not liable for client disputes or refunds.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.workspace_premium_rounded,
-                    title: '6. Membership Plans & Subscriptions',
-                    content:
-                        'Vendor membership plans grant directory exposure, listing priority, and verified badge for the chosen duration (3, 6, or 12 months). Plans are non-refundable once activated.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.person_remove_rounded,
-                    title: '7. Account Termination & Deletion',
-                    content:
-                        'Vendors may permanently terminate their account at any time. Upon deletion, your business profile, portfolio media, verified status, and booking history will be permanently erased.',
-                  ),
-                  _buildPolicySection(
-                    icon: Icons.balance_rounded,
-                    title: '8. Governing Law & Jurisdiction',
-                    content:
-                        'These terms are governed by the laws of India, subject to the jurisdiction of courts in Chandigarh.',
-                  ),
-                  const SizedBox(height: 20),
-                ],
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('terms'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Terms of Service...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Terms of Service.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.gavel_rounded,
+                      title: 'Terms of Service Pending',
+                      subtitle: 'The terms and conditions will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showCancellationPolicySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: const [
+                      Icon(Icons.assignment_return_outlined,
+                          color: AppColors.primary, size: 24),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'Cancellation Policy',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            const Text(
+              'Official Booking Cancellation & Direct Refund Guidelines',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: _cmsApi.getCmsData('refund'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading Cancellation Policy...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load Cancellation Policy.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.assignment_return_outlined,
+                      title: 'Cancellation Policy Pending',
+                      subtitle: 'The cancellation policy will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSupportSheet(BuildContext context) {
+    AppSupportSheet.show(
+      context,
+      isVendor: true,
+      onOpenFaq: () => _showVendorFaqSheet(context),
     );
   }
 
@@ -695,13 +970,7 @@ class VendorProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Your vendor account has been deleted successfully.'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              Utils.showSuccess('Your vendor account has been deleted successfully.');
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,
@@ -715,54 +984,6 @@ class VendorProfileScreen extends StatelessWidget {
               ),
             ),
             child: const Text('Delete Permanently'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPolicySection({
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  content,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.darkGrey,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -815,19 +1036,19 @@ class VendorProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showDirectSettlementSheet(BuildContext context) {
+  void _showVendorFaqSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
+        height: MediaQuery.of(context).size.height * 0.88,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         decoration: const BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -842,99 +1063,133 @@ class VendorProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.successLight,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.handshake_rounded,
-                      color: AppColors.success, size: 24),
+                Row(
+                  children: const [
+                    Icon(Icons.help_rounded, color: AppColors.primary, size: 24),
+                    SizedBox(width: 10),
+                    Text(
+                      'FAQs',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Direct In-Person Settlement',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Text(
-                        'Zero platform commissions or bank payout delays',
-                        style: TextStyle(fontSize: 12, color: AppColors.grey),
-                      ),
-                    ],
-                  ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.offWhite,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.grey.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Direct Settlement Policy:',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '• Direct Transactions: Customers pay you directly in cash, UPI, or bank transfer on the event day.',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    '• No Bank Payout Delays: Widoora does not hold escrow or bank payouts. 100% of the client payment belongs directly to you.',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    '• Zero Commissions: You keep 100% of your earnings.',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
-                  ),
-                ],
+            const Text(
+              'Frequently Asked Questions & Answers',
+              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: FutureBuilder<DataResponse<List<FaqModel>>>(
+                future: _faqApi.getFaqList(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const AppLoadingState(message: 'Loading FAQs...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  if (response == null || response.isSuccess != true) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load FAQs from server.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final faqs = response.data ?? [];
+                  if (faqs.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.help_outline_rounded,
+                      title: 'No FAQs Available',
+                      subtitle: 'Frequently asked questions will appear here shortly.',
+                    );
+                  }
+                  return ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: faqs.length,
+                    itemBuilder: (context, i) {
+                      final faq = faqs[i];
+                      return _VendorFaqTile(
+                        question: faq.question ?? 'FAQ',
+                        answer: faq.answer ?? '',
+                      );
+                    },
+                  );
+                },
               ),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Understood'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Expandable FAQ tile for vendor profile
+class _VendorFaqTile extends StatelessWidget {
+  final String question;
+  final String answer;
+
+  const _VendorFaqTile({required this.question, required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.offWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.grey.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const RoundedRectangleBorder(
+            side: BorderSide.none,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          collapsedShape: const RoundedRectangleBorder(
+            side: BorderSide.none,
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          iconColor: AppColors.primary,
+          collapsedIconColor: AppColors.grey,
+          title: Text(
+            question,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
+          children: [
+            Text(
+              answer,
+              style: const TextStyle(
+                fontSize: 12.5,
+                color: AppColors.darkGrey,
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 8),
           ],
         ),
       ),

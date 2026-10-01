@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/helper/storage_helper.dart';
 
 /// Single unified booking record shared between Customer and Vendor panels.
 class BookingRecord {
@@ -93,7 +94,7 @@ class AppBookingService extends ChangeNotifier {
   final List<BookingRecord> _bookings = [];
 
   AppBookingService._internal() {
-    _loadSeedBookings();
+    // Only real user/API bookings are maintained
   }
 
   List<BookingRecord> get bookings => List.unmodifiable(_bookings);
@@ -233,17 +234,23 @@ class AppBookingService extends ChangeNotifier {
     final record = BookingRecord(
       id: 'BK_${DateTime.now().millisecondsSinceEpoch}',
       vendorName: vendorName,
-      clientName: clientName ?? 'Simran & Rahul 💍',
-      vendorPhone: vendorPhone ?? '+91 98765 43210',
-      clientPhone: clientPhone ?? '+91 98765 11223',
+      clientName: clientName ??
+          (StorageHelper().getUserName()?.trim().isNotEmpty == true
+              ? StorageHelper().getUserName()!.trim()
+              : 'Customer'),
+      vendorPhone: vendorPhone ?? '',
+      clientPhone: clientPhone ??
+          (StorageHelper().getUserMobile()?.trim().isNotEmpty == true
+              ? StorageHelper().getUserMobile()!.trim()
+              : ''),
       category: category,
       package: package,
       total: total,
       price: price,
-      date: date ?? '28 Dec 2026',
+      date: date ?? 'To be scheduled',
       time: time ?? 'Event Day',
-      venue: venue ?? 'The Oberoi Sukhvilas, Chandigarh',
-      eventName: eventName ?? 'Grand Royal Vivah',
+      venue: venue ?? 'Venue to be finalized',
+      eventName: eventName ?? 'Wedding Celebration',
       eventType: eventType ?? 'Wedding',
       eventIcon: eventIcon ?? Icons.celebration_rounded,
       eventColor: eventColor ?? const Color(0xFF8B1A2E),

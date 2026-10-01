@@ -407,9 +407,9 @@ class _ExploreBodyState extends State<ExploreBody> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.76,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.78,
             ),
             itemCount: displayedCategories.length,
             itemBuilder: (context, i) {
@@ -427,49 +427,30 @@ class _ExploreBodyState extends State<ExploreBody> {
                       ),
                     );
                   },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.grey.withValues(alpha: 0.22),
-                        width: 1,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ServiceIconWrap(
+                        item: cat,
+                        size: 88,
+                        iconSize: 54,
+                        borderRadius: 22,
+                        isSelected: false,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                      const SizedBox(height: 8),
+                      Text(
+                        cat.title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                          height: 1.15,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ServiceIconWrap(
-                          item: cat,
-                          size: 64,
-                          iconSize: 38,
-                          borderRadius: 16,
-                          isSelected: false,
-                        ),
-                        const SizedBox(height: 7),
-                        Text(
-                          cat.title,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
-                            height: 1.15,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );

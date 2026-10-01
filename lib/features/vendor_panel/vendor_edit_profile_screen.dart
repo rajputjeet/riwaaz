@@ -1,97 +1,267 @@
+import 'dart:io';
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import '../../controllers/category_controller.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_images.dart';
-import '../../core/constants/service_categories.dart';
+import '../../data/api_provider/user_api_provider.dart';
+import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
-import '../../shared/widgets/service_categories_bar.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../utils/utils.dart';
 
 class VendorEditProfileScreen extends StatefulWidget {
   const VendorEditProfileScreen({super.key});
 
   @override
-  State<VendorEditProfileScreen> createState() =>
-      _VendorEditProfileScreenState();
+  State<VendorEditProfileScreen> createState() => _VendorEditProfileScreenState();
 }
 
 class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _userApi = UserApiProvider();
+  final _picker = ImagePicker();
 
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  late TextEditingController _nameCtrl;
   late TextEditingController _businessNameCtrl;
-  late TextEditingController _categoryCtrl;
-  late TextEditingController _contactPersonCtrl;
-  late TextEditingController _phoneCtrl;
-  late TextEditingController _whatsappCtrl;
+  late TextEditingController _discCtrl;
   late TextEditingController _emailCtrl;
-  late TextEditingController _cityCtrl;
-  late TextEditingController _priceCtrl;
-  late TextEditingController _experienceCtrl;
-  late TextEditingController _bioCtrl;
+  late TextEditingController _addressCtrl;
 
-  final List<String> _specialties = [
-    'Royal Wedding Cinematography',
-    'Candid Photography',
-    'Drone 4K Shoots',
-    'Pre-Wedding Films',
-    'Traditional Photography',
-    'Live Streaming',
-  ];
-
-  final Set<String> _selectedSpecialties = {
-    'Royal Wedding Cinematography',
-    'Candid Photography',
-    'Pre-Wedding Films',
-  };
+  XFile? _selectedImage;
+  String? _currentProfileImgUrl;
 
   @override
   void initState() {
     super.initState();
     final storage = StorageHelper();
-    _businessNameCtrl = TextEditingController(
-        text: (storage.getUserName()?.isNotEmpty == true)
-            ? storage.getUserName()!
-            : 'Royal Click Studio');
-    _categoryCtrl = TextEditingController();
-    _contactPersonCtrl = TextEditingController();
-    _phoneCtrl = TextEditingController(
-        text: storage.getUserMobile() ?? '');
-    _whatsappCtrl = TextEditingController(
-        text: storage.getUserMobile() ?? '');
-    _emailCtrl = TextEditingController(
-        text: storage.getUserEmail() ?? '');
-    _cityCtrl = TextEditingController();
-    _priceCtrl = TextEditingController();
-    _experienceCtrl = TextEditingController();
-    _bioCtrl = TextEditingController();
+    _nameCtrl = TextEditingController(text: storage.getUserName() ?? '');
+    _businessNameCtrl = TextEditingController(text: storage.getUserName() ?? '');
+    _discCtrl = TextEditingController();
+    _emailCtrl = TextEditingController(text: storage.getUserEmail() ?? '');
+    _addressCtrl = TextEditingController();
+    _currentProfileImgUrl = storage.getUserProfileImg();
+
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await _userApi.getProfile();
+      if (!mounted) return;
+      if (res.isSuccess == true && res.data != null) {
+        final user = res.data!;
+        final v = user.vendorProfile;
+
+        _nameCtrl.text = v?.ownerName ?? user.fullName ?? '';
+        _businessNameCtrl.text = v?.businessName ?? '';
+        _discCtrl.text = v?.businessDescription ?? '';
+        _emailCtrl.text = user.email ?? '';
+        _addressCtrl.text = v?.businessAddress ?? v?.city ?? '';
+
+        if (user.profileImgUrl != null && user.profileImgUrl!.isNotEmpty) {
+          _currentProfileImgUrl = user.profileImgUrl;
+          StorageHelper().saveUserProfileImg(user.profileImgUrl);
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _businessNameCtrl.dispose();
-    _categoryCtrl.dispose();
-    _contactPersonCtrl.dispose();
-    _phoneCtrl.dispose();
-    _whatsappCtrl.dispose();
+    _discCtrl.dispose();
     _emailCtrl.dispose();
-    _cityCtrl.dispose();
-    _priceCtrl.dispose();
-    _experienceCtrl.dispose();
-    _bioCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState?.validate() ?? false) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Business profile updated successfully!'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-      );
-      Navigator.of(context).pop();
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Upload Profile Picture',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select a clear photo for your vendor profile',
+                style: TextStyle(fontSize: 13, color: AppColors.darkGrey),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          final picked = await _picker.pickImage(
+                            source: ImageSource.camera,
+                            imageQuality: 85,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                          );
+                          if (picked != null) {
+                            setState(() => _selectedImage = picked);
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          Utils.showError('Camera error: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      label: const Text(
+                        'Camera',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          final picked = await _picker.pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 85,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                          );
+                          if (picked != null) {
+                            setState(() => _selectedImage = picked);
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          Utils.showError('Gallery error: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
+                      label: const Text(
+                        'Gallery',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _isSaving = true);
+    final storage = StorageHelper();
+
+    try {
+      final name = _nameCtrl.text.trim();
+      final businessName = _businessNameCtrl.text.trim();
+      final disc = _discCtrl.text.trim();
+      final email = _emailCtrl.text.trim();
+      final address = _addressCtrl.text.trim();
+
+      final formDataMap = <String, dynamic>{
+        'fullName': name.isNotEmpty ? name : businessName,
+        'name': name.isNotEmpty ? name : businessName,
+        'ownerName': name,
+        'businessName': businessName,
+        'businessDescription': disc,
+        'about': disc,
+        'bio': disc,
+        'email': email,
+        'businessAddress': address,
+        'address': address,
+        'city': address,
+      };
+
+      if (_selectedImage != null) {
+        final fileName = _selectedImage!.name;
+        formDataMap['profileImg'] = await dio.MultipartFile.fromFile(
+          _selectedImage!.path,
+          filename: fileName,
+        );
+      }
+
+      final formData = dio.FormData.fromMap(formDataMap);
+      final res = await _userApi.editProfile(formData);
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      if (res.isSuccess == true) {
+        if (businessName.isNotEmpty) {
+          await storage.saveUserName(businessName);
+        }
+        if (email.isNotEmpty) {
+          await storage.saveUserEmail(email);
+        }
+        if (res.data?.profileImgUrl != null) {
+          await storage.saveUserProfileImg(res.data!.profileImgUrl);
+        }
+
+        if (!mounted) return;
+        Utils.showSuccess('Business profile updated successfully!');
+        Navigator.of(context).pop(true);
+      } else {
+        Utils.showError(res.message ?? 'Failed to update profile.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      Utils.showError('Error updating profile: $e');
     }
   }
 
@@ -111,606 +281,327 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           'Edit Business Profile',
           style: TextStyle(
             fontSize: 17,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: AppColors.black,
           ),
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Logo / Avatar Picker
-              Center(
-                child: Stack(
+      body: _isLoading
+          ? const AppLoadingState(message: 'Loading profile details...')
+          : SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.gold, width: 2.5),
-                      ),
-                      child: ClipOval(
-                        child: CachedImageView(
-                          imageUrl: AppImages.vendorRoyalClick,
-                          fit: BoxFit.cover,
-                          fallbackIcon: Icons.camera_alt,
-                          iconColor: AppColors.white,
-                          iconSize: 40,
-                          backgroundColor: AppColors.primary,
+                    // Profile Image Picker
+                    Center(
+                      child: GestureDetector(
+                        onTap: _showImageSourceSheet,
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.gold, width: 2.5),
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                              ),
+                              child: ClipOval(
+                                child: _selectedImage != null
+                                    ? Image.file(
+                                        File(_selectedImage!.path),
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : CachedImageView(
+                                        imageUrl: _currentProfileImgUrl ?? '',
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        isCircle: true,
+                                        fallbackIcon: Icons.storefront_rounded,
+                                        iconColor: AppColors.gold,
+                                        iconSize: 46,
+                                        backgroundColor: AppColors.primary,
+                                      ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: AppColors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
+                    const SizedBox(height: 6),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _showImageSourceSheet,
+                        icon: const Icon(Icons.photo_camera_rounded, size: 16),
+                        label: const Text(
+                          'Change Profile Picture',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
                         ),
-                        child: const Icon(Icons.camera_alt_rounded,
-                            color: AppColors.white, size: 16),
                       ),
                     ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Photo selector opened'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.photo_library_outlined, size: 16),
-                  label: const Text('Change Studio Cover / Logo',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-              ),
+                    const SizedBox(height: 18),
 
-              const SizedBox(height: 16),
-
-              const Text(
-                'BASIC BUSINESS INFORMATION',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              _buildTextField(
-                label: 'Business / Studio Name',
-                controller: _businessNameCtrl,
-                icon: Icons.storefront_rounded,
-                validator: (v) =>
-                    (v?.trim().isEmpty ?? true) ? 'Name is required' : null,
-              ),
-
-              _buildCategorySelector(),
-
-              _buildTextField(
-                label: 'Owner / Contact Person',
-                controller: _contactPersonCtrl,
-                icon: Icons.person_outline_rounded,
-              ),
-
-              _buildTextField(
-                label: 'Phone Number (For Client Calls)',
-                controller: _phoneCtrl,
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-              ),
-
-              _buildTextField(
-                label: 'WhatsApp Number (For Direct Chats)',
-                controller: _whatsappCtrl,
-                icon: Icons.chat_bubble_outline_rounded,
-                keyboardType: TextInputType.phone,
-              ),
-
-              _buildTextField(
-                label: 'Business Email',
-                controller: _emailCtrl,
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-
-              _buildTextField(
-                label: 'Cities & Service Regions Covered',
-                controller: _cityCtrl,
-                icon: Icons.location_on_outlined,
-              ),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      label: 'Starting Package',
-                      controller: _priceCtrl,
-                      icon: Icons.currency_rupee_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTextField(
-                      label: 'Experience',
-                      controller: _experienceCtrl,
-                      icon: Icons.workspace_premium_outlined,
-                    ),
-                  ),
-                ],
-              ),
-
-              _buildTextField(
-                label: 'About Studio / Description',
-                controller: _bioCtrl,
-                icon: Icons.description_outlined,
-                maxLines: 4,
-              ),
-
-              const SizedBox(height: 16),
-
-              const Text(
-                'SPECIALTIES & HIGHLIGHTS',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                  color: AppColors.darkGrey,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _specialties.map((spec) {
-                  final isSelected = _selectedSpecialties.contains(spec);
-                  return FilterChip(
-                    label: Text(
-                      spec,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? AppColors.white
-                            : AppColors.darkGrey,
-                      ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: AppColors.primary,
-                    checkmarkColor: AppColors.white,
-                    backgroundColor: AppColors.white,
-                    side: BorderSide(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.25),
-                      width: 1.2,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? AppColors.white
-                          : AppColors.darkGrey,
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedSpecialties.add(spec);
-                        } else {
-                          _selectedSpecialties.remove(spec);
+                    // 1. Owner / Contact Person Name
+                    _buildTextField(
+                      label: 'Owner / Contact Person Name',
+                      hintText: 'e.g. Nishant Rajput',
+                      controller: _nameCtrl,
+                      icon: Icons.person_outline_rounded,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter owner name';
                         }
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
+                        if (v.trim().length < 2) {
+                          return 'Owner name must be at least 2 characters';
+                        }
+                        return null;
+                      },
+                    ),
 
-              const SizedBox(height: 24),
+                    const SizedBox(height: 14),
 
-              // In-Person Payment Reminder Box
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.successLight.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: AppColors.success.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.handshake_rounded,
-                        color: AppColors.success, size: 22),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Direct In-Person Settlements: You retain 100% of client payments with zero platform commission deductions.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.black,
-                          height: 1.35,
+                    // 2. Business / Studio Name
+                    _buildTextField(
+                      label: 'Business / Studio Name',
+                      hintText: 'e.g. Royal Graphy Studio',
+                      controller: _businessNameCtrl,
+                      icon: Icons.storefront_rounded,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter business / studio name';
+                        }
+                        if (v.trim().length < 2) {
+                          return 'Business name must be at least 2 characters';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 3. Business Description (Disc)
+                    _buildTextField(
+                      label: 'Business Description',
+                      hintText: 'Describe your wedding services, style and offerings...',
+                      controller: _discCtrl,
+                      icon: Icons.description_outlined,
+                      maxLines: 4,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter business description';
+                        }
+                        if (v.trim().length < 10) {
+                          return 'Description must be at least 10 characters';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 4. Email Address
+                    _buildTextField(
+                      label: 'Business Email',
+                      hintText: 'e.g. studio@studio.com',
+                      controller: _emailCtrl,
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter business email address';
+                        }
+                        if (!v.contains('@') || !v.contains('.')) {
+                          return 'Please enter a valid email address';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 5. Address
+                    _buildTextField(
+                      label: 'Business Address / City',
+                      hintText: 'e.g. C-127, Mohali Industrial Area, Mohali',
+                      controller: _addressCtrl,
+                      icon: Icons.location_on_outlined,
+                      maxLines: 2,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Please enter business address and city';
+                        }
+                        if (v.trim().length < 3) {
+                          return 'Address must be at least 3 characters';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _saveProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 2,
                         ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: AppColors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Save Profile Changes',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                       ),
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 1,
-                  ),
-                  child: const Text(
-                    'Save Changes',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
   Widget _buildTextField({
     required String label,
+    required String hintText,
     required TextEditingController controller,
     required IconData icon,
-    TextInputType? keyboardType,
     int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
+    bool isRequired = false,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            text: label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: AppColors.darkGrey,
+              color: AppColors.black,
             ),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            validator: validator,
-            decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
-              filled: true,
-              fillColor: AppColors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                    color: AppColors.grey.withValues(alpha: 0.2)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                    color: AppColors.grey.withValues(alpha: 0.2)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.5),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    final categories = Get.isRegistered<CategoryController>()
-        ? CategoryController.to.serviceCategories
-        : <ServiceCategoryItem>[];
-
-    ServiceCategoryItem? currentItem;
-    for (final c in categories) {
-      if (c.title.toLowerCase().trim() ==
-          _categoryCtrl.text.toLowerCase().trim()) {
-        currentItem = c;
-        break;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
             children: [
-              Icon(Icons.category_rounded,
-                  size: 16, color: AppColors.primary),
-              SizedBox(width: 8),
-              Text(
-                'Primary Category',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => _openCategoryPicker(categories),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.grey.withValues(alpha: 0.2), width: 1.2),
-              ),
-              child: Row(
-                children: [
-                  if (currentItem != null)
-                    ServiceIconWrap(
-                      item: currentItem,
-                      size: 38,
-                      iconSize: 18,
-                      borderRadius: 10,
-                    )
-                  else
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.storefront_rounded,
-                          size: 18, color: AppColors.primary),
-                    ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _categoryCtrl.text.isNotEmpty
-                              ? _categoryCtrl.text
-                              : (currentItem?.title ?? 'Select Category'),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        if (currentItem != null && currentItem.desc.isNotEmpty)
-                          Text(
-                            currentItem.desc,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                      ],
-                    ),
+              if (isRequired)
+                const TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
-                  const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.primary, size: 22),
-                ],
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.black,
+          ),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
+            prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+            filled: true,
+            fillColor: AppColors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.grey.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppColors.grey.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 1.5,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.error,
+                width: 1.2,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.error,
+                width: 1.5,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _openCategoryPicker(List<ServiceCategoryItem> categories) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.greyLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Select Business Category',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(),
-              Expanded(
-                child: categories.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.storefront_outlined,
-                                size: 40, color: AppColors.grey),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'No categories available from server',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 15),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton.icon(
-                              onPressed: () async {
-                                if (Get.isRegistered<CategoryController>()) {
-                                  await CategoryController.to.fetchCategories(
-                                      forceRefresh: true);
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                    setState(() {});
-                                  }
-                                }
-                              },
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: const Text('Refresh'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        itemCount: categories.length,
-                  separatorBuilder: (_, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final item = categories[index];
-                    final isSelected = item.title.toLowerCase().trim() ==
-                        _categoryCtrl.text.toLowerCase().trim();
-
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          _categoryCtrl.text = item.title;
-                        });
-                        Navigator.pop(context);
-                      },
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected ? item.bgColor : AppColors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSelected
-                                ? item.color
-                                : AppColors.greyLight.withValues(alpha: 0.6),
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            ServiceIconWrap(
-                              item: item,
-                              size: 52,
-                              iconSize: 30,
-                              borderRadius: 14,
-                              isSelected: isSelected,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.title,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w700
-                                          : FontWeight.w600,
-                                      color: AppColors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    item.desc,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11.5,
-                                      color: AppColors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (isSelected)
-                              Icon(Icons.check_circle_rounded,
-                                  color: item.color, size: 20),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

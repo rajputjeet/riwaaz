@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../utils/utils.dart';
 import '../vendor_panel/vendor_shell.dart';
 import 'controllers/vendor_registration_controller.dart';
 import 'vendor_verification_tracker_screen.dart';
@@ -168,13 +169,7 @@ class _VendorSubmittedScreenState extends State<VendorSubmittedScreen> {
                           onTap: () {
                             Clipboard.setData(
                                 ClipboardData(text: _effectiveApplicationId));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content:
-                                    Text('Application ID copied to clipboard!'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
+                            Utils.showSuccess('Application ID copied to clipboard!');
                           },
                           child: const Icon(
                             Icons.copy_rounded,

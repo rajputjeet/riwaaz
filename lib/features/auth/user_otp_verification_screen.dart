@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
 
@@ -83,17 +84,8 @@ class _UserOtpVerificationScreenState extends State<UserOtpVerificationScreen> {
   void _verifyOtp() async {
     final code = _otpCode;
     if (code.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please enter the complete 4-digit code',
-            style: GoogleFonts.plusJakartaSans(color: Colors.white),
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      Utils.showError(
+        'Please enter the complete 4-digit code',
       );
       return;
     }
@@ -118,29 +110,9 @@ class _UserOtpVerificationScreenState extends State<UserOtpVerificationScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Welcome, ${widget.name}! Account verified successfully.',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(milliseconds: 1500),
-      ),
+    Utils.showSuccess(
+      'Welcome, ${widget.name}! Account verified successfully.',
+      title: 'Verified',
     );
 
     // Send user directly to Home

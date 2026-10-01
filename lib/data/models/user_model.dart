@@ -3,12 +3,24 @@ class VendorProfileModel {
   String? applicationStatus;
   String? businessName;
   String? ownerName;
+  String? businessDescription;
+  String? businessAddress;
+  String? city;
+  List<dynamic>? packages;
+  List<dynamic>? portfolio;
+  List<dynamic>? services;
 
   VendorProfileModel({
     this.applicationId,
     this.applicationStatus,
     this.businessName,
     this.ownerName,
+    this.businessDescription,
+    this.businessAddress,
+    this.city,
+    this.packages,
+    this.portfolio,
+    this.services,
   });
 
   factory VendorProfileModel.fromJson(Map<String, dynamic> json) {
@@ -17,6 +29,12 @@ class VendorProfileModel {
       applicationStatus: json['applicationStatus']?.toString(),
       businessName: json['businessName']?.toString(),
       ownerName: json['ownerName']?.toString(),
+      businessDescription: json['businessDescription']?.toString() ?? json['description']?.toString(),
+      businessAddress: json['businessAddress']?.toString() ?? json['address']?.toString(),
+      city: json['city']?.toString(),
+      packages: json['packages'] is List ? (json['packages'] as List) : null,
+      portfolio: json['portfolio'] is List ? (json['portfolio'] as List) : null,
+      services: json['services'] is List ? (json['services'] as List) : null,
     );
   }
 
@@ -26,6 +44,12 @@ class VendorProfileModel {
       if (applicationStatus != null) 'applicationStatus': applicationStatus,
       if (businessName != null) 'businessName': businessName,
       if (ownerName != null) 'ownerName': ownerName,
+      if (businessDescription != null) 'businessDescription': businessDescription,
+      if (businessAddress != null) 'businessAddress': businessAddress,
+      if (city != null) 'city': city,
+      if (packages != null) 'packages': packages,
+      if (portfolio != null) 'portfolio': portfolio,
+      if (services != null) 'services': services,
     };
   }
 }
@@ -36,6 +60,7 @@ class UserModel {
   String? email;
   String? mobile;
   String? password;
+  String? profileImgUrl;
   int? roleId; // 2 = Customer, 3 = Vendor Partner
   bool? isVerified;
   int? otp;
@@ -53,6 +78,7 @@ class UserModel {
     this.email,
     this.mobile,
     this.password,
+    this.profileImgUrl,
     this.roleId,
     this.isVerified,
     this.otp,
@@ -71,6 +97,12 @@ class UserModel {
       email: json['email']?.toString(),
       mobile: (json['mobile'] ?? json['phone'])?.toString(),
       password: json['password']?.toString(),
+      profileImgUrl: () {
+        final url = json['profileImgId'] is Map
+            ? json['profileImgId']['url']?.toString()
+            : (json['profileImg']?.toString() ?? json['avatar']?.toString());
+        return (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+      }(),
       roleId: json['roleId'] is int
           ? json['roleId']
           : int.tryParse(json['roleId']?.toString() ?? ''),

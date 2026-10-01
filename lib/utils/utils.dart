@@ -6,24 +6,36 @@ abstract class Utils {
   static void showSnackBar(
     String? message, {
     bool isError = false,
+    bool isSuccess = false,
     String? title,
+    Duration duration = const Duration(seconds: 3),
   }) {
     if (message == null || message.trim().isEmpty) return;
 
+    final Color bgColor = isError
+        ? AppColors.error
+        : (isSuccess ? AppColors.success : AppColors.primary);
+
+    final IconData iconData = isError
+        ? Icons.error_outline_rounded
+        : (isSuccess ? Icons.check_circle_rounded : Icons.info_outline_rounded);
+
+    final String? resolvedTitle = title ?? (isError ? 'Error' : (isSuccess ? 'Success' : null));
+
     if (Get.context == null && Get.overlayContext == null) {
-      debugPrint("SnackBar: $message");
+      debugPrint("SnackBar ($resolvedTitle): $message");
       return;
     }
 
     try {
       Get.closeAllSnackbars();
       Get.rawSnackbar(
-        titleText: title != null
+        titleText: resolvedTitle != null
             ? Text(
-                title,
+                resolvedTitle,
                 style: const TextStyle(
                   color: AppColors.white,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   fontSize: 14,
                 ),
               )
@@ -34,27 +46,54 @@ abstract class Utils {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: AppColors.white,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             fontSize: 13,
             height: 1.35,
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        backgroundColor: isError ? AppColors.error : AppColors.primary,
-        borderRadius: 10,
+        backgroundColor: bgColor,
+        borderRadius: 14,
         snackPosition: SnackPosition.TOP,
-        duration: const Duration(seconds: 3),
-        icon: Icon(
-          isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-          color: AppColors.white,
-          size: 22,
+        snackStyle: SnackStyle.FLOATING,
+        duration: duration,
+        boxShadows: [
+          BoxShadow(
+            color: bgColor.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        icon: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            iconData,
+            color: AppColors.white,
+            size: 20,
+          ),
         ),
+        shouldIconPulse: false,
       );
     } catch (_) {
-      // Fallback if GetContext not ready
-      debugPrint("SnackBar: $message");
+      debugPrint("SnackBar ($resolvedTitle): $message");
     }
+  }
+
+  static void showSuccess(String? message, {String? title, Duration duration = const Duration(seconds: 3)}) {
+    showSnackBar(message, isSuccess: true, title: title, duration: duration);
+  }
+
+  static void showError(String? message, {String? title, Duration duration = const Duration(seconds: 3)}) {
+    showSnackBar(message, isError: true, title: title, duration: duration);
+  }
+
+  static void showInfo(String? message, {String? title, Duration duration = const Duration(seconds: 3)}) {
+    showSnackBar(message, title: title, duration: duration);
   }
 
   static void showLoader({String message = 'Please wait...'}) {
