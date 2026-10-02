@@ -187,21 +187,18 @@ class StorageHelper {
     }
   }
 
-  // ── Session Clear ──────────────────────────────────────────────────────────
+  // ── Session & All Data Clear ──────────────────────────────────────────────
 
+  /// Completely wipes ALL stored preferences and data from the device
+  Future<void> clearAllData() async {
+    if (_prefsInstance == null) await init();
+    if (_prefsInstance != null) {
+      await _prefsInstance!.clear();
+    }
+  }
+
+  /// Alias for clearAllData — clears all stored data on logout
   Future<void> clearSession() async {
-    if (_prefsInstance == null) return;
-    await Future.wait([
-      _prefsInstance!.remove(_accessToken),
-      _prefsInstance!.remove(_refreshToken),
-      _prefsInstance!.remove(_userId),
-      _prefsInstance!.remove(_roleId),
-      _prefsInstance!.remove(_isVerified),
-      _prefsInstance!.remove(_isLoggedIn),
-      _prefsInstance!.remove(_userModel),
-      _prefsInstance!.remove(_applicationId),
-      _prefsInstance!.remove(_applicationStatus),
-      _prefsInstance!.remove(_vendorDraft),
-    ]);
+    await clearAllData();
   }
 }

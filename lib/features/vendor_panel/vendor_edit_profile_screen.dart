@@ -535,7 +535,7 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
               color: AppColors.black,
             ),
             children: [
-              if (isRequired)
+              if (isRequired && !label.toLowerCase().contains('optional'))
                 const TextSpan(
                   text: ' *',
                   style: TextStyle(

@@ -1083,9 +1083,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await StorageHelper().clearSession();
               if (Get.isRegistered<AuthController>()) {
                 await Get.find<AuthController>().logout();
+              } else {
+                await StorageHelper().clearAllData();
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
@@ -1172,9 +1173,15 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 style: TextStyle(color: AppColors.darkGrey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              if (Get.isRegistered<AuthController>()) {
+                await Get.find<AuthController>().logout();
+              } else {
+                await StorageHelper().clearAllData();
+              }
               Utils.showSuccess('Your vendor account has been deleted successfully.');
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,

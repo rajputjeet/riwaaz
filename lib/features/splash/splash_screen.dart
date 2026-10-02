@@ -295,13 +295,80 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildLogo() {
-    return CachedImageView(
-      imageUrl: AppImages.widooraLogo,
-      width: 160,
-      height: 160,
-      fit: BoxFit.contain,
-      fallbackIcon: Icons.favorite_rounded,
-      iconColor: AppColors.gold,
+    return AnimatedBuilder(
+      animation: _particleController,
+      builder: (context, child) {
+        final pulse = math.sin(_particleController.value * 2 * math.pi) * 0.04 + 1.0;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Ambient outer breathing halo
+            Transform.scale(
+              scale: pulse * 1.08,
+              child: Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.secondary.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.25),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            // Outer golden luxury rim
+            Container(
+              width: 154,
+              height: 154,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFF7D9A0),
+                    Color(0xFFC89950),
+                    Color(0xFFF3D088),
+                    Color(0xFF9E7030),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.secondary.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    spreadRadius: 3,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(3.0),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: CachedImageView(
+                      imageUrl: AppImages.widooraLogo,
+                      fit: BoxFit.contain,
+                      fallbackIcon: Icons.favorite_rounded,
+                      iconColor: AppColors.gold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -97,6 +97,11 @@ class AppBookingService extends ChangeNotifier {
     // Only real user/API bookings are maintained
   }
 
+  void clearAll() {
+    _bookings.clear();
+    notifyListeners();
+  }
+
   List<BookingRecord> get bookings => List.unmodifiable(_bookings);
 
   List<Map<String, dynamic>> get allBookingsAsMaps =>

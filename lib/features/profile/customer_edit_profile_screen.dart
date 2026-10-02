@@ -479,7 +479,7 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
               color: AppColors.black,
             ),
             children: [
-              if (isRequired)
+              if (isRequired && !label.toLowerCase().contains('optional'))
                 const TextSpan(
                   text: ' *',
                   style: TextStyle(

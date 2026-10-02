@@ -169,7 +169,8 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 const SizedBox(height: 18),
 
                 // Business Email
-                _buildFieldLabel('Business Email Address (Optional)'),
+                _buildFieldLabel('Business Email Address (Optional)',
+                    isRequired: false),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -473,6 +474,8 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
   }
 
   Widget _buildFieldLabel(String label, {bool isRequired = true}) {
+    final bool effectiveRequired =
+        isRequired && !label.toLowerCase().contains('optional');
     return Padding(
       padding: const EdgeInsets.only(bottom: 7, left: 2),
       child: RichText(
@@ -484,7 +487,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             color: AppColors.black,
           ),
           children: [
-            if (isRequired)
+            if (effectiveRequired)
               const TextSpan(
                 text: ' *',
                 style: TextStyle(

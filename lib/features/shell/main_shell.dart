@@ -2502,9 +2502,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
           ElevatedButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await StorageHelper().clearSession();
               if (Get.isRegistered<AuthController>()) {
                 await Get.find<AuthController>().logout();
+              } else {
+                await StorageHelper().clearAllData();
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
@@ -2591,9 +2592,15 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 style: TextStyle(color: AppColors.darkGrey)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              if (Get.isRegistered<AuthController>()) {
+                await Get.find<AuthController>().logout();
+              } else {
+                await StorageHelper().clearAllData();
+              }
               Utils.showSuccess('Your account has been deleted successfully.');
+              if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 FadeScaleRoute(page: const UnifiedLoginScreen()),
                 (route) => false,

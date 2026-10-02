@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import '../../../core/services/booking_service.dart';
+import '../../vendor_registration/controllers/vendor_registration_controller.dart';
 import '../../../data/api_provider/auth_api_provider.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/shared/data_response.dart';
@@ -359,7 +361,17 @@ class AuthController extends GetxController {
     try {
       await _authApiProvider.logOut();
     } catch (_) {}
-    await _storageHelper.clearSession();
+    await _storageHelper.clearAllData();
     currentUser.value = null;
+    generatedOtp.value = null;
+    isLoading.value = false;
+
+    // Clear all booking state
+    AppBookingService.instance.clearAll();
+
+    // Reset vendor registration controller if registered
+    if (Get.isRegistered<VendorRegistrationController>()) {
+      Get.delete<VendorRegistrationController>(force: true);
+    }
   }
 }
