@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import 'login_screen.dart';
 import 'user_signup_screen.dart';
@@ -351,6 +352,30 @@ class UnifiedLoginScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () =>
+                              AppSupportSheet.showForgotPasswordAdminSheet(
+                            context,
+                            isVendor: false,
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                          ),
+                          child: Text(
+                            'Forgot Password? Contact Admin',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              color: AppColors.secondary.withValues(alpha: 0.75),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),

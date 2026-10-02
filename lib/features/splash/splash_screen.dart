@@ -295,40 +295,13 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildLogo() {
-    return Container(
-      width: 140,
-      height: 140,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.white.withValues(alpha: 0.08),
-        border: Border.all(
-          color: AppColors.secondary.withValues(alpha: 0.6),
-          width: 2.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.secondary.withValues(alpha: 0.35),
-            blurRadius: 30,
-            spreadRadius: 4,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Center(
-        child: CachedImageView(
-          imageUrl: AppImages.widooraLogo,
-          width: 110,
-          height: 110,
-          fit: BoxFit.contain,
-          fallbackIcon: Icons.favorite_rounded,
-          iconColor: AppColors.gold,
-        ),
-      ),
+    return CachedImageView(
+      imageUrl: AppImages.widooraLogo,
+      width: 160,
+      height: 160,
+      fit: BoxFit.contain,
+      fallbackIcon: Icons.favorite_rounded,
+      iconColor: AppColors.gold,
     );
   }
 

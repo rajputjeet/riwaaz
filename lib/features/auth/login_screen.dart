@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
@@ -158,15 +159,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Spacer(flex: 3),
 
                         // Email or Phone field
-                        _buildFieldLabel('Email Address or Mobile Number'),
+                        _buildFieldLabel('Email Address or Phone Number'),
                         TextFormField(
                           controller: _identifierController,
                           keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: AppColors.white,
-                            hintText:
-                                'e.g. priya.sharma@gmail.com or 9876543210',
+                            hintText: 'Enter email or 10-digit phone number',
                             hintStyle: GoogleFonts.plusJakartaSans(
                               color: AppColors.grey,
                               fontSize: 13.5,
@@ -266,15 +266,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
 
-                        // Forgot password link
+                        // Forgot password / Contact Admin link
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              Utils.showInfo(
-                                'Password reset instructions sent to your registered contact.',
-                              );
-                            },
+                            onPressed: () => _showContactAdminSheet(context),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 4, vertical: 8),
@@ -433,6 +429,13 @@ class _LoginScreenState extends State<LoginScreen> {
           color: AppColors.black,
         ),
       ),
+    );
+  }
+
+  void _showContactAdminSheet(BuildContext context) {
+    AppSupportSheet.showForgotPasswordAdminSheet(
+      context,
+      isVendor: widget.initialIsVendor,
     );
   }
 }

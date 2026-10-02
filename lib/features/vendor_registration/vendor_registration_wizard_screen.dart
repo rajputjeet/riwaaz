@@ -68,6 +68,7 @@ class _VendorRegistrationWizardScreenState
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
+  final _addressUrlController = TextEditingController();
 
   // Step 3 State: Business Details
   String _experience = '5+ Years';
@@ -192,12 +193,6 @@ class _VendorRegistrationWizardScreenState
     if (_panPath == null || _panPath!.trim().isEmpty) {
       missing.add('PAN Card');
     }
-    if (_businessCertPath == null || _businessCertPath!.trim().isEmpty) {
-      missing.add('Business Registration / MSME');
-    }
-    if (_addressProofPath == null || _addressProofPath!.trim().isEmpty) {
-      missing.add('Address Proof');
-    }
     return missing;
   }
 
@@ -205,8 +200,6 @@ class _VendorRegistrationWizardScreenState
     int count = 0;
     if (_aadharPath != null && _aadharPath!.trim().isNotEmpty) count++;
     if (_panPath != null && _panPath!.trim().isNotEmpty) count++;
-    if (_businessCertPath != null && _businessCertPath!.trim().isNotEmpty) count++;
-    if (_addressProofPath != null && _addressProofPath!.trim().isNotEmpty) count++;
     return count;
   }
 
@@ -433,6 +426,7 @@ class _VendorRegistrationWizardScreenState
       'mobile': _mobileController.text.trim(),
       'email': _emailController.text.trim(),
       'address': _addressController.text.trim(),
+      'addressUrl': _addressUrlController.text.trim(),
       'experience': _experience,
       'description': _descriptionController.text.trim(),
       'gstNumber': _gstController.text.trim(),
@@ -478,6 +472,9 @@ class _VendorRegistrationWizardScreenState
       businessAddress: _addressController.text.trim().isNotEmpty
           ? _addressController.text.trim()
           : 'SCO 142, Sector 70, Mohali, Punjab',
+      addressUrl: _addressUrlController.text.trim().isNotEmpty
+          ? _addressUrlController.text.trim()
+          : null,
       city: 'Mohali',
       gstNumber: _gstController.text.trim(),
       categoryId: categoryId,
@@ -543,6 +540,7 @@ class _VendorRegistrationWizardScreenState
       _mobileController.text = (draft['mobile'] as String?) ?? '';
       _emailController.text = (draft['email'] as String?) ?? '';
       _addressController.text = (draft['address'] as String?) ?? '';
+      _addressUrlController.text = (draft['addressUrl'] as String?) ?? '';
       _experience = (draft['experience'] as String?) ?? '5+ Years';
       _descriptionController.text = (draft['description'] as String?) ?? '';
       _gstController.text = (draft['gstNumber'] as String?) ?? '';
@@ -619,6 +617,7 @@ class _VendorRegistrationWizardScreenState
     _mobileController.dispose();
     _emailController.dispose();
     _addressController.dispose();
+    _addressUrlController.dispose();
     _descriptionController.dispose();
     _gstController.dispose();
     super.dispose();
@@ -720,6 +719,8 @@ class _VendorRegistrationWizardScreenState
   }
 
   void _submitRegistration() async {
+    if (_vendorController.isSubmitting.value) return;
+
     final missing = _getMissingRequiredDocs();
     if (missing.isNotEmpty) {
       setState(() {
@@ -735,55 +736,69 @@ class _VendorRegistrationWizardScreenState
     final categoryId = _resolveCategoryId();
     final planId = _resolvePlanId();
 
-    final res = await _vendorController.submitApplication(
-      ownerName: _ownerNameController.text.trim().isNotEmpty
-          ? _ownerNameController.text.trim()
-          : (StorageHelper().getUserName() ?? 'Partner'),
-      businessName: _businessNameController.text.trim().isNotEmpty
-          ? _businessNameController.text.trim()
-          : (StorageHelper().getUserName() ?? 'Royal Click Studio'),
-      yearsOfExperience: _experience,
-      businessDescription: _descriptionController.text.trim().isNotEmpty
-          ? _descriptionController.text.trim()
-          : 'Professional wedding services and premium deliverables on Widoora.',
-      businessAddress: _addressController.text.trim().isNotEmpty
-          ? _addressController.text.trim()
-          : 'SCO 142, Sector 70, Mohali, Punjab',
-      city: 'Mohali',
-      gstNumber: _gstController.text.trim(),
-      categoryId: categoryId,
-      categoryName: _selectedCategory,
-      subscriptionPlanId: planId,
-      aadharFile: _aadharPath,
-      panFile: _panPath,
-      businessCertFile: _businessCertPath,
-      addressProofFile: _addressProofPath,
-      gstDocFile: _gstDocPath,
-      isPreliminaryUpload: false,
-    );
-
-    // Clear local draft upon final submission
-    await StorageHelper().clearVendorDraft();
-
-    if (!mounted) return;
-
-    if (res.isSuccess == true || _vendorController.isDraftSavedOnServer.value) {
-      Navigator.of(context).pushReplacement(
-        FadeScaleRoute(
-          page: VendorSubmittedScreen(
-            businessName: _businessNameController.text.trim().isNotEmpty
-                ? _businessNameController.text.trim()
-                : 'Royal Click Studio',
-            businessType: _selectedCategory,
-            ownerName: _ownerNameController.text.trim().isNotEmpty
-                ? _ownerNameController.text.trim()
-                : 'Partner',
-            applicationId: res.data?.applicationId ??
-                StorageHelper().getApplicationId() ??
-                'WDV12345678',
-          ),
-        ),
+    try {
+      final res = await _vendorController.submitApplication(
+        ownerName: _ownerNameController.text.trim().isNotEmpty
+            ? _ownerNameController.text.trim()
+            : (StorageHelper().getUserName() ?? 'Partner'),
+        businessName: _businessNameController.text.trim().isNotEmpty
+            ? _businessNameController.text.trim()
+            : (StorageHelper().getUserName() ?? 'Royal Click Studio'),
+        yearsOfExperience: _experience,
+        businessDescription: _descriptionController.text.trim().isNotEmpty
+            ? _descriptionController.text.trim()
+            : 'Professional wedding services and premium deliverables on Widoora.',
+        businessAddress: _addressController.text.trim().isNotEmpty
+            ? _addressController.text.trim()
+            : 'SCO 142, Sector 70, Mohali, Punjab',
+        addressUrl: _addressUrlController.text.trim().isNotEmpty
+            ? _addressUrlController.text.trim()
+            : null,
+        city: 'Mohali',
+        gstNumber: _gstController.text.trim(),
+        categoryId: categoryId,
+        categoryName: _selectedCategory,
+        subscriptionPlanId: planId,
+        aadharFile: _aadharPath,
+        panFile: _panPath,
+        businessCertFile: _businessCertPath,
+        addressProofFile: _addressProofPath,
+        gstDocFile: _gstDocPath,
+        isPreliminaryUpload: false,
       );
+
+      if (!mounted) return;
+
+      if (res.isSuccess == true || _vendorController.isDraftSavedOnServer.value) {
+        final nav = Navigator.of(context);
+        // Clear local draft upon final submission
+        await StorageHelper().clearVendorDraft();
+
+        nav.pushReplacement(
+          FadeScaleRoute(
+            page: VendorSubmittedScreen(
+              businessName: _businessNameController.text.trim().isNotEmpty
+                  ? _businessNameController.text.trim()
+                  : 'Royal Click Studio',
+              businessType: _selectedCategory,
+              ownerName: _ownerNameController.text.trim().isNotEmpty
+                  ? _ownerNameController.text.trim()
+                  : 'Partner',
+              applicationId: res.data?.applicationId ??
+                  StorageHelper().getApplicationId() ??
+                  'WDV12345678',
+            ),
+          ),
+        );
+      } else {
+        Utils.showError(
+          res.message ?? res.error ?? 'Failed to submit application. Please try again.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Utils.showError('An error occurred during submission: $e');
+      }
     }
   }
   void _showPaymentSheet() {
@@ -1469,28 +1484,42 @@ class _VendorRegistrationWizardScreenState
           ],
         ),
         const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: descErr != null
-                  ? AppColors.error
-                  : AppColors.grey.withValues(alpha: 0.3),
-              width: descErr != null ? 1.4 : 1.0,
+        TextField(
+          controller: _descriptionController,
+          maxLines: 4,
+          maxLength: 500,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.white,
+            hintText: 'Describe your wedding services, studio style, expertise, years in industry, and specialties...',
+            hintStyle: const TextStyle(color: AppColors.grey, fontSize: 13),
+            counterText: '',
+            contentPadding: const EdgeInsets.all(14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: descErr != null
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.3),
+                width: descErr != null ? 1.4 : 1.0,
+              ),
             ),
-          ),
-          child: TextField(
-            controller: _descriptionController,
-            maxLines: 5,
-            maxLength: 500,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Describe your wedding services, studio style, expertise, years in industry, and specialties...',
-              hintStyle: TextStyle(color: AppColors.grey, fontSize: 13),
-              counterText: '',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: descErr != null
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.3),
+                width: descErr != null ? 1.4 : 1.0,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: descErr != null ? AppColors.error : AppColors.primary,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -1517,9 +1546,20 @@ class _VendorRegistrationWizardScreenState
           hint: 'e.g. SCO 142, Sector 70, Mohali, Punjab',
           controller: _addressController,
           icon: Icons.location_on_outlined,
-          maxLines: 2,
           isRequired: true,
           errorText: addressErr,
+        ),
+
+        const SizedBox(height: 16),
+
+        // 5b. Map / Google Maps Location URL (Optional)
+        _buildFormField(
+          label: 'Map Location URL (Optional)',
+          hint: 'Paste your Google Maps or Apple Maps link',
+          controller: _addressUrlController,
+          icon: Icons.map_outlined,
+          keyboardType: TextInputType.url,
+          isRequired: false,
         ),
 
         const SizedBox(height: 16),
@@ -1739,7 +1779,7 @@ class _VendorRegistrationWizardScreenState
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep3Documents() {
     final uploadedCount = _getUploadedRequiredDocsCount();
-    final allUploaded = uploadedCount == 4;
+    final allUploaded = uploadedCount == 2;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1770,7 +1810,7 @@ class _VendorRegistrationWizardScreenState
                 ),
               ),
               child: Text(
-                '$uploadedCount/4 Required',
+                '$uploadedCount/2 Required',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1785,8 +1825,8 @@ class _VendorRegistrationWizardScreenState
         const SizedBox(height: 6),
         Text(
           allUploaded
-              ? 'All 4 required documents attached. You can proceed to review.'
-              : 'All 4 required documents (Aadhaar, PAN, Business & Address Proof) must be uploaded to continue. Skipping is not permitted.',
+              ? 'All required documents attached. You can proceed to review.'
+              : 'Aadhaar & PAN Card are required. Business Registration & Address Proof are optional but recommended.',
           style: TextStyle(
             fontSize: 12.5,
             color: _showDocValidationErrors && !allUploaded ? AppColors.error : AppColors.darkGrey,
@@ -1798,7 +1838,7 @@ class _VendorRegistrationWizardScreenState
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: uploadedCount / 4,
+            value: uploadedCount / 2,
             backgroundColor: AppColors.greyLight.withValues(alpha: 0.5),
             valueColor: AlwaysStoppedAnimation<Color>(
               allUploaded
@@ -1827,18 +1867,18 @@ class _VendorRegistrationWizardScreenState
         ),
         _buildDocPickerCard(
           key: 'businessCert',
-          title: 'Business Registration / MSME',
+          title: 'Business Registration / MSME (Optional)',
           subtitle: 'Trade certificate or incorporation',
           filePath: _businessCertPath,
-          isRequired: true,
+          isRequired: false,
           icon: Icons.apartment_outlined,
         ),
         _buildDocPickerCard(
           key: 'addressProof',
-          title: 'Address Proof',
+          title: 'Address Proof (Optional)',
           subtitle: 'Electricity bill, rent agreement',
           filePath: _addressProofPath,
-          isRequired: true,
+          isRequired: false,
           icon: Icons.receipt_long_outlined,
         ),
         _buildDocPickerCard(
@@ -2953,24 +2993,36 @@ class _VendorRegistrationWizardScreenState
                 SizedBox(
                   width: double.infinity,
                   height: 44,
-                  child: ElevatedButton(
-                    onPressed: _submitRegistration,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  child: Obx(() {
+                    final isSubmitting = _vendorController.isSubmitting.value;
+                    return ElevatedButton(
+                      onPressed: isSubmitting ? null : _submitRegistration,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.w700)),
-                        SizedBox(width: 6),
-                        Icon(Icons.arrow_forward_rounded, size: 16),
-                      ],
-                    ),
-                  ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.w700)),
+                                SizedBox(width: 6),
+                                Icon(Icons.arrow_forward_rounded, size: 16),
+                              ],
+                            ),
+                    );
+                  }),
                 ),
               ],
             ),
@@ -3020,38 +3072,70 @@ class _VendorRegistrationWizardScreenState
           ),
         ),
         const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: hasError
-                  ? AppColors.error
-                  : AppColors.grey.withValues(alpha: 0.3),
-              width: hasError ? 1.4 : 1.0,
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          onChanged: (_) {
+            if (_showStep2ValidationErrors) {
+              setState(() {});
+            }
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.white,
+            hintText: hint,
+            hintStyle: const TextStyle(color: AppColors.grey, fontSize: 13),
+            prefixIcon: icon != null
+                ? Icon(
+                    icon,
+                    color: hasError ? AppColors.error : AppColors.primary,
+                    size: 20,
+                  )
+                : null,
+            prefixText: prefixText,
+            suffixIcon: suffixIcon != null
+                ? Icon(suffixIcon, color: AppColors.grey)
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: hasError
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.3),
+                width: hasError ? 1.4 : 1.0,
+              ),
             ),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            onChanged: (_) {
-              if (_showStep2ValidationErrors) {
-                setState(() {});
-              }
-            },
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: AppColors.grey, fontSize: 13),
-              prefixIcon: icon != null
-                  ? Icon(icon, color: hasError ? AppColors.error : AppColors.primary, size: 18)
-                  : null,
-              prefixText: prefixText,
-              suffixIcon: suffixIcon != null
-                  ? Icon(suffixIcon, color: AppColors.grey)
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(12),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: hasError
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.3),
+                width: hasError ? 1.4 : 1.0,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(
+                color: hasError ? AppColors.error : AppColors.primary,
+                width: 1.5,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: AppColors.error,
+                width: 1.4,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: AppColors.error,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -3088,9 +3172,9 @@ class _VendorRegistrationWizardScreenState
       buttonText = 'Save Details & View Plans';
     } else if (_currentStep == 3) {
       final uploadedCount = _getUploadedRequiredDocsCount();
-      buttonText = uploadedCount == 4
-          ? 'Continue to Review (4/4 Uploaded ✓)'
-          : 'Upload Required Documents ($uploadedCount/4)';
+      buttonText = uploadedCount == 2
+          ? 'Continue to Review (2/2 Uploaded ✓)'
+          : 'Upload Required Documents ($uploadedCount/2)';
     } else {
       buttonText = 'Continue';
     }
@@ -3104,49 +3188,56 @@ class _VendorRegistrationWizardScreenState
           SizedBox(
             width: double.infinity,
             height: 50,
-            child: ElevatedButton(
-              onPressed: _nextStep,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    buttonText,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+            child: Obx(() {
+              final isSubmitting = _vendorController.isSubmitting.value;
+              return ElevatedButton(
+                onPressed: isSubmitting ? null : _nextStep,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.arrow_forward_rounded, size: 18),
-                ],
-              ),
-            ),
+                ),
+                child: isSubmitting
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'Submitting...',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            buttonText,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_rounded, size: 18),
+                        ],
+                      ),
+              );
+            }),
           ),
-          if (_currentStep == 5) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 40,
-              child: TextButton(
-                onPressed: _submitRegistration,
-                child: const Text(
-                  'Skip Plan for Now & Finish Application',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkGrey,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

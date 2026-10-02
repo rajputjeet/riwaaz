@@ -5,6 +5,8 @@ import '../../core/utils/app_animations.dart';
 import '../wedding_details/wedding_details_screen.dart';
 import '../shell/main_shell.dart';
 import '../vendor_registration/vendor_welcome_screen.dart';
+import '../../shared/widgets/app_support_sheet.dart';
+import 'login_screen.dart';
 
 class UserAuthScreen extends StatefulWidget {
   final bool initialIsLogin;
@@ -39,22 +41,18 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
     super.dispose();
   }
 
-  void _handleSubmit() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // If new user signing up, go through wedding details onboarding; else directly to MainShell
-    if (!_isLogin) {
-      Navigator.of(context).pushReplacement(
-        FadeScaleRoute(page: const WeddingDetailsScreen()),
+  void _handleSubmit() {
+    if (_isLogin) {
+      // Go to real login screen (supports phone + password or email + password)
+      Navigator.of(context).push(
+        FadeScaleRoute(page: const LoginScreen()),
       );
-    } else {
-      Navigator.of(context).pushReplacement(
-        FadeScaleRoute(page: const MainShell(initialIndex: 0)),
-      );
+      return;
     }
+    // Sign-up flow: go to wedding details onboarding
+    Navigator.of(context).pushReplacement(
+      FadeScaleRoute(page: const WeddingDetailsScreen()),
+    );
   }
 
   void _skipAsGuest() {
@@ -355,6 +353,32 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
                   obscureText: _obscurePassword,
                   onToggleObscure: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ],
+
+              if (_isLogin) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () =>
+                        AppSupportSheet.showForgotPasswordAdminSheet(
+                      context,
+                      isVendor: false,
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 4),
+                    ),
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
               ],
 

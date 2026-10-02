@@ -10,6 +10,33 @@ class VendorProfileModel {
   List<dynamic>? portfolio;
   List<dynamic>? services;
 
+  // Subscription expiry fields (from GET /api/users/profile)
+  bool? isExpiringSoon;
+  int? daysLeft;
+  int? daysRemaining;
+  String? expiringMessage;
+  String? subscriptionStatus;
+
+  // Subscription plan fields (from login response)
+  bool? isSubscriptionActive;
+  String? subscriptionStartDate;
+  String? subscriptionEndDate;
+  String? subscriptionPlanTitle;
+  String? subscriptionPlanType;
+  int? subscriptionPlanDurationMonths;
+  int? subscriptionPlanPrice;
+
+  // Sponsored Ad fields (from GET /api/ad/active-vendors)
+  bool? isAdActive;
+  String? adTitle;
+  String? adDuration;
+  int? adDurationInDays;
+  String? adStartDate;
+  String? adEndDate;
+  int? adDaysLeft;
+  int? adPriority;
+  String? adBadge;
+
   VendorProfileModel({
     this.applicationId,
     this.applicationStatus,
@@ -21,9 +48,34 @@ class VendorProfileModel {
     this.packages,
     this.portfolio,
     this.services,
+    this.isExpiringSoon,
+    this.daysLeft,
+    this.daysRemaining,
+    this.expiringMessage,
+    this.subscriptionStatus,
+    this.isSubscriptionActive,
+    this.subscriptionStartDate,
+    this.subscriptionEndDate,
+    this.subscriptionPlanTitle,
+    this.subscriptionPlanType,
+    this.subscriptionPlanDurationMonths,
+    this.subscriptionPlanPrice,
+    this.isAdActive,
+    this.adTitle,
+    this.adDuration,
+    this.adDurationInDays,
+    this.adStartDate,
+    this.adEndDate,
+    this.adDaysLeft,
+    this.adPriority,
+    this.adBadge,
   });
 
   factory VendorProfileModel.fromJson(Map<String, dynamic> json) {
+    // subscriptionPlanId can be a Map (populated) or a String (ID only)
+    final planRaw = json['subscriptionPlanId'];
+    final planMap = planRaw is Map<String, dynamic> ? planRaw : null;
+
     return VendorProfileModel(
       applicationId: json['applicationId']?.toString(),
       applicationStatus: json['applicationStatus']?.toString(),
@@ -35,6 +87,41 @@ class VendorProfileModel {
       packages: json['packages'] is List ? (json['packages'] as List) : null,
       portfolio: json['portfolio'] is List ? (json['portfolio'] as List) : null,
       services: json['services'] is List ? (json['services'] as List) : null,
+      isExpiringSoon: json['isExpiringSoon'] as bool?,
+      daysLeft: json['daysLeft'] is int
+          ? json['daysLeft']
+          : int.tryParse(json['daysLeft']?.toString() ?? ''),
+      daysRemaining: json['daysRemaining'] is int
+          ? json['daysRemaining']
+          : int.tryParse(json['daysRemaining']?.toString() ?? ''),
+      expiringMessage: json['expiringMessage']?.toString(),
+      subscriptionStatus: json['subscriptionStatus']?.toString(),
+      isSubscriptionActive: json['isSubscriptionActive'] as bool?,
+      subscriptionStartDate: json['subscriptionStartDate']?.toString(),
+      subscriptionEndDate: json['subscriptionEndDate']?.toString(),
+      subscriptionPlanTitle: planMap?['title']?.toString() ?? planMap?['name']?.toString(),
+      subscriptionPlanType: planMap?['type']?.toString(),
+      subscriptionPlanDurationMonths: planMap?['durationInMonths'] is int
+          ? planMap!['durationInMonths']
+          : int.tryParse(planMap?['durationInMonths']?.toString() ?? ''),
+      subscriptionPlanPrice: planMap?['price'] is int
+          ? planMap!['price']
+          : int.tryParse(planMap?['price']?.toString() ?? ''),
+      isAdActive: json['isAdActive'] as bool?,
+      adTitle: json['adTitle']?.toString(),
+      adDuration: json['adDuration']?.toString(),
+      adDurationInDays: json['adDurationInDays'] is int
+          ? json['adDurationInDays']
+          : int.tryParse(json['adDurationInDays']?.toString() ?? ''),
+      adStartDate: json['adStartDate']?.toString(),
+      adEndDate: json['adEndDate']?.toString(),
+      adDaysLeft: json['adDaysLeft'] is int
+          ? json['adDaysLeft']
+          : int.tryParse(json['adDaysLeft']?.toString() ?? ''),
+      adPriority: json['adPriority'] is int
+          ? json['adPriority']
+          : int.tryParse(json['adPriority']?.toString() ?? ''),
+      adBadge: json['adBadge']?.toString(),
     );
   }
 
@@ -50,6 +137,23 @@ class VendorProfileModel {
       if (packages != null) 'packages': packages,
       if (portfolio != null) 'portfolio': portfolio,
       if (services != null) 'services': services,
+      if (isExpiringSoon != null) 'isExpiringSoon': isExpiringSoon,
+      if (daysLeft != null) 'daysLeft': daysLeft,
+      if (daysRemaining != null) 'daysRemaining': daysRemaining,
+      if (expiringMessage != null) 'expiringMessage': expiringMessage,
+      if (subscriptionStatus != null) 'subscriptionStatus': subscriptionStatus,
+      if (isSubscriptionActive != null) 'isSubscriptionActive': isSubscriptionActive,
+      if (subscriptionStartDate != null) 'subscriptionStartDate': subscriptionStartDate,
+      if (subscriptionEndDate != null) 'subscriptionEndDate': subscriptionEndDate,
+      if (isAdActive != null) 'isAdActive': isAdActive,
+      if (adTitle != null) 'adTitle': adTitle,
+      if (adDuration != null) 'adDuration': adDuration,
+      if (adDurationInDays != null) 'adDurationInDays': adDurationInDays,
+      if (adStartDate != null) 'adStartDate': adStartDate,
+      if (adEndDate != null) 'adEndDate': adEndDate,
+      if (adDaysLeft != null) 'adDaysLeft': adDaysLeft,
+      if (adPriority != null) 'adPriority': adPriority,
+      if (adBadge != null) 'adBadge': adBadge,
     };
   }
 }
@@ -70,6 +174,10 @@ class UserModel {
   String? accessToken;
   String? refreshToken;
 
+  bool? isFeatured;
+  int? adPriority;
+  String? adBadge;
+
   VendorProfileModel? vendorProfile;
 
   UserModel({
@@ -85,6 +193,9 @@ class UserModel {
     this.token,
     this.accessToken,
     this.refreshToken,
+    this.isFeatured,
+    this.adPriority,
+    this.adBadge,
     this.vendorProfile,
   });
 
@@ -113,6 +224,11 @@ class UserModel {
       token: rawToken,
       accessToken: json['accessToken']?.toString(),
       refreshToken: json['refreshToken']?.toString(),
+      isFeatured: json['isFeatured'] as bool?,
+      adPriority: json['adPriority'] is int
+          ? json['adPriority']
+          : int.tryParse(json['adPriority']?.toString() ?? ''),
+      adBadge: json['adBadge']?.toString(),
       vendorProfile: json['vendorProfile'] != null &&
               json['vendorProfile'] is Map<String, dynamic>
           ? VendorProfileModel.fromJson(json['vendorProfile'])
@@ -133,6 +249,9 @@ class UserModel {
       if (token != null) 'token': token,
       if (accessToken != null) 'accessToken': accessToken,
       if (refreshToken != null) 'refreshToken': refreshToken,
+      if (isFeatured != null) 'isFeatured': isFeatured,
+      if (adPriority != null) 'adPriority': adPriority,
+      if (adBadge != null) 'adBadge': adBadge,
       if (vendorProfile != null) 'vendorProfile': vendorProfile!.toJson(),
     };
   }

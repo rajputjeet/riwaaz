@@ -25,6 +25,8 @@ import 'vendor_portfolio_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
 import 'vendor_edit_profile_screen.dart';
 import 'vendor_verification_screen.dart';
+import 'vendor_ads_screen.dart';
+import '../profile/change_password_screen.dart';
 
 class VendorProfileScreen extends StatefulWidget {
   const VendorProfileScreen({super.key});
@@ -345,6 +347,142 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                             ),
 
                             const SizedBox(height: 18),
+
+                            // ── Subscription Expiry Reminder Banner ─────────
+                            Builder(builder: (context) {
+                              final vp = _profile?.vendorProfile;
+                              final expiring = vp?.isExpiringSoon == true ||
+                                  (vp?.daysLeft != null && vp!.daysLeft! <= 7) ||
+                                  (vp?.daysRemaining != null && vp!.daysRemaining! <= 7);
+                              if (!expiring) return const SizedBox.shrink();
+
+                              final days = vp?.daysLeft ?? vp?.daysRemaining ?? 0;
+                              final msg = vp?.expiringMessage ??
+                                  'Your subscription is expiring in $days day${days == 1 ? '' : 's'}!';
+                              final status = vp?.subscriptionStatus ?? 'Expiring Soon';
+                              final isCritical = days <= 2;
+                              final bannerColor = isCritical
+                                  ? const Color(0xFFFFECEC)
+                                  : const Color(0xFFFFF8E1);
+                              final borderColor = isCritical
+                                  ? const Color(0xFFE53935)
+                                  : const Color(0xFFF9A825);
+                              final iconColor = isCritical
+                                  ? const Color(0xFFE53935)
+                                  : const Color(0xFFF57F17);
+                              final textColor = isCritical
+                                  ? const Color(0xFFB71C1C)
+                                  : const Color(0xFF5D4037);
+
+                              return Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () => Navigator.of(context).push(
+                                      FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+                                    ),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: bannerColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: borderColor, width: 1.4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: borderColor.withValues(alpha: 0.15),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: borderColor.withValues(alpha: 0.12),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              isCritical
+                                                  ? Icons.warning_rounded
+                                                  : Icons.access_time_rounded,
+                                              color: iconColor,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      status,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: iconColor,
+                                                        letterSpacing: 0.3,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: borderColor,
+                                                        borderRadius: BorderRadius.circular(20),
+                                                      ),
+                                                      child: Text(
+                                                        '$days day${days == 1 ? '' : 's'} left',
+                                                        style: const TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 3),
+                                                Text(
+                                                  msg,
+                                                  style: TextStyle(
+                                                    fontSize: 12.5,
+                                                    color: textColor,
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: borderColor,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'Renew',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+                                ],
+                              );
+                            }),
+
                             const Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -377,6 +515,15 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                               ),
                             ),
                             _buildMenuItem(
+                              icon: Icons.campaign_rounded,
+                              iconColor: const Color(0xFFEAB308),
+                              title: 'Sponsored Ads & Spotlight',
+                              subtitle: 'Boost profile visibility to brides & grooms',
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(page: const VendorAdsScreen()),
+                              ),
+                            ),
+                            _buildMenuItem(
                               icon: Icons.inventory_2_outlined,
                               title: 'My Packages & Services',
                               subtitle: _packagesSubtitle,
@@ -391,6 +538,28 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                               onTap: () => Navigator.of(context).push(
                                 FadeScaleRoute(page: const VendorPortfolioScreen()),
                               ),
+                            ),
+
+                            const SizedBox(height: 18),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'SECURITY & ACCOUNT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: AppColors.darkGrey,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            _buildMenuItem(
+                              icon: Icons.lock_reset_rounded,
+                              title: 'Change Password',
+                              subtitle: 'Update your vendor account password',
+                              onTap: () => _openChangePasswordScreen(context),
                             ),
 
                             const SizedBox(height: 18),
@@ -440,6 +609,33 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                             ),
 
                             const SizedBox(height: 28),
+
+                            // Change Password
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _openChangePasswordScreen(context),
+                                icon: const Icon(Icons.lock_reset_rounded,
+                                    color: AppColors.secondary, size: 18),
+                                label: const Text(
+                                  'Change Password',
+                                  style: TextStyle(
+                                    color: AppColors.secondary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.secondary, width: 1.2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
 
                             SizedBox(
                               width: double.infinity,
@@ -849,6 +1045,14 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
       context,
       isVendor: true,
       onOpenFaq: () => _showVendorFaqSheet(context),
+    );
+  }
+
+  void _openChangePasswordScreen(BuildContext context) {
+    Navigator.of(context).push(
+      FadeScaleRoute(
+        page: const ChangePasswordScreen(isVendor: true),
+      ),
     );
   }
 

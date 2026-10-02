@@ -1038,6 +1038,221 @@ Provides summary metrics for the vendor's home/dashboard screen: counts of All, 
 }
 ```
 
+
+---
+
+## 📢 21. Ads Pricing & Vendor Sponsored Ads APIs
+
+Complete API suite for Ads Pricing Plans, Vendor Ad Purchases, Vendor My Active Ad, and Public User Side Active Sponsored Vendors List.
+
+### 21.1 Get Ads Pricing Plans List (Public / Vendor)
+
+Returns active available Ad Plans for vendors to purchase (e.g. 1 Day, 3 Days, 1 Week).
+
+- **Method:** `GET`
+- **Endpoint:** `/ad/list`
+- **Auth Required:** No (Public)
+
+#### Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Ad Plans retrieved successfully",
+  "data": [
+    {
+      "_id": "6701a2b3c4d5e6f7a8b9c001",
+      "title": "1 Day Featured Boost",
+      "duration": "1 Day",
+      "durationInDays": 1,
+      "price": 199,
+      "description": "Showcase your business at top of homepage for 24 hours.",
+      "stateId": 1
+    },
+    {
+      "_id": "6701a2b3c4d5e6f7a8b9c002",
+      "title": "3 Days Vendor Spotlight",
+      "duration": "3 Days",
+      "durationInDays": 3,
+      "price": 499,
+      "description": "Premium top placement in browse & search for 3 full days.",
+      "stateId": 1
+    },
+    {
+      "_id": "6701a2b3c4d5e6f7a8b9c003",
+      "title": "1 Week Ultimate Platinum Ad",
+      "duration": "1 Week",
+      "durationInDays": 7,
+      "price": 999,
+      "description": "Maximum reach with #1 position priority & platinum badge for 7 days.",
+      "stateId": 1
+    }
+  ]
+}
+```
+
+---
+
+### 21.2 Vendor Buy / Run Ad API (Vendor)
+
+Purchases and immediately starts an Ad campaign for the vendor. Automatically computes `adStartDate`, `adEndDate`, and sets `isAdActive: true`.
+
+- **Method:** `POST`
+- **Endpoint:** `/ad/buy`
+- **Auth Required:** Yes (`Bearer <ACCESS_TOKEN>`)
+- **Content-Type:** `application/json`
+
+#### Request Body
+
+```json
+{
+  "adPlanId": "6701a2b3c4d5e6f7a8b9c001"
+}
+```
+
+#### Success Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Ad campaign purchased and activated successfully!",
+  "data": {
+    "purchase": {
+      "_id": "6702b3c4d5e6f7a8b9c00111",
+      "vendorId": "65f1a2b3c4d5e6f7a8b9c0d1",
+      "adPlanId": "6701a2b3c4d5e6f7a8b9c001",
+      "amount": 199,
+      "paymentStatus": "Paid",
+      "startDate": "2026-10-03T00:00:00.000Z",
+      "endDate": "2026-10-04T00:00:00.000Z",
+      "isActive": true
+    },
+    "vendor": {
+      "isAdActive": true,
+      "adTitle": "1 Day Featured Boost",
+      "adDuration": "1 Day",
+      "adStartDate": "2026-10-03T00:00:00.000Z",
+      "adEndDate": "2026-10-04T00:00:00.000Z",
+      "adDaysLeft": 1
+    }
+  }
+}
+```
+
+---
+
+### 21.3 Vendor Check My Active Ad API (Vendor)
+
+Checks if the authenticated vendor currently has an active ad running, along with days remaining and expiry details.
+
+- **Method:** `GET`
+- **Endpoint:** `/ad/my-ad`
+- **Auth Required:** Yes (`Bearer <ACCESS_TOKEN>`)
+
+#### Active Ad Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Active Ad status retrieved",
+  "data": {
+    "hasActiveAd": true,
+    "ad": {
+      "title": "1 Week Ultimate Platinum Ad",
+      "duration": "1 Week",
+      "startDate": "2026-10-03T00:00:00.000Z",
+      "endDate": "2026-10-10T00:00:00.000Z",
+      "daysLeft": 7,
+      "isActive": true
+    }
+  }
+}
+```
+
+---
+
+### 21.4 Public User Side Featured / Sponsored Vendors List API (User Side)
+
+Returns all vendors who currently have an active ad running (`isAdActive: true` and `adEndDate >= now`), automatically prioritized and sorted according to their purchased ad duration tier.
+
+> 🌟 **Weighted Rotation & Freshness Boost Logic:**
+>
+> 1. **⚡ Freshness Boost (+100 Points):** Any vendor who purchases an Ad (1-Day, 3-Days, or 1-Week) within the **last 24 hours** automatically receives a **+100 Freshness Boost**. This guarantees that a newly purchased 1-Day ad immediately jumps to **Position #1 (TOP)** during its 24-hour campaign window!
+> 2. **🏆 Tier Weight (7 Days = +30, 3 Days = +20, 1 Day = +10):** 7-Day and 3-Day ads retain higher base tier weights so they stay near top throughout their 7-day / 3-day active duration once the 24-hour initial boost ends.
+> 3. **⏱️ Auto-Expiry Handling:** Once an ad's end date passes, `isAdActive` turns `false` automatically and the vendor is excluded from this API response.
+
+- **Method:** `GET`
+- **Endpoint:** `/ad/active-vendors`
+- **Auth Required:** No (Public)
+- **Optional Query Params:** `?categoryId=<CATEGORY_ID>` (Filter featured vendors by category)
+
+#### Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Featured / Sponsored Vendors List",
+  "data": {
+    "list": [
+      {
+        "_id": "65f1a2b3c4d5e6f7a8b9c0d1",
+        "fullName": "Royal Clicks Studio",
+        "email": "royal@gmail.com",
+        "mobile": "8556936887",
+        "roleId": 3,
+        "isFeatured": true,
+        "adPriority": 1,
+        "adBadge": "SPONSORED (1 WEEK PLATINUM)",
+        "vendorProfile": {
+          "businessName": "Royal Clicks Studio",
+          "city": "Mohali",
+          "isAdActive": true,
+          "adTitle": "1 Week Ultimate Platinum Ad",
+          "adDuration": "1 Week",
+          "adDurationInDays": 7,
+          "adStartDate": "2026-10-03T00:00:00.000Z",
+          "adEndDate": "2026-10-10T00:00:00.000Z",
+          "adDaysLeft": 7,
+          "adPriority": 1,
+          "adBadge": "SPONSORED (1 WEEK PLATINUM)",
+          "isSubscriptionActive": true
+        }
+      },
+      {
+        "_id": "65f1a2b3c4d5e6f7a8b9c0d2",
+        "fullName": "Golden Event Caterers",
+        "email": "golden.caterers@gmail.com",
+        "mobile": "9812345678",
+        "roleId": 3,
+        "isFeatured": true,
+        "adPriority": 2,
+        "adBadge": "SPONSORED (3 DAYS SPOTLIGHT)",
+        "vendorProfile": {
+          "businessName": "Golden Event Caterers",
+          "city": "Chandigarh",
+          "isAdActive": true,
+          "adTitle": "3 Days Vendor Spotlight",
+          "adDuration": "3 Days",
+          "adDurationInDays": 3,
+          "adStartDate": "2026-10-03T00:00:00.000Z",
+          "adEndDate": "2026-10-06T00:00:00.000Z",
+          "adDaysLeft": 3,
+          "adPriority": 2,
+          "adBadge": "SPONSORED (3 DAYS SPOTLIGHT)",
+          "isSubscriptionActive": true
+        }
+      }
+    ],
+    "totalCount": 2,
+    "grouped": {
+      "oneWeekAds": [],
+      "threeDaysAds": [],
+      "oneDayAds": []
+    }
+  }
+}
+```
+
 ---
 
 ## 🛠️ Flutter Quick Integration Snippets (Dio)

@@ -89,6 +89,7 @@ class VendorRegistrationController extends GetxController {
     required String yearsOfExperience,
     required String businessDescription,
     required String businessAddress,
+    String? addressUrl,
     required String city,
     String? gstNumber,
     required String categoryId,
@@ -105,14 +106,18 @@ class VendorRegistrationController extends GetxController {
 
     final bool hasAadhar = aadharFile is MultipartFile || (aadharFile is String && aadharFile.trim().isNotEmpty);
     final bool hasPan = panFile is MultipartFile || (panFile is String && panFile.trim().isNotEmpty);
-    final bool hasBusinessCert = businessCertFile is MultipartFile || (businessCertFile is String && businessCertFile.trim().isNotEmpty);
-    final bool hasAddressProof = addressProofFile is MultipartFile || (addressProofFile is String && addressProofFile.trim().isNotEmpty);
 
-    if (!hasAadhar || !hasPan || !hasBusinessCert || !hasAddressProof) {
+    if (!hasAadhar || !hasPan) {
       isSubmitting.value = false;
+      if (!isPreliminaryUpload) {
+        Utils.showSnackBar(
+          'Aadhaar and PAN Card documents are required to complete registration.',
+          isError: true,
+        );
+      }
       return DataResponse<VendorApplicationModel>(
         isSuccess: false,
-        message: 'All 4 verification documents (Aadhaar, PAN, Business & Address Proof) are required and cannot be skipped.',
+        message: 'Aadhaar and PAN Card documents are required to complete registration.',
       );
     }
 
@@ -123,6 +128,8 @@ class VendorRegistrationController extends GetxController {
       'businessDescription': businessDescription.trim(),
       'businessAddress': businessAddress.trim(),
       'city': city.trim(),
+      if (addressUrl != null && addressUrl.trim().isNotEmpty)
+        'addressUrl': addressUrl.trim(),
       if (gstNumber != null && gstNumber.trim().isNotEmpty)
         'gstNumber': gstNumber.trim(),
       'categoryId': categoryId,
@@ -150,8 +157,12 @@ class VendorRegistrationController extends GetxController {
 
     formDataMap['aadhar'] = await toMultipart(aadharFile, 'aadhar_card.jpg');
     formDataMap['pan'] = await toMultipart(panFile, 'pan_card.jpg');
-    formDataMap['businessCert'] = await toMultipart(businessCertFile, 'business_cert.jpg');
-    formDataMap['addressProof'] = await toMultipart(addressProofFile, 'address_proof.jpg');
+    if (businessCertFile != null && (businessCertFile is MultipartFile || (businessCertFile is String && businessCertFile.trim().isNotEmpty))) {
+      formDataMap['businessCert'] = await toMultipart(businessCertFile, 'business_cert.jpg');
+    }
+    if (addressProofFile != null && (addressProofFile is MultipartFile || (addressProofFile is String && addressProofFile.trim().isNotEmpty))) {
+      formDataMap['addressProof'] = await toMultipart(addressProofFile, 'address_proof.jpg');
+    }
     if (gstDocFile != null && (gstDocFile is MultipartFile || (gstDocFile is String && gstDocFile.trim().isNotEmpty))) {
       formDataMap['gstDoc'] = await toMultipart(gstDocFile, 'gst_cert.jpg');
     }

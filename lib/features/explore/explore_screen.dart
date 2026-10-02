@@ -12,6 +12,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/category_controller.dart';
 import '../../core/constants/service_categories.dart';
+import '../../data/api_provider/ad_api_provider.dart';
+import '../../data/models/user_model.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/service_categories_bar.dart';
 import '../../shared/widgets/app_search_bar.dart';
@@ -37,13 +39,46 @@ class ExploreBody extends StatefulWidget {
 class _ExploreBodyState extends State<ExploreBody> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final AdApiProvider _adApi = AdApiProvider();
+
+  List<UserModel> _sponsoredVendors = [];
+  bool _isLoadingVendors = true;
 
   @override
   void initState() {
     super.initState();
+    _fetchSponsoredVendors();
     _searchFocusNode.addListener(() {
       setState(() {});
     });
+  }
+
+  Future<void> _fetchSponsoredVendors() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingVendors = true;
+      });
+    }
+    try {
+      final res = await _adApi.getActiveSponsoredVendors();
+      if (mounted) {
+        setState(() {
+          _isLoadingVendors = false;
+          if (res.isSuccess == true && res.data != null) {
+            _sponsoredVendors = res.data!;
+          } else {
+            _sponsoredVendors = [];
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoadingVendors = false;
+          _sponsoredVendors = [];
+        });
+      }
+    }
   }
 
   @override
@@ -61,23 +96,36 @@ class _ExploreBodyState extends State<ExploreBody> {
         children: [
           _buildSearchHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  FadeInWidget(
-                    delay: const Duration(milliseconds: 150),
-                    child: _buildServiceGrid(),
-                  ),
-                  const SizedBox(height: 14),
-                  FadeInWidget(
-                    delay: const Duration(milliseconds: 250),
-                    child: _buildFeaturedSection(),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await Future.wait([
+                  _fetchSponsoredVendors(),
+                  if (Get.isRegistered<CategoryController>())
+                    CategoryController.to.fetchCategories(forceRefresh: true),
+                ]);
+              },
+              color: AppColors.primary,
+              backgroundColor: AppColors.white,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    FadeInWidget(
+                      delay: const Duration(milliseconds: 150),
+                      child: _buildServiceGrid(),
+                    ),
+                    const SizedBox(height: 14),
+                    FadeInWidget(
+                      delay: const Duration(milliseconds: 250),
+                      child: _buildFeaturedSection(),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),
@@ -462,53 +510,21 @@ class _ExploreBodyState extends State<ExploreBody> {
   }
 
   Widget _buildFeaturedSection() {
-    final featuredVendors = [
-      (
-        'Royal Click Studio',
-        'Photography & Videography',
-        'Chandigarh',
-        '4.9',
-        320,
-        '₹35,000 onwards',
-        AppImages.vendorRoyalClick,
-      ),
-      (
-        'Royal Mandap & Floral Decor',
-        'Decor & Flora',
-        'Chandigarh',
-        '4.9',
-        240,
-        '₹45,000 onwards',
-        AppImages.exploreDecoration,
-      ),
-      (
-        'Heritage Haveli Resort & Palace',
-        'Banquet Halls & Hotels',
-        'Mohali',
-        '4.9',
-        420,
-        '₹2,50,000 onwards',
-        AppImages.weddingHero,
-      ),
-      (
-        'Audi A8 & Vintage Car Rentals',
-        'Wedding Cars',
-        'Chandigarh',
-        '4.8',
-        155,
-        '₹15,000 onwards',
-        AppImages.exploreWeddingCar,
-      ),
-      (
-        'Flavours of Punjab Caterers',
-        'Catering',
-        'Chandigarh',
-        '4.9',
-        310,
-        '₹850 onwards',
-        AppImages.exploreCatering,
-      ),
-    ];
+    final query = _searchController.text.trim().toLowerCase();
+    final displayedSponsored = query.isEmpty
+        ? _sponsoredVendors
+        : _sponsoredVendors.where((v) {
+            final bName = v.vendorProfile?.businessName?.toLowerCase() ?? '';
+            final fName = v.fullName?.toLowerCase() ?? '';
+            final city = v.vendorProfile?.city?.toLowerCase() ?? '';
+            final adT = v.vendorProfile?.adTitle?.toLowerCase() ?? '';
+            final badge = (v.adBadge ?? v.vendorProfile?.adBadge)?.toLowerCase() ?? '';
+            return bName.contains(query) ||
+                fName.contains(query) ||
+                city.contains(query) ||
+                adT.contains(query) ||
+                badge.contains(query);
+          }).toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -517,50 +533,269 @@ class _ExploreBodyState extends State<ExploreBody> {
         children: [
           Row(
             children: [
-              Text('Featured Vendors', style: AppTextStyles.headlineSmall),
+              Text('Featured & Sponsored', style: AppTextStyles.headlineSmall),
+              if (_sponsoredVendors.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFD97706),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_sponsoredVendors.length} Active',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const Spacer(),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    SlidePageRoute(
-                      page: const ServiceListingScreen(
-                          category: 'Photography & Videography'),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'See All',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+              if (_isLoadingVendors)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                  ),
+                )
+              else
+                IconButton(
+                  onPressed: _fetchSponsoredVendors,
+                  icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.primary),
+                  tooltip: 'Refresh Sponsored Vendors',
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          if (_isLoadingVendors && _sponsoredVendors.isEmpty)
+            _buildFeaturedLoadingSkeleton()
+          else if (displayedSponsored.isEmpty)
+            _buildEmptyFeaturedVendors(query.isNotEmpty)
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: displayedSponsored.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                final v = displayedSponsored[index];
+                final name = v.vendorProfile?.businessName ?? v.fullName ?? 'Sponsored Partner';
+                final loc = v.vendorProfile?.city ?? 'Punjab';
+                final badge = v.adBadge ?? v.vendorProfile?.adBadge ?? v.vendorProfile?.adTitle ?? 'SPONSORED';
+                final priority = v.adPriority ?? v.vendorProfile?.adPriority ?? (index + 1);
+                final daysLeft = v.vendorProfile?.adDaysLeft;
+                final duration = v.vendorProfile?.adDuration;
+                final category = (v.vendorProfile?.services != null && v.vendorProfile!.services!.isNotEmpty)
+                    ? v.vendorProfile!.services!.join(', ')
+                    : (v.vendorProfile?.adTitle ?? 'Wedding Vendor Partner');
+
+                String priceText = 'Featured Partner';
+                if (v.vendorProfile?.packages != null && v.vendorProfile!.packages!.isNotEmpty) {
+                  final firstPkg = v.vendorProfile!.packages!.first;
+                  if (firstPkg is Map && firstPkg['price'] != null) {
+                    priceText = '₹${firstPkg['price']} onwards';
+                  }
+                }
+
+                final img = (v.profileImgUrl != null && v.profileImgUrl!.isNotEmpty)
+                    ? v.profileImgUrl!
+                    : AppImages.vendorRoyalClick;
+
+                return _buildVerticalFeaturedCard(
+                  name: name,
+                  category: category,
+                  location: loc,
+                  rating: '4.9',
+                  reviews: 180 + (priority <= 3 ? (4 - priority) * 35 : 10),
+                  price: priceText,
+                  imagePath: img,
+                  isSponsored: true,
+                  adBadgeText: badge,
+                  adPriority: priority,
+                  adDaysLeft: daysLeft,
+                  adDuration: duration,
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyFeaturedVendors(bool isSearch) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFEADBCE),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFAF2E9),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isSearch ? Icons.search_off_rounded : Icons.campaign_outlined,
+              size: 24,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            isSearch ? 'No Sponsored Vendors Found' : 'No Featured Vendors Right Now',
+            style: GoogleFonts.cormorantGaramond(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF26050E),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isSearch
+                ? 'No active sponsored vendors match your search.'
+                : 'Active sponsored vendors and featured partners will appear here once campaigns run.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.grey,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () {
+              if (isSearch) {
+                _searchController.clear();
+                setState(() {});
+              } else {
+                _fetchSponsoredVendors();
+              }
+            },
+            icon: Icon(
+              isSearch ? Icons.clear_rounded : Icons.refresh_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+            label: Text(
+              isSearch ? 'Clear Search' : 'Refresh Featured',
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturedLoadingSkeleton() {
+    return Column(
+      children: List.generate(2, (index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          height: 220,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                flex: 6,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.greyLight.withValues(alpha: 0.4),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              height: 14,
+                              width: 140,
+                              decoration: BoxDecoration(
+                                color: AppColors.greyLight.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              height: 10,
+                              width: 90,
+                              decoration: BoxDecoration(
+                                color: AppColors.greyLight.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 32,
+                        width: 65,
+                        decoration: BoxDecoration(
+                          color: AppColors.cream,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Vertical list of featured vendors
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: featuredVendors.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 14),
-            itemBuilder: (context, index) {
-              final v = featuredVendors[index];
-              return _buildVerticalFeaturedCard(
-                name: v.$1,
-                category: v.$2,
-                location: v.$3,
-                rating: v.$4,
-                reviews: v.$5,
-                price: v.$6,
-                imagePath: v.$7,
-              );
-            },
-          ),
-        ],
-      ),
+        );
+      }),
     );
   }
 
@@ -572,7 +807,33 @@ class _ExploreBodyState extends State<ExploreBody> {
     required int reviews,
     required String price,
     required String imagePath,
+    bool isSponsored = true,
+    String? adBadgeText,
+    int? adPriority,
+    int? adDaysLeft,
+    String? adDuration,
   }) {
+    final badgeUpper = (adBadgeText ?? '').toUpperCase();
+    final is1Week = badgeUpper.contains('1 WEEK') || badgeUpper.contains('PLATINUM');
+    final is3Days = badgeUpper.contains('3 DAYS') || badgeUpper.contains('SPOTLIGHT');
+    final is1Day = badgeUpper.contains('1 DAY') || badgeUpper.contains('BOOST');
+
+    final LinearGradient badgeGradient = is1Week
+        ? const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFB45309)])
+        : is3Days
+            ? const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFC2410C)])
+            : is1Day
+                ? const LinearGradient(colors: [Color(0xFFE11D48), Color(0xFFBE123C)])
+                : const LinearGradient(colors: [Color(0xFFEAB308), Color(0xFFCA8A04)]);
+
+    final IconData badgeIcon = is1Week
+        ? Icons.workspace_premium_rounded
+        : is3Days
+            ? Icons.star_rounded
+            : is1Day
+                ? Icons.bolt_rounded
+                : Icons.stars_rounded;
+
     return AnimatedTapWidget(
       onTap: () {
         Navigator.of(context).push(
@@ -608,12 +869,12 @@ class _ExploreBodyState extends State<ExploreBody> {
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(16)),
                   child: SizedBox(
-                    height: 145,
+                    height: 150,
                     width: double.infinity,
                     child: CachedImageView(
                       imageUrl: imagePath,
                       fit: BoxFit.cover,
-                      fallbackIcon: Icons.image_rounded,
+                      fallbackIcon: Icons.storefront_rounded,
                       iconColor: Colors.white54,
                       iconSize: 36,
                       backgroundColor: AppColors.primaryDark,
@@ -630,77 +891,154 @@ class _ExploreBodyState extends State<ExploreBody> {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.45),
+                          Colors.black.withValues(alpha: 0.50),
                           Colors.transparent,
                         ],
                       ),
                     ),
                   ),
                 ),
-                // "FEATURED" pill
+                // "FEATURED" / "SPONSORED" badge + optional Priority #1
                 Positioned(
                   top: 10,
                   left: 10,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.workspace_premium_rounded,
-                            size: 12, color: AppColors.goldLight),
-                        SizedBox(width: 4),
-                        Text(
-                          'FEATURED',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.white,
-                            letterSpacing: 0.5,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: isSponsored ? badgeGradient : null,
+                          color: isSponsored ? null : AppColors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              badgeIcon,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              adBadgeText ?? (isSponsored ? 'SPONSORED' : 'FEATURED'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (adPriority != null && adPriority == 1) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.trending_up_rounded, size: 12, color: Colors.white),
+                              SizedBox(width: 3),
+                              Text(
+                                '#1 TOP',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-                // Rating badge
+                // Rating & Days Left badge
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded,
-                            size: 13, color: AppColors.gold),
-                        const SizedBox(width: 3),
-                        Text(
-                          rating,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (adDaysLeft != null && adDaysLeft > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.timer_outlined, size: 11, color: Color(0xFFFDE68A)),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${adDaysLeft}d left',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          ' ($reviews)',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
-                        ),
+                        const SizedBox(width: 5),
                       ],
-                    ),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                size: 13, color: AppColors.gold),
+                            const SizedBox(width: 3),
+                            Text(
+                              rating,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.white,
+                              ),
+                            ),
+                            Text(
+                              ' ($reviews)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -762,13 +1100,35 @@ class _ExploreBodyState extends State<ExploreBody> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          price,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              price,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            if (adDuration != null && adDuration.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  adDuration,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),

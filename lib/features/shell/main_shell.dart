@@ -12,8 +12,8 @@ import '../auth/unified_login_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
 import '../service_listing/service_listing_screen.dart';
 import '../../core/services/booking_service.dart';
-import '../vendor_panel/vendor_shell.dart';
 import '../profile/customer_edit_profile_screen.dart';
+import '../profile/change_password_screen.dart';
 import '../notifications/customer_notifications_screen.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../data/api_provider/cms_api_provider.dart';
@@ -2063,68 +2063,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
     );
   }
 
-  void _showSavedVendorsSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.65,
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.grey.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Saved Vendors',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
-                ),
-              ],
-            ),
-            const Text(
-              'Your shortlisted professionals for quick access',
-              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-            ),
-            const Divider(height: 24),
-            const Expanded(
-              child: AppEmptyState(
-                icon: Icons.bookmark_outline_rounded,
-                title: 'No Saved Vendors',
-                subtitle:
-                    'Browse categories and tap the bookmark icon on vendor profiles to save them here.',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showFaqSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -2529,6 +2467,14 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
     );
   }
 
+  void _openChangePasswordScreen(BuildContext context) {
+    Navigator.of(context).push(
+      FadeScaleRoute(
+        page: const ChangePasswordScreen(isVendor: false),
+      ),
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2850,23 +2796,26 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 subtitle: 'Manage budget allocations and planned expenses',
                 onTap: () => _showBudgetSheet(context),
               ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.bookmark_outline_rounded,
-                title: 'Saved Vendors',
-                subtitle: 'Shortlisted photographers, decorators & caterers',
-                onTap: () => _showSavedVendorsSheet(context),
+
+              const SizedBox(height: 18),
+
+              const Text(
+                'SECURITY & ACCOUNT',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                  color: AppColors.darkGrey,
+                ),
               ),
+              const SizedBox(height: 10),
+
               _buildActionItem(
                 context: context,
-                icon: Icons.storefront_rounded,
-                title: 'Vendor Partner Portal',
-                subtitle: 'Switch to vendor panel, incoming bookings & inquiries',
-                onTap: () {
-                  Navigator.of(context).push(
-                    FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
-                  );
-                },
+                icon: Icons.lock_reset_rounded,
+                title: 'Change Password',
+                subtitle: 'Update your account security password',
+                onTap: () => _openChangePasswordScreen(context),
               ),
 
               const SizedBox(height: 18),
@@ -2919,6 +2868,34 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               ),
 
               const SizedBox(height: 28),
+
+              // ─── BOTTOM ACTIONS (CHANGE PASSWORD, LOGOUT & DELETE ACCOUNT) ─────
+              // Change Password
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openChangePasswordScreen(context),
+                  icon: const Icon(Icons.lock_reset_rounded,
+                      color: AppColors.secondary, size: 18),
+                  label: const Text(
+                    'Change Password',
+                    style: TextStyle(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.secondary, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
 
               // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
               SizedBox(

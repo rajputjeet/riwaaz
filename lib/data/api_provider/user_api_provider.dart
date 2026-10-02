@@ -57,7 +57,11 @@ class UserApiProvider {
     try {
       final response = await _dio.put(
         ApiConstants.changePassword,
-        data: {'oldPassword': oldPassword, 'newPassword': newPassword},
+        data: {
+          'oldPassword': oldPassword,
+          'currentPassword': oldPassword,
+          'newPassword': newPassword,
+        },
         options: Injector.getHeaderToken(),
       );
 

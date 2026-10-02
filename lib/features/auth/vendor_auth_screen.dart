@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
-import '../vendor_panel/vendor_shell.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 import '../vendor_registration/vendor_registration_wizard_screen.dart';
+import 'login_screen.dart';
 import 'user_auth_screen.dart';
 
 class VendorAuthScreen extends StatefulWidget {
@@ -14,8 +15,8 @@ class VendorAuthScreen extends StatefulWidget {
 }
 
 class _VendorAuthScreenState extends State<VendorAuthScreen> {
-  final _identifierController = TextEditingController(text: '9876543210');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _identifierController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -26,14 +27,10 @@ class _VendorAuthScreenState extends State<VendorAuthScreen> {
     super.dispose();
   }
 
-  void _handleLogin() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    Navigator.of(context).pushReplacement(
-      FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
+  void _handleLogin() {
+    // Navigate to the unified LoginScreen (supports email or phone + password)
+    Navigator.of(context).push(
+      FadeScaleRoute(page: const LoginScreen(initialIsVendor: true)),
     );
   }
 
@@ -187,7 +184,7 @@ class _VendorAuthScreenState extends State<VendorAuthScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () => _showContactAdminSheet(context),
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(
@@ -364,5 +361,9 @@ class _VendorAuthScreenState extends State<VendorAuthScreen> {
         ),
       ),
     );
+  }
+
+  void _showContactAdminSheet(BuildContext context) {
+    AppSupportSheet.showForgotPasswordAdminSheet(context, isVendor: true);
   }
 }

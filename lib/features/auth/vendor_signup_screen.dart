@@ -169,7 +169,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 const SizedBox(height: 18),
 
                 // Business Email
-                _buildFieldLabel('Business Email Address'),
+                _buildFieldLabel('Business Email Address (Optional)'),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -178,9 +178,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     prefixIcon: Icons.email_outlined,
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter email address';
-                    }
+                    if (val == null || val.trim().isEmpty) return null;
                     if (!val.contains('@') || !val.contains('.')) {
                       return 'Please enter a valid email address';
                     }

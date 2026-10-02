@@ -8,6 +8,7 @@ import '../network_handling.dart';
 import '../shared/data_response.dart';
 import '../../utils/helper/storage_helper.dart';
 import 'api_constant.dart';
+import 'user_api_provider.dart';
 
 // Unified Vendor API Provider for Services, Packages, Plans, Portfolio, and Bookings
 class VendorApiProvider {
@@ -516,4 +517,16 @@ class VendorApiProvider {
       );
     }
   }
+
+  // ─── Account ───────────────────────────────────────────────────────────────
+
+  // PUT /api/users/change-password
+  Future<DataResponse<dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) =>
+      UserApiProvider().changePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      );
 }

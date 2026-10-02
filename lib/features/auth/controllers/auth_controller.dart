@@ -38,7 +38,7 @@ class AuthController extends GetxController {
 
     final requestBody = {
       'fullName': fullName.trim(),
-      'email': email.trim().toLowerCase(),
+      if (email.trim().isNotEmpty) 'email': email.trim().toLowerCase(),
       'phone': phone.trim(),
       'password': password,
       'roleId': roleId,

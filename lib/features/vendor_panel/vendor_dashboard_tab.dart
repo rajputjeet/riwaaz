@@ -9,6 +9,7 @@ import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
+import 'vendor_ads_screen.dart';
 import '../../core/services/booking_service.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../utils/utils.dart';
@@ -258,6 +259,11 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
           // Vendor Membership Status Banner (3M, 6M, 1Y)
           _buildMembershipBanner(context),
+
+          const SizedBox(height: 12),
+
+          // Sponsored Ad / Boost Banner
+          _buildSponsoredAdBanner(context),
 
           const SizedBox(height: 14),
 
@@ -531,6 +537,89 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
     );
   }
 
+  Widget _buildSponsoredAdBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEAB308).withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAB308).withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.campaign_rounded,
+              color: Color(0xFFEAB308),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Promote Your Business',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Get featured on user app top banner & search',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFFCBD5E1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).push(
+              FadeScaleRoute(page: const VendorAdsScreen()),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEAB308),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Boost Ad',
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEarningsCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -651,6 +740,13 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
         'Plans',
         () => Navigator.of(context).push(
               FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+            )
+      ),
+      (
+        Icons.campaign_rounded,
+        'Boost Ads',
+        () => Navigator.of(context).push(
+              FadeScaleRoute(page: const VendorAdsScreen()),
             )
       ),
       (

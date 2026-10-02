@@ -163,7 +163,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                 const SizedBox(height: 18),
 
                 // Email Address
-                _buildFieldLabel('Email Address'),
+                _buildFieldLabel('Email Address (Optional)'),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -172,9 +172,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                     prefixIcon: Icons.email_outlined,
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter your email address';
-                    }
+                    if (val == null || val.trim().isEmpty) return null;
                     if (!val.contains('@') || !val.contains('.')) {
                       return 'Please enter a valid email address';
                     }

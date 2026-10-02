@@ -82,4 +82,10 @@ abstract class ApiConstants {
 
   // 13. System Settings API
   static const String settingCheck = "/api/setting/check";
+
+  // 14. Ads & Vendor Sponsored Ads APIs
+  static const String adList = "/api/ad/list";
+  static const String adBuy = "/api/ad/buy";
+  static const String adMyAd = "/api/ad/my-ad";
+  static const String adActiveVendors = "/api/ad/active-vendors";
 }
