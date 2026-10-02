@@ -458,7 +458,7 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       hintText: 'e.g. C-127, Mohali Industrial Area, Mohali',
                       controller: _addressCtrl,
                       icon: Icons.location_on_outlined,
-                      maxLines: 2,
+                      maxLines: 1,
                       isRequired: true,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
@@ -561,42 +561,55 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
-            prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+            prefixIcon: maxLines > 1
+                ? Container(
+                    width: 46,
+                    alignment: Alignment.topCenter,
+                    padding: const EdgeInsets.only(top: 15),
+                    child: Icon(icon, color: AppColors.primary, size: 20),
+                  )
+                : Icon(icon, color: AppColors.primary, size: 20),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 46,
+              minHeight: 46,
+            ),
             filled: true,
             fillColor: AppColors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 15,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
                 color: AppColors.grey.withValues(alpha: 0.3),
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
                 color: AppColors.grey.withValues(alpha: 0.3),
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(
                 color: AppColors.primary,
-                width: 1.5,
+                width: 1.6,
               ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(
                 color: AppColors.error,
                 width: 1.2,
               ),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(
                 color: AppColors.error,
-                width: 1.5,
+                width: 1.6,
               ),
             ),
           ),
