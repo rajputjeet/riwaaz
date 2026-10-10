@@ -322,9 +322,20 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                               right: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(7),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.white,
+                                    width: 2.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: const Icon(
                                   Icons.camera_alt_rounded,

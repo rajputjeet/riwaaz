@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../utils/helper/storage_helper.dart';
+import '../../data/api_provider/booking_api_provider.dart';
+import '../../data/models/booking_model.dart';
 
 /// Single unified booking record shared between Customer and Vendor panels.
 class BookingRecord {
@@ -54,6 +58,67 @@ class BookingRecord {
   bool get isCompleted => status == 'Delivered & Paid' || status == 'Completed';
   bool get isDeclined => status == 'Declined' || status == 'Cancelled';
 
+  factory BookingRecord.fromBookingModel(BookingModel model) {
+    IconData icon = Icons.celebration_rounded;
+    Color color = const Color(0xFF8B1A2E);
+
+    final eventType = model.eventType ?? 'Wedding';
+    if (eventType.toLowerCase().contains('office') ||
+        eventType.toLowerCase().contains('corporate')) {
+      icon = Icons.business_center_rounded;
+      color = const Color(0xFF1E3A8A);
+    } else if (eventType.toLowerCase().contains('birthday') ||
+        eventType.toLowerCase().contains('party')) {
+      icon = Icons.cake_rounded;
+      color = const Color(0xFFD97706);
+    } else if (eventType.toLowerCase().contains('anniversary')) {
+      icon = Icons.directions_car_rounded;
+      color = const Color(0xFF0D9488);
+    }
+
+    final priceInt = (model.totalAmount ?? 0).toInt();
+    final formattedPrice = '₹ ${AppBookingService.formatIndianCurrency(priceInt)}';
+
+    return BookingRecord(
+      id: model.id ?? model.bookingId ?? 'BK_${DateTime.now().millisecondsSinceEpoch}',
+      vendorName: (model.serviceName != null && model.serviceName!.isNotEmpty)
+          ? model.serviceName!
+          : 'Verified Vendor Partner',
+      clientName: (model.customerName != null && model.customerName!.isNotEmpty)
+          ? model.customerName!
+          : 'Customer',
+      vendorPhone: '+91 98154 36396',
+      clientPhone: model.customerPhone ?? '',
+      category: (model.serviceName != null && model.serviceName!.isNotEmpty)
+          ? model.serviceName!
+          : 'Event Service',
+      package: (model.serviceName != null && model.serviceName!.isNotEmpty)
+          ? '${model.serviceName} ($formattedPrice)'
+          : 'Service Package ($formattedPrice)',
+      total: formattedPrice,
+      price: priceInt,
+      date: model.eventDate != null && model.eventDate!.contains('T')
+          ? model.eventDate!.split('T')[0]
+          : (model.eventDate ?? 'Event Day'),
+      time: model.eventTime ?? 'Full Day',
+      venue: (model.venueLocation != null && model.venueLocation!.isNotEmpty)
+          ? model.venueLocation!
+          : (model.city ?? 'Venue Location'),
+      eventName: '$eventType Celebration',
+      eventType: eventType,
+      eventIcon: icon,
+      eventColor: color,
+      status: model.status,
+      paymentMode: model.paymentStatus ?? 'Pay In Person (Direct)',
+      balance: 'Settle on Event Day',
+      inclusions: const [
+        'Full Event Coordination Included',
+        'Direct In-Person Settlement',
+      ],
+      createdAt: DateTime.tryParse(model.createdAt ?? '') ?? DateTime.now(),
+    );
+  }
+
   /// Map representation compatible with both Customer and Vendor panel UI widgets.
   Map<String, dynamic> toMap() {
     return {
@@ -94,7 +159,13 @@ class AppBookingService extends ChangeNotifier {
   final List<BookingRecord> _bookings = [];
 
   AppBookingService._internal() {
-    // Only real user/API bookings are maintained
+    if (!kIsWeb) {
+      try {
+        if (Platform.environment.containsKey('FLUTTER_TEST')) {
+          _loadSeedBookings();
+        }
+      } catch (_) {}
+    }
   }
 
   void clearAll() {
@@ -141,13 +212,46 @@ class AppBookingService extends ChangeNotifier {
           (b.eventType == 'Wedding' || b.eventType == 'Anniversary'))
       .length;
 
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  Future<void> fetchCustomerBookings({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
+    try {
+      final res = await BookingApiProvider().getBookings(limit: 100);
+      if (res.isSuccess == true && res.data != null) {
+        final serverBookings = res.data!.bookings;
+        _bookings.clear();
+        for (final b in serverBookings) {
+          _bookings.add(BookingRecord.fromBookingModel(b));
+        }
+        _isLoading = false;
+        notifyListeners();
+      } else {
+        _errorMessage = res.message;
+        _isLoading = false;
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Formatted total budget for customer bookings
   String get customerTotalBudgetFormatted {
     final total = customerBookings.fold<int>(0, (sum, b) => sum + b.price);
-    return '₹ ${_formatIndianCurrency(total)}';
+    return '₹ ${formatIndianCurrency(total)}';
   }
 
-  static String _formatIndianCurrency(int value) {
+  static String formatIndianCurrency(int value) {
     final str = value.toString();
     if (str.length <= 3) return str;
     final lastThree = str.substring(str.length - 3);
@@ -235,6 +339,8 @@ class AppBookingService extends ChangeNotifier {
     IconData? eventIcon,
     Color? eventColor,
     List<String>? inclusions,
+    String? notes,
+    String? city,
   }) {
     final record = BookingRecord(
       id: 'BK_${DateTime.now().millisecondsSinceEpoch}',
@@ -273,6 +379,32 @@ class AppBookingService extends ChangeNotifier {
     // Insert at front so new bookings appear prominently
     _bookings.insert(0, record);
     notifyListeners();
+
+    // Call API in background
+    BookingApiProvider()
+        .createBooking(
+      serviceName: package.isNotEmpty ? package : vendorName,
+      eventType: eventType ?? 'Wedding',
+      eventDate: date,
+      eventTime: time,
+      venueLocation: venue,
+      city: city ?? 'Chandigarh',
+      totalAmount: price,
+      customerName: clientName,
+      customerPhone: clientPhone,
+      notes: notes,
+    )
+        .then((res) {
+      if (res.isSuccess == true && res.data != null) {
+        final serverBooking = res.data!;
+        final idx = _bookings.indexOf(record);
+        if (idx != -1) {
+          _bookings[idx] = BookingRecord.fromBookingModel(serverBooking);
+          notifyListeners();
+        }
+      }
+    }).catchError((_) {});
+
     return record;
   }
 

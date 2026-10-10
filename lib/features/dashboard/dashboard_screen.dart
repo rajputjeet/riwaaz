@@ -77,6 +77,9 @@ class _DashboardBodyState extends State<DashboardBody> {
     super.initState();
     _eventsPageController = PageController(viewportFraction: 0.91);
     AppBookingService.instance.addListener(_onBookingsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppBookingService.instance.fetchCustomerBookings(silent: true);
+    });
     _startAutoScroll();
   }
 

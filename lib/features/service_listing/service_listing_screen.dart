@@ -5,6 +5,9 @@ import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
+import '../../data/api_provider/ad_api_provider.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/user_model.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
 import '../vendor_detail/vendor_detail_screen.dart';
 import '../shell/main_shell.dart';
@@ -19,7 +22,7 @@ class ServiceListingScreen extends StatefulWidget {
 
   const ServiceListingScreen({
     super.key,
-    this.category = 'Photography & Videography',
+    this.category = 'Photographers & Videographers',
   });
 
   @override
@@ -37,13 +40,17 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   final List<String> _filters = ['All', 'Price: Low to High', 'Top Rated'];
 
   late String _currentCategory;
-  late List<_VendorData> _vendors;
+  List<_VendorData> _vendors = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  final VendorApiProvider _vendorApi = VendorApiProvider();
 
   @override
   void initState() {
     super.initState();
     _currentCategory = widget.category;
-    _vendors = _getCategoryVendors(_currentCategory);
+    _fetchVendors();
+
     _searchFocusNode.addListener(() {
       setState(() {});
     });
@@ -57,652 +64,80 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     )..forward();
   }
 
-  List<_VendorData> _getCategoryVendors(String cat) {
-    final catLower = cat.toLowerCase();
-    if (catLower == 'all' ||
-        catLower == 'all categories' ||
-        catLower == 'all vendors') {
-      return _getAllVendors();
+  /// Fetches real vendors dynamically from live backend API:
+  /// GET /api/ad/active-vendors (optionally filtered by ?categoryId=<ID>)
+  Future<void> _fetchVendors() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
     }
-    if (catLower.contains('decor') || catLower.contains('flora')) {
-      return [
-        _VendorData(
-          name: 'Royal Mandap & Floral Decor',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 240,
-          startingPrice: 45000,
-          isWishlisted: true,
-          imagePath: AppImages.exploreDecoration,
-        ),
-        _VendorData(
-          name: 'Flora Magic Events',
-          location: 'Mohali',
-          rating: 4.8,
-          reviews: 180,
-          startingPrice: 35000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorMemories,
-        ),
-        _VendorData(
-          name: 'Grand Stage Crafters',
-          location: 'Ludhiana',
-          rating: 4.7,
-          reviews: 130,
-          startingPrice: 55000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorCandid,
-        ),
-      ];
-    } else if (catLower.contains('cater')) {
-      return [
-        _VendorData(
-          name: 'Flavours of Punjab Caterers',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 310,
-          startingPrice: 850,
-          isWishlisted: true,
-          imagePath: AppImages.exploreCatering,
-        ),
-        _VendorData(
-          name: 'Royal Feast Banquet Food',
-          location: 'Panchkula',
-          rating: 4.8,
-          reviews: 195,
-          startingPrice: 1100,
-          isWishlisted: false,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-      ];
-    } else if (catLower.contains('car') || catLower.contains('vehicle')) {
-      return [
-        _VendorData(
-          name: 'Royal Vintage & Luxury Cars',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 155,
-          startingPrice: 15000,
-          isWishlisted: true,
-          imagePath: AppImages.exploreWeddingCar,
-        ),
-        _VendorData(
-          name: 'Punjab Elite Limousines',
-          location: 'Ludhiana',
-          rating: 4.7,
-          reviews: 98,
-          startingPrice: 20000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorLensArt,
-        ),
-      ];
-    } else if (catLower.contains('hotel') ||
-        catLower.contains('banquet') ||
-        catLower.contains('hall') ||
-        catLower.contains('resort')) {
-      return [
-        _VendorData(
-          name: 'Heritage Haveli Resort & Palace',
-          location: 'Mohali, Punjab',
-          rating: 4.9,
-          reviews: 420,
-          startingPrice: 250000,
-          isWishlisted: true,
-          imagePath: AppImages.weddingHero,
-        ),
-        _VendorData(
-          name: 'The Grand Palace Resort & Convention',
-          location: 'Chandigarh',
-          rating: 4.8,
-          reviews: 380,
-          startingPrice: 350000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-      ];
-    } else if (catLower.contains('makeup') || catLower.contains('hair')) {
-      return [
-        _VendorData(
-          name: 'Glamour Glow by Simran',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 215,
-          startingPrice: 22000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorMemories,
-        ),
-        _VendorData(
-          name: 'Studio 99 Bridal Lounge',
-          location: 'Mohali',
-          rating: 4.8,
-          reviews: 160,
-          startingPrice: 18000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-      ];
-    } else if (catLower.contains('mehndi')) {
-      return [
-        _VendorData(
-          name: 'Geetanjali Henna & Bridal Art',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 195,
-          startingPrice: 7500,
-          isWishlisted: true,
-          imagePath: AppImages.vendorCandid,
-        ),
-        _VendorData(
-          name: 'Royal Rajasthani Mehndi Studio',
-          location: 'Amritsar',
-          rating: 4.8,
-          reviews: 145,
-          startingPrice: 6000,
-          isWishlisted: false,
-          imagePath: AppImages.exploreDecoration,
-        ),
-      ];
-    } else if (catLower.contains('dj') || catLower.contains('sound')) {
-      return [
-        _VendorData(
-          name: 'DJ Sandy Beats & Sound System',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 280,
-          startingPrice: 35000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorLensArt,
-        ),
-        _VendorData(
-          name: 'Bass & Dhol Live DJ Stage',
-          location: 'Ludhiana',
-          rating: 4.8,
-          reviews: 175,
-          startingPrice: 28000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorShutter,
-        ),
-      ];
-    } else if (catLower.contains('band') || catLower.contains('live')) {
-      return [
-        _VendorData(
-          name: 'The Punjabi Virsa Live Symphony Band',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 140,
-          startingPrice: 75000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-        _VendorData(
-          name: 'Soulful Sufi & Brass Ensemble',
-          location: 'Patiala',
-          rating: 4.8,
-          reviews: 95,
-          startingPrice: 55000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorMemories,
-        ),
-      ];
-    } else if (catLower.contains('dress') ||
-        catLower.contains('bridal') ||
-        catLower.contains('groom')) {
-      return [
-        _VendorData(
-          name: 'Royal Libas Bridal Couture',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 340,
-          startingPrice: 65000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorCandid,
-        ),
-        _VendorData(
-          name: 'Maharaja Sherwani & Royal Wear',
-          location: 'Ludhiana',
-          rating: 4.8,
-          reviews: 210,
-          startingPrice: 42000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorLensArt,
-        ),
-      ];
-    } else if (catLower.contains('jaggo')) {
-      return [
-        _VendorData(
-          name: 'Desi Jaggo Dhol Troupe Punjab',
-          location: 'Mohali',
-          rating: 4.9,
-          reviews: 185,
-          startingPrice: 25000,
-          isWishlisted: true,
-          imagePath: AppImages.exploreDecoration,
-        ),
-        _VendorData(
-          name: 'Jashan-E-Jaggo Traditional Troupe',
-          location: 'Amritsar',
-          rating: 4.8,
-          reviews: 130,
-          startingPrice: 22000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-      ];
-    } else if (catLower.contains('turban')) {
-      return [
-        _VendorData(
-          name: 'Shahi Dastar & Turban Bandi',
-          location: 'Amritsar',
-          rating: 4.9,
-          reviews: 310,
-          startingPrice: 5000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorMemories,
-        ),
-        _VendorData(
-          name: 'Royal Pagri & Safa Stylists',
-          location: 'Chandigarh',
-          rating: 4.8,
-          reviews: 190,
-          startingPrice: 4500,
-          isWishlisted: false,
-          imagePath: AppImages.vendorShutter,
-        ),
-      ];
-    } else if (catLower.contains('card') || catLower.contains('invit')) {
-      return [
-        _VendorData(
-          name: 'Royal Scroll & Box Wedding Cards',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 230,
-          startingPrice: 150,
-          isWishlisted: true,
-          imagePath: AppImages.vendorCandid,
-        ),
-        _VendorData(
-          name: 'Kalyan Digital & Laser Invitations',
-          location: 'Ludhiana',
-          rating: 4.8,
-          reviews: 175,
-          startingPrice: 95,
-          isWishlisted: false,
-          imagePath: AppImages.exploreCatering,
-        ),
-      ];
-    } else if (catLower.contains('jewel')) {
-      return [
-        _VendorData(
-          name: 'Kalyan Heritage Bridal Jewellers',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 410,
-          startingPrice: 150000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-        _VendorData(
-          name: 'Amritsari Kundan & Polki Jewellers',
-          location: 'Amritsar',
-          rating: 4.8,
-          reviews: 285,
-          startingPrice: 110000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorLensArt,
-        ),
-      ];
-    } else if (catLower.contains('tent')) {
-      return [
-        _VendorData(
-          name: 'Grand Shehnai Tent & Shamiana',
-          location: 'Mohali',
-          rating: 4.9,
-          reviews: 240,
-          startingPrice: 120000,
-          isWishlisted: true,
-          imagePath: AppImages.weddingHero,
-        ),
-        _VendorData(
-          name: 'Royal Canopy & Luxury Tents',
-          location: 'Chandigarh',
-          rating: 4.8,
-          reviews: 160,
-          startingPrice: 180000,
-          isWishlisted: false,
-          imagePath: AppImages.exploreDecoration,
-        ),
-      ];
-    } else {
-      // Default / Photography & Videography
-      return [
-        _VendorData(
-          name: 'Royal Click Studio',
-          location: 'Chandigarh',
-          rating: 4.9,
-          reviews: 320,
-          startingPrice: 35000,
-          isWishlisted: true,
-          imagePath: AppImages.vendorRoyalClick,
-        ),
-        _VendorData(
-          name: 'Memories Forever',
-          location: 'Mohali',
-          rating: 4.8,
-          reviews: 210,
-          startingPrice: 28000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorMemories,
-        ),
-        _VendorData(
-          name: 'Shutter Magic',
-          location: 'Ludhiana',
-          rating: 4.7,
-          reviews: 185,
-          startingPrice: 22000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorShutter,
-        ),
-        _VendorData(
-          name: 'Candid Clicks',
-          location: 'Patiala',
-          rating: 4.6,
-          reviews: 150,
-          startingPrice: 18000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorCandid,
-        ),
-        _VendorData(
-          name: 'LensArt Studio',
-          location: 'Amritsar',
-          rating: 4.8,
-          reviews: 265,
-          startingPrice: 32000,
-          isWishlisted: false,
-          imagePath: AppImages.vendorLensArt,
-        ),
-      ];
-    }
-  }
 
-  List<_VendorData> _getAllVendors() {
-    return [
-      // Photography & Videography
-      _VendorData(
-        name: 'Royal Click Studio',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 320,
-        startingPrice: 35000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      _VendorData(
-        name: 'Memories Forever',
-        location: 'Mohali',
-        rating: 4.8,
-        reviews: 210,
-        startingPrice: 28000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorMemories,
-      ),
-      _VendorData(
-        name: 'LensArt Studio',
-        location: 'Amritsar',
-        rating: 4.8,
-        reviews: 265,
-        startingPrice: 32000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorLensArt,
-      ),
-      // Decoration & Stage
-      _VendorData(
-        name: 'Grand Stage Crafters & AV Tech',
-        location: 'Ludhiana',
-        rating: 4.9,
-        reviews: 190,
-        startingPrice: 55000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorCandid,
-      ),
-      _VendorData(
-        name: 'Royal Mandap & Floral Decor',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 240,
-        startingPrice: 45000,
-        isWishlisted: false,
-        imagePath: AppImages.exploreDecoration,
-      ),
-      _VendorData(
-        name: 'Flora Magic Events',
-        location: 'Mohali',
-        rating: 4.8,
-        reviews: 180,
-        startingPrice: 35000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorMemories,
-      ),
-      // Catering & Food
-      _VendorData(
-        name: 'Flavours of Punjab Caterers',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 310,
-        startingPrice: 850,
-        isWishlisted: true,
-        imagePath: AppImages.exploreCatering,
-      ),
-      _VendorData(
-        name: 'Royal Feast Banquet Food',
-        location: 'Panchkula',
-        rating: 4.8,
-        reviews: 195,
-        startingPrice: 1100,
-        isWishlisted: false,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      // DJ & Sound System
-      _VendorData(
-        name: 'DJ Sandy Beats & Sound System',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 280,
-        startingPrice: 35000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorLensArt,
-      ),
-      _VendorData(
-        name: 'Bass & Dhol Live DJ Stage',
-        location: 'Ludhiana',
-        rating: 4.8,
-        reviews: 175,
-        startingPrice: 28000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorShutter,
-      ),
-      // Venues & Banquets
-      _VendorData(
-        name: 'Heritage Haveli Resort & Palace',
-        location: 'Mohali, Punjab',
-        rating: 4.9,
-        reviews: 420,
-        startingPrice: 250000,
-        isWishlisted: true,
-        imagePath: AppImages.weddingHero,
-      ),
-      _VendorData(
-        name: 'The Grand Palace Resort & Convention',
-        location: 'Chandigarh',
-        rating: 4.8,
-        reviews: 380,
-        startingPrice: 350000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      // Luxury Cars
-      _VendorData(
-        name: 'Royal Vintage & Luxury Cars',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 155,
-        startingPrice: 15000,
-        isWishlisted: true,
-        imagePath: AppImages.exploreWeddingCar,
-      ),
-      _VendorData(
-        name: 'Punjab Elite Limousines',
-        location: 'Ludhiana',
-        rating: 4.7,
-        reviews: 98,
-        startingPrice: 20000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorLensArt,
-      ),
-      // Makeup & Hair
-      _VendorData(
-        name: 'Glamour Glow by Simran',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 215,
-        startingPrice: 22000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorMemories,
-      ),
-      _VendorData(
-        name: 'Studio 99 Bridal Lounge',
-        location: 'Mohali',
-        rating: 4.8,
-        reviews: 160,
-        startingPrice: 18000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      // Mehndi Art
-      _VendorData(
-        name: 'Geetanjali Henna & Bridal Art',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 195,
-        startingPrice: 7500,
-        isWishlisted: true,
-        imagePath: AppImages.vendorCandid,
-      ),
-      _VendorData(
-        name: 'Royal Rajasthani Mehndi Studio',
-        location: 'Amritsar',
-        rating: 4.8,
-        reviews: 145,
-        startingPrice: 6000,
-        isWishlisted: false,
-        imagePath: AppImages.exploreDecoration,
-      ),
-      // Live Symphony & Bands
-      _VendorData(
-        name: 'The Punjabi Virsa Live Symphony Band',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 140,
-        startingPrice: 75000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      _VendorData(
-        name: 'Soulful Sufi & Brass Ensemble',
-        location: 'Patiala',
-        rating: 4.8,
-        reviews: 95,
-        startingPrice: 55000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorMemories,
-      ),
-      // Bridal & Groom Wear
-      _VendorData(
-        name: 'Royal Libas Bridal Couture',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 340,
-        startingPrice: 65000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorCandid,
-      ),
-      _VendorData(
-        name: 'Maharaja Sherwani & Royal Wear',
-        location: 'Ludhiana',
-        rating: 4.8,
-        reviews: 210,
-        startingPrice: 42000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorLensArt,
-      ),
-      // Jewellery
-      _VendorData(
-        name: 'Kalyan Heritage Bridal Jewellers',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 410,
-        startingPrice: 150000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorRoyalClick,
-      ),
-      _VendorData(
-        name: 'Amritsari Kundan & Polki Jewellers',
-        location: 'Amritsar',
-        rating: 4.8,
-        reviews: 285,
-        startingPrice: 110000,
-        isWishlisted: false,
-        imagePath: AppImages.vendorLensArt,
-      ),
-      // Tents & Shamiana
-      _VendorData(
-        name: 'Grand Shehnai Tent & Shamiana',
-        location: 'Mohali',
-        rating: 4.9,
-        reviews: 240,
-        startingPrice: 120000,
-        isWishlisted: true,
-        imagePath: AppImages.weddingHero,
-      ),
-      _VendorData(
-        name: 'Royal Canopy & Luxury Tents',
-        location: 'Chandigarh',
-        rating: 4.8,
-        reviews: 160,
-        startingPrice: 180000,
-        isWishlisted: false,
-        imagePath: AppImages.exploreDecoration,
-      ),
-      // Dhol & Jaggo
-      _VendorData(
-        name: 'Desi Jaggo Dhol Troupe Punjab',
-        location: 'Mohali',
-        rating: 4.9,
-        reviews: 185,
-        startingPrice: 25000,
-        isWishlisted: true,
-        imagePath: AppImages.exploreDecoration,
-      ),
-      // Turban & Pagri
-      _VendorData(
-        name: 'Shahi Dastar & Turban Bandi',
-        location: 'Amritsar',
-        rating: 4.9,
-        reviews: 310,
-        startingPrice: 5000,
-        isWishlisted: true,
-        imagePath: AppImages.vendorMemories,
-      ),
-      // Invitations
-      _VendorData(
-        name: 'Royal Scroll & Box Wedding Cards',
-        location: 'Chandigarh',
-        rating: 4.9,
-        reviews: 230,
-        startingPrice: 150,
-        isWishlisted: true,
-        imagePath: AppImages.vendorCandid,
-      ),
-    ];
+    try {
+      String? categoryId;
+      final isAll = _currentCategory.toLowerCase() == 'all' ||
+          _currentCategory.toLowerCase() == 'all categories' ||
+          _currentCategory.toLowerCase() == 'all vendors';
+
+      if (!isAll && Get.isRegistered<CategoryController>()) {
+        final resolved =
+            CategoryController.to.resolveCategoryId(_currentCategory);
+        if (resolved.isNotEmpty &&
+            RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(resolved)) {
+          categoryId = resolved;
+        }
+      }
+
+      final res =
+          await _vendorApi.getVendorsList(categoryId: categoryId);
+
+      if (!mounted) return;
+
+      if (res.isSuccess == true && res.data != null) {
+        var list =
+            res.data!.map((u) => _VendorData.fromUserModel(u)).toList();
+
+        // If a specific category was selected and server returned vendors,
+        // also apply category-match filtering locally if needed
+        if (!isAll && list.isNotEmpty) {
+          final lowerCat = _currentCategory.toLowerCase();
+          final filtered = list.where((v) {
+            final matchesCat = v.category != null &&
+                (v.category!.toLowerCase().contains(lowerCat) ||
+                    lowerCat.contains(v.category!.toLowerCase()));
+            final matchesProfile = v.userModel?.vendorProfile?.services?.any(
+                  (s) =>
+                      s.toLowerCase().contains(lowerCat) ||
+                      lowerCat.contains(s.toLowerCase()),
+                ) ??
+                false;
+            return matchesCat || matchesProfile;
+          }).toList();
+          if (filtered.isNotEmpty) {
+            list = filtered;
+          }
+        }
+
+        setState(() {
+          _isLoading = false;
+          _vendors = list;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _vendors = [];
+          _errorMessage = res.message ?? res.error;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _vendors = [];
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   @override
@@ -739,77 +174,26 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           _buildCategoryFilterBar(),
           _buildFilterRow(),
           Expanded(
-            child: displayedVendors.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFBF4ED),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFE5D5C5)),
-                            ),
-                            child: const Icon(Icons.search_off_rounded,
-                                size: 30, color: AppColors.primary),
+            child: RefreshIndicator(
+              onRefresh: _fetchVendors,
+              color: AppColors.primary,
+              backgroundColor: AppColors.white,
+              child: _isLoading
+                  ? _buildVendorsLoadingSkeleton()
+                  : displayedVendors.isEmpty
+                      ? _buildEmptyState(query)
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No vendors match "$query"',
-                            style: GoogleFonts.cormorantGaramond(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryDark,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _currentCategory.toLowerCase() == 'all'
-                                ? 'Try searching for another vendor name or location'
-                                : 'Try searching for another name or location in $_currentCategory',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: AppColors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 8),
-                            ),
-                            child: const Text('Clear Search',
-                                style: TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: displayedVendors.length,
-                    itemBuilder: (context, i) {
-                      return _buildVendorCard(displayedVendors[i]);
-                    },
-                  ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          itemCount: displayedVendors.length,
+                          itemBuilder: (context, i) {
+                            return _buildVendorCard(displayedVendors[i]);
+                          },
+                        ),
+            ),
           ),
         ],
       ),
@@ -826,6 +210,299 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           }
         },
       ),
+    );
+  }
+
+  Widget _buildEmptyState(String query) {
+    if (query.isNotEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBF4ED),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFE5D5C5)),
+                    ),
+                    child: const Icon(
+                      Icons.search_off_rounded,
+                      size: 34,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No vendors match "$query"',
+                    style: GoogleFonts.cormorantGaramond(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _currentCategory.toLowerCase() == 'all'
+                        ? 'Try searching for another vendor name or location'
+                        : 'Try searching for another name or location in $_currentCategory',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 10),
+                    ),
+                    child: const Text(
+                      'Clear Search',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final isAll = _currentCategory.toLowerCase() == 'all';
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFEADBCE),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF380C1D).withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAF2E9),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFEADBCE),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.storefront_outlined,
+                    size: 34,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Verified Vendors Yet',
+                  style: GoogleFonts.cormorantGaramond(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF26050E),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isAll
+                      ? 'No active vendors are currently available. As new vendors join and activate their profiles, they will appear here.'
+                      : 'There are currently no verified vendors registered in "$_currentCategory". Check back soon as new vendors get onboarded!',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: AppColors.darkGrey,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _fetchVendors,
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text(
+                        'Refresh',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                      ),
+                    ),
+                    if (!isAll)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _currentCategory = 'All';
+                          });
+                          _fetchVendors();
+                        },
+                        icon: const Icon(Icons.grid_view_rounded, size: 16),
+                        label: const Text(
+                          'Browse All Categories',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(
+                            color: AppColors.primary,
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 10),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVendorsLoadingSkeleton() {
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.grey.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 160,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight.withValues(alpha: 0.45),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 140,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppColors.greyLight.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 50,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppColors.greyLight.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          width: 90,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: AppColors.greyLight.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 80,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.greyLight.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -855,10 +532,12 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               final isSelected = _currentCategory.toLowerCase() == 'all';
               return GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _currentCategory = 'All';
-                    _vendors = _getCategoryVendors('All');
-                  });
+                  if (_currentCategory.toLowerCase() != 'all') {
+                    setState(() {
+                      _currentCategory = 'All';
+                    });
+                    _fetchVendors();
+                  }
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -919,10 +598,12 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 _currentCategory.toLowerCase() == cat.title.toLowerCase();
             return GestureDetector(
               onTap: () {
-                setState(() {
-                  _currentCategory = cat.title;
-                  _vendors = _getCategoryVendors(cat.title);
-                });
+                if (_currentCategory.toLowerCase() != cat.title.toLowerCase()) {
+                  setState(() {
+                    _currentCategory = cat.title;
+                  });
+                  _fetchVendors();
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -1133,7 +814,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${_vendors.length} Verified Vendors',
+                          _isLoading
+                              ? 'Loading Vendors...'
+                              : '${_vendors.length} Verified Vendors',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -1144,14 +827,14 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       ],
                     ),
                   ),
-                  // Mirror spacer to balance back button and guarantee perfect horizontal centering
+                  // Mirror spacer to balance back button
                   const SizedBox(width: 38),
                 ],
               ),
 
               const SizedBox(height: 12),
 
-              // Unified Luxury Search Bar with instant tap highlight & pristine rounded corners
+              // Unified Search Bar
               AppSearchBar(
                 controller: _searchController,
                 focusNode: _searchFocusNode,
@@ -1169,8 +852,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: Row(
-        children: _filters.asMap().entries.map((entry) {
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: _filters.asMap().entries.map((entry) {
           final i = entry.key;
           final label = entry.value;
           final isActive = _selectedFilter == i;
@@ -1237,6 +923,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
             ),
           );
         }).toList(),
+        ),
       ),
     );
   }
@@ -1252,6 +939,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               rating: vendor.rating,
               reviews: vendor.reviews,
               startingPrice: vendor.startingPrice,
+              category: vendor.category,
+              imageUrl: vendor.imagePath,
+              vendorModel: vendor.userModel,
             ),
           ),
         );
@@ -1342,8 +1032,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     ),
                   ),
                 ),
-                // Badge
-                if (vendor.isWishlisted)
+                // Badge (Sponsored / Featured or Top Rated)
+                if (vendor.userModel?.isFeatured == true ||
+                    (vendor.userModel?.vendorProfile?.isAdActive == true) ||
+                    (vendor.userModel?.adBadge != null &&
+                        vendor.userModel!.adBadge!.isNotEmpty))
                   Positioned(
                     top: 10,
                     left: 10,
@@ -1363,16 +1056,59 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           ),
                         ],
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star_rounded, size: 12, color: Colors.white),
-                          SizedBox(width: 3),
+                          const Icon(Icons.workspace_premium_rounded,
+                              size: 12, color: Colors.white),
+                          const SizedBox(width: 3),
                           Text(
-                            'Top Rated',
-                            style: TextStyle(
+                            vendor.userModel?.adBadge != null &&
+                                    vendor.userModel!.adBadge!.isNotEmpty
+                                ? vendor.userModel!.adBadge!
+                                : 'SPONSORED',
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10.5,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (vendor.isWishlisted || vendor.rating >= 4.8)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryDark],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 12, color: Colors.white),
+                          const SizedBox(width: 3),
+                          Text(
+                            vendor.rating >= 4.8 ? 'Top Rated' : 'Verified Partner',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
                             ),
@@ -1426,9 +1162,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       ),
                       const Spacer(),
                       Text(
-                        vendor.startingPrice >= 1000
-                            ? '₹${(vendor.startingPrice / 1000).toStringAsFixed(0)}K onwards'
-                            : '₹${vendor.startingPrice} onwards',
+                        vendor.startingPrice > 0
+                            ? (vendor.startingPrice >= 1000
+                                ? '₹${(vendor.startingPrice / 1000).toStringAsFixed(0)}K onwards'
+                                : '₹${vendor.startingPrice} onwards')
+                            : 'Starting price on request',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w700,
@@ -1448,6 +1186,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
 }
 
 class _VendorData {
+  final String id;
   final String name;
   final String location;
   final double rating;
@@ -1455,8 +1194,11 @@ class _VendorData {
   final int startingPrice;
   final bool isWishlisted;
   final String imagePath;
+  final String? category;
+  final UserModel? userModel;
 
   const _VendorData({
+    required this.id,
     required this.name,
     required this.location,
     required this.rating,
@@ -1464,5 +1206,56 @@ class _VendorData {
     required this.startingPrice,
     required this.isWishlisted,
     required this.imagePath,
+    this.category,
+    this.userModel,
   });
+
+  factory _VendorData.fromUserModel(UserModel user) {
+    final profile = user.vendorProfile;
+    final bName = (profile?.businessName != null &&
+            profile!.businessName!.trim().isNotEmpty)
+        ? profile.businessName!.trim()
+        : (user.fullName != null && user.fullName!.trim().isNotEmpty
+            ? user.fullName!.trim()
+            : 'Wedding Vendor Partner');
+
+    final loc = (profile?.city != null && profile!.city!.trim().isNotEmpty)
+        ? profile.city!.trim()
+        : 'Punjab';
+
+    int price = 0;
+    if (profile?.packages != null && profile!.packages!.isNotEmpty) {
+      final firstPkg = profile.packages!.first;
+      if (firstPkg is Map && firstPkg['price'] != null) {
+        price = int.tryParse(firstPkg['price'].toString()) ?? 0;
+      }
+    }
+
+    String img = '';
+    if (user.profileImgUrl != null && user.profileImgUrl!.trim().isNotEmpty) {
+      img = user.profileImgUrl!.trim();
+    } else if (profile?.portfolio != null && profile!.portfolio!.isNotEmpty) {
+      img = profile.portfolio!.first.toString();
+    } else {
+      img = AppImages.vendorRoyalClick;
+    }
+
+    final categoryStr =
+        (profile?.services != null && profile!.services!.isNotEmpty)
+            ? profile!.services!.join(', ')
+            : (profile?.adTitle ?? '');
+
+    return _VendorData(
+      id: user.id ?? '',
+      name: bName,
+      location: loc,
+      rating: 4.9,
+      reviews: 120,
+      startingPrice: price,
+      isWishlisted: false,
+      imagePath: img,
+      category: categoryStr,
+      userModel: user,
+    );
+  }
 }

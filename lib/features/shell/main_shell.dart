@@ -51,7 +51,9 @@ class _MainShellState extends State<MainShell> {
   void _onTabTap(int index) {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
-    if (index == 4) {
+    if (index == 3) {
+      AppBookingService.instance.fetchCustomerBookings(silent: true);
+    } else if (index == 4) {
       _customerProfileKey.currentState?.loadProfile(silent: true);
     }
   }
@@ -861,6 +863,9 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
   void initState() {
     super.initState();
     AppBookingService.instance.addListener(_onBookingsChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppBookingService.instance.fetchCustomerBookings(silent: true);
+    });
   }
 
   @override
@@ -1212,14 +1217,18 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
   @override
   Widget build(BuildContext context) {
     final bookings = _filteredBookings;
+    final isLoading = AppBookingService.instance.isLoading;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => AppBookingService.instance.fetchCustomerBookings(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1458,7 +1467,26 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
             const SizedBox(height: 14),
 
             // Booked Vendors Cards or Empty State
-            if (bookings.isEmpty)
+            if (isLoading && bookings.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(40),
+                alignment: Alignment.center,
+                child: const Column(
+                  children: [
+                    CircularProgressIndicator(color: AppColors.primary),
+                    SizedBox(height: 12),
+                    Text(
+                      'Loading your bookings...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.darkGrey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (bookings.isEmpty)
               Container(
                 padding: const EdgeInsets.all(32),
                 margin: const EdgeInsets.symmetric(vertical: 20),
@@ -1851,6 +1879,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2715,14 +2744,29 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                                 loadProfile();
                               }
                             },
+                            borderRadius: BorderRadius.circular(20),
                             child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(
-                                color: AppColors.gold,
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.white,
+                                  width: 2.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.25),
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: const Icon(Icons.edit_rounded,
-                                  color: AppColors.white, size: 13),
+                              child: const Icon(
+                                Icons.edit_rounded,
+                                color: AppColors.white,
+                                size: 15,
+                              ),
                             ),
                           ),
                         ),
@@ -2743,6 +2787,53 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.darkGrey,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () async {
+                        final updated = await Navigator.of(context).push<bool>(
+                          FadeScaleRoute(
+                            page: const CustomerEditProfileScreen(),
+                          ),
+                        );
+                        if (updated == true || mounted) {
+                          loadProfile();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.edit_rounded,
+                              size: 13,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Edit Profile',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

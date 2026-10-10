@@ -4,9 +4,11 @@ import '../models/active_plan_model.dart';
 import '../models/booking_model.dart';
 import '../models/dashboard_stats_model.dart';
 import '../models/vendor_application_model.dart';
+import '../models/user_model.dart';
 import '../network_handling.dart';
 import '../shared/data_response.dart';
 import '../../utils/helper/storage_helper.dart';
+import 'ad_api_provider.dart';
 import 'api_constant.dart';
 import 'user_api_provider.dart';
 
@@ -460,9 +462,7 @@ class VendorApiProvider {
 
       return DataResponse<BookingsListResponse>.fromJson(
         response.data as Map<String, dynamic>,
-        (json) => BookingsListResponse.fromJson(
-          response.data as Map<String, dynamic>,
-        ),
+        (json) => BookingsListResponse.fromJson(json),
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -529,4 +529,74 @@ class VendorApiProvider {
         oldPassword: oldPassword,
         newPassword: newPassword,
       );
+
+  // ─── Public Vendors Discovery ───────────────────────────────────────────────
+
+  /// Fetches vendors list.
+  /// First queries the public general vendor listing endpoint (/api/vendors),
+  /// and automatically falls back to active featured vendors (/api/ad/active-vendors)
+  /// if the general endpoint is not deployed yet on the backend server.
+  Future<DataResponse<List<UserModel>>> getVendorsList({
+    String? categoryId,
+    String? search,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        if (categoryId != null && categoryId.isNotEmpty)
+          'categoryId': categoryId,
+        if (search != null && search.isNotEmpty) 'search': search,
+      };
+
+      // 1. Try public normal vendor listing endpoint
+      try {
+        final response = await _dio.get(
+          ApiConstants.vendorList,
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        );
+
+        if (response.statusCode == 200 && response.data != null) {
+          final resMap = response.data is Map<String, dynamic>
+              ? response.data as Map<String, dynamic>
+              : <String, dynamic>{};
+          final result = DataResponse<List<UserModel>>.fromJson(
+            resMap,
+            (data) {
+              List<dynamic> rawList = [];
+              if (data is List) {
+                rawList = data;
+              } else if (data is Map<String, dynamic>) {
+                if (data['list'] is List) {
+                  rawList = data['list'] as List;
+                } else if (data['vendors'] is List) {
+                  rawList = data['vendors'] as List;
+                }
+              }
+              return rawList
+                  .whereType<Map<String, dynamic>>()
+                  .map((e) => UserModel.fromJson(e))
+                  .toList();
+            },
+          );
+          if (result.isSuccess == true &&
+              result.data != null &&
+              result.data!.isNotEmpty) {
+            return result;
+          }
+        }
+      } catch (_) {
+        // Fall back to active-vendors if /api/vendors returned 404 or error
+      }
+
+      // 2. Fall back to active sponsored vendors API
+      return AdApiProvider().getActiveSponsoredVendors(categoryId: categoryId);
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<List<UserModel>>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+        data: [],
+      );
+    }
+  }
 }

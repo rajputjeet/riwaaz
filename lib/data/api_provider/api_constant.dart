@@ -1,4 +1,4 @@
-const bool isProdMode = false;
+const bool isProdMode = true;
 
 abstract class ApiConstants {
   static const String _prodUrl = "https://wedora-pgc7.onrender.com";
@@ -66,7 +66,9 @@ abstract class ApiConstants {
   static String vendorServiceDelete(String id) =>
       vendorServicePackageDelete(id);
 
-  // 10. Vendor Bookings APIs
+  // 10. Bookings APIs (Customer & Vendor)
+  static const String bookingCreate = "/api/booking/create";
+  static const String bookingList = "/api/booking/list";
   static const String vendorBookingsList = "/api/booking/list";
   static String vendorUpdateBookingStatus(String bookingId) =>
       "/api/users/vendor/booking/status/$bookingId";
@@ -88,4 +90,8 @@ abstract class ApiConstants {
   static const String adBuy = "/api/ad/buy";
   static const String adMyAd = "/api/ad/my-ad";
   static const String adActiveVendors = "/api/ad/active-vendors";
+
+  // 15. Public & Verified Vendors Discovery API
+  static const String vendorList = "/api/vendors";
+  static const String vendorListAll = "/api/users/vendors";
 }

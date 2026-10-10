@@ -48,12 +48,23 @@ class BookingModel {
       status == 'Cancelled' || status == 'Rejected' || status == 'Declined';
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    String? custName = json['customerName']?.toString();
+    String? custEmail = json['customerEmail']?.toString();
+    String? custPhone = json['customerPhone']?.toString();
+
+    if (json['userId'] is Map<String, dynamic>) {
+      final u = json['userId'] as Map<String, dynamic>;
+      custName ??= u['fullName']?.toString() ?? u['name']?.toString();
+      custEmail ??= u['email']?.toString();
+      custPhone ??= u['mobile']?.toString() ?? u['phone']?.toString();
+    }
+
     return BookingModel(
       id: (json['_id'] ?? json['id'])?.toString(),
       bookingId: json['bookingId']?.toString(),
-      customerName: json['customerName']?.toString(),
-      customerEmail: json['customerEmail']?.toString(),
-      customerPhone: json['customerPhone']?.toString(),
+      customerName: custName,
+      customerEmail: custEmail,
+      customerPhone: custPhone,
       serviceName: json['serviceName']?.toString(),
       eventType: json['eventType']?.toString(),
       eventDate: json['eventDate']?.toString(),
@@ -63,8 +74,12 @@ class BookingModel {
           : int.tryParse(json['guestCount']?.toString() ?? ''),
       venueLocation: json['venueLocation']?.toString(),
       city: json['city']?.toString(),
-      totalAmount: json['totalAmount'] is num ? json['totalAmount'] : null,
-      advancePaid: json['advancePaid'] is num ? json['advancePaid'] : null,
+      totalAmount: json['totalAmount'] is num
+          ? json['totalAmount']
+          : num.tryParse(json['totalAmount']?.toString() ?? ''),
+      advancePaid: json['advancePaid'] is num
+          ? json['advancePaid']
+          : num.tryParse(json['advancePaid']?.toString() ?? ''),
       paymentStatus: json['paymentStatus']?.toString(),
       status: json['status']?.toString() ?? 'Pending',
       notes: json['notes']?.toString(),
@@ -137,16 +152,38 @@ class BookingsListResponse {
 
   BookingsListResponse({required this.bookings, this.summary});
 
-  factory BookingsListResponse.fromJson(Map<String, dynamic> json) {
-    final List<dynamic> data = json['data'] ?? [];
+  factory BookingsListResponse.fromJson(dynamic rawJson) {
+    List<dynamic> list = [];
+    BookingsSummary? summary;
+
+    if (rawJson is List) {
+      list = rawJson;
+    } else if (rawJson is Map<String, dynamic>) {
+      final inner = rawJson['data'];
+      if (inner is List) {
+        list = inner;
+      } else if (inner is Map<String, dynamic>) {
+        if (inner['data'] is List) {
+          list = inner['data'] as List;
+        }
+        if (inner['summary'] is Map<String, dynamic>) {
+          summary = BookingsSummary.fromJson(inner['summary'] as Map<String, dynamic>);
+        }
+      } else if (rawJson['bookings'] is List) {
+        list = rawJson['bookings'] as List;
+      }
+
+      if (summary == null && rawJson['summary'] is Map<String, dynamic>) {
+        summary = BookingsSummary.fromJson(rawJson['summary'] as Map<String, dynamic>);
+      }
+    }
+
     return BookingsListResponse(
-      bookings: data
+      bookings: list
           .whereType<Map<String, dynamic>>()
           .map((b) => BookingModel.fromJson(b))
           .toList(),
-      summary: json['summary'] != null && json['summary'] is Map<String, dynamic>
-          ? BookingsSummary.fromJson(json['summary'] as Map<String, dynamic>)
-          : null,
+      summary: summary,
     );
   }
 }

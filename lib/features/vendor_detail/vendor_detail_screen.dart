@@ -4,11 +4,13 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/app_animations.dart';
+import '../../data/models/user_model.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
 import '../../core/services/booking_service.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/portfolio_video_player.dart';
 import '../shell/main_shell.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 
 class VendorDetailScreen extends StatefulWidget {
@@ -17,14 +19,20 @@ class VendorDetailScreen extends StatefulWidget {
   final double rating;
   final int reviews;
   final int startingPrice;
+  final String? category;
+  final String? imageUrl;
+  final UserModel? vendorModel;
 
   const VendorDetailScreen({
     super.key,
-    this.vendorName = 'Royal Click Studio',
-    this.location = 'Chandigarh',
+    this.vendorName = 'Verified Vendor Partner',
+    this.location = 'Punjab',
     this.rating = 4.9,
-    this.reviews = 320,
-    this.startingPrice = 35000,
+    this.reviews = 120,
+    this.startingPrice = 25000,
+    this.category,
+    this.imageUrl,
+    this.vendorModel,
   });
 
   @override
@@ -43,38 +51,69 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
 
   final List<String> _tabs = ['About', 'Packages', 'Portfolio', 'Reviews'];
 
-  static const List<_PackageData> _vendorPackages = [
-    _PackageData(
-      'Basic Package',
-      25000,
-      [
-        '1 Photographer',
-        '5 Edited Photos',
-        '1 Album',
-      ],
-      AppColors.grey,
-    ),
-    _PackageData(
-      'Standard Package',
-      40000,
-      [
-        '2 Photographers',
-        'Candid + Album',
-        'Cinematic Video',
-      ],
-      AppColors.primary,
-    ),
-    _PackageData(
-      'Premium Package',
-      70000,
-      [
-        'Pre-Wedding + Drone',
-        'Cinematic Video',
-        'Album + 2 Photographers',
-      ],
-      AppColors.gold,
-    ),
-  ];
+  List<_PackageData> get _activePackages {
+    if (widget.vendorModel?.vendorProfile?.packages != null &&
+        widget.vendorModel!.vendorProfile!.packages!.isNotEmpty) {
+      final list = <_PackageData>[];
+      for (final p in widget.vendorModel!.vendorProfile!.packages!) {
+        if (p is Map) {
+          final title =
+              p['name']?.toString() ?? p['title']?.toString() ?? 'Service Package';
+          final price = int.tryParse(p['price']?.toString() ?? '') ??
+              widget.startingPrice;
+          List<String> inclusions = [];
+          if (p['features'] is List) {
+            inclusions =
+                (p['features'] as List).map((e) => e.toString()).toList();
+          } else if (p['services'] is List) {
+            inclusions =
+                (p['services'] as List).map((e) => e.toString()).toList();
+          } else if (p['description'] != null) {
+            inclusions = [p['description'].toString()];
+          }
+          list.add(_PackageData(
+            title,
+            price,
+            inclusions.isNotEmpty
+                ? inclusions
+                : const ['Full Event Coordination', 'Direct Vendor Settlement'],
+            list.isEmpty
+                ? AppColors.grey
+                : (list.length == 1 ? AppColors.primary : AppColors.gold),
+          ));
+        }
+      }
+      if (list.isNotEmpty) return list;
+    }
+
+    if (widget.startingPrice > 0) {
+      return [
+        _PackageData(
+          'Standard Service Package',
+          widget.startingPrice,
+          const [
+            'Dedicated Professional Team',
+            'Full Event Coordination Included',
+            'Direct In-Person Settlement',
+          ],
+          AppColors.primary,
+        ),
+      ];
+    }
+
+    return const [
+      _PackageData(
+        'Custom Service Package',
+        25000,
+        [
+          'Dedicated Professional Team',
+          'Full Event Coordination Included',
+          'Direct In-Person Settlement',
+        ],
+        AppColors.primary,
+      ),
+    ];
+  }
 
   String _formatCurrency(int amount) {
     return amount.toString().replaceAllMapped(
@@ -227,7 +266,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           children: [
             // Hero image — real photo or server URL
             CachedImageView(
-              imageUrl: AppImages.vendorDetailHero,
+              imageUrl: (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
+                  ? widget.imageUrl!
+                  : (widget.vendorModel?.profileImgUrl != null &&
+                          widget.vendorModel!.profileImgUrl!.isNotEmpty)
+                      ? widget.vendorModel!.profileImgUrl!
+                      : AppImages.vendorDetailHero,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
@@ -297,10 +341,19 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'RC',
-                      style: TextStyle(
+                      widget.vendorName.trim().isNotEmpty
+                          ? widget.vendorName
+                              .trim()
+                              .split(' ')
+                              .where((s) => s.isNotEmpty)
+                              .take(2)
+                              .map((s) => s[0])
+                              .join()
+                              .toUpperCase()
+                          : 'V',
+                      style: const TextStyle(
                         color: AppColors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -433,10 +486,11 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildPackages() {
+    final pkgs = _activePackages;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        children: _vendorPackages.asMap().entries.map((entry) {
+        children: pkgs.asMap().entries.map((entry) {
           final i = entry.key;
           final pkg = entry.value;
           final isSelected = _selectedPackageIndex == i;
@@ -444,7 +498,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             delay: Duration(milliseconds: 100 * i),
             child: _buildPackageCard(
               pkg,
-              isPopular: i == 1,
+              isPopular: i == 0 || i == 1,
               isSelected: isSelected,
               onSelect: () => setState(() => _selectedPackageIndex = i),
             ),
@@ -512,14 +566,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                           color: Colors.white, size: 14)
                       : null,
                 ),
-                Text(
-                  pkg.name,
-                  style: AppTextStyles.headlineSmall.copyWith(
-                    fontSize: 15.5,
-                    color: isSelected ? const Color(0xFF26050E) : AppColors.black,
+                Expanded(
+                  child: Text(
+                    pkg.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headlineSmall.copyWith(
+                      fontSize: 15.5,
+                      color: isSelected ? const Color(0xFF26050E) : AppColors.black,
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 if (isPopular)
                   Container(
                     margin: const EdgeInsets.only(right: 6),
@@ -645,6 +702,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildAbout() {
+    final bio = (widget.vendorModel?.vendorProfile?.businessDescription != null &&
+            widget.vendorModel!.vendorProfile!.businessDescription!.trim().isNotEmpty)
+        ? widget.vendorModel!.vendorProfile!.businessDescription!.trim()
+        : '${widget.vendorName} is a verified event and wedding vendor partner serving ${widget.location} and surrounding areas. Connect directly with transparent quotes and direct in-person settlement.';
+
+    final services = widget.vendorModel?.vendorProfile?.services;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -653,24 +717,78 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           Text('About ${widget.vendorName}', style: AppTextStyles.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            'Royal Click Studio is a premium wedding photography and videography service based in Chandigarh. With over 250 successful weddings, we specialise in capturing every precious moment of your special day with artistic excellence.',
+            bio,
             style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
           ),
+          if (services != null && services.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Specialties & Services',
+                style: AppTextStyles.headlineSmall.copyWith(fontSize: 16)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: services.map((s) {
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBF4ED),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE5D5C6)),
+                  ),
+                  child: Text(
+                    s,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildPortfolio() {
-    // Portfolio items: type = 'image' or 'video', url = asset path or network url
-    final portfolioItems = [
-      {'type': 'image', 'url': AppImages.vendorRoyalClick, 'title': ''},
-      {'type': 'image', 'url': AppImages.vendorMemories, 'title': ''},
-      {'type': 'image', 'url': AppImages.vendorShutter, 'title': ''},
-      {'type': 'image', 'url': AppImages.vendorCandid, 'title': ''},
-      {'type': 'image', 'url': AppImages.vendorLensArt, 'title': ''},
-      {'type': 'image', 'url': AppImages.weddingHero, 'title': ''},
-    ];
+    final rawPortfolio = widget.vendorModel?.vendorProfile?.portfolio;
+    final List<Map<String, String>> portfolioItems = [];
+
+    if (rawPortfolio != null && rawPortfolio.isNotEmpty) {
+      for (final item in rawPortfolio) {
+        if (item is Map) {
+          final url =
+              item['url']?.toString() ?? item['fileUrl']?.toString() ?? '';
+          final type = item['type']?.toString() ??
+              (CachedImageView.isVideoUrl(url) ? 'video' : 'image');
+          final title = item['title']?.toString() ?? '';
+          if (url.isNotEmpty) {
+            portfolioItems.add({'type': type, 'url': url, 'title': title});
+          }
+        } else if (item is String && item.isNotEmpty) {
+          portfolioItems.add({
+            'type': CachedImageView.isVideoUrl(item) ? 'video' : 'image',
+            'url': item,
+            'title': '',
+          });
+        }
+      }
+    }
+
+    if (portfolioItems.isEmpty) {
+      final defaultImg = (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
+          ? widget.imageUrl!
+          : (widget.vendorModel?.profileImgUrl != null &&
+                  widget.vendorModel!.profileImgUrl!.isNotEmpty)
+              ? widget.vendorModel!.profileImgUrl!
+              : AppImages.vendorRoyalClick;
+      portfolioItems
+          .add({'type': 'image', 'url': defaultImg, 'title': widget.vendorName});
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -733,7 +851,6 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     );
   }
 
-
   Widget _buildReviews() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -742,17 +859,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           _buildReviewCard(
             'Priya Sharma',
             5.0,
-            'Absolutely stunning work! Royal Click captured every emotion perfectly. Highly recommend!',
+            'Absolutely stunning work! Everything was captured and coordinated with great care.',
           ),
           _buildReviewCard(
             'Rahul Mehta',
-            4.5,
-            'Professional team, great quality photos. Delivered on time. Would book again!',
+            4.8,
+            'Professional team, timely execution, and very accommodating with all our requests.',
           ),
           _buildReviewCard(
             'Anjali Kapoor',
             5.0,
-            'Best wedding photographer in Chandigarh! The candid shots are breathtaking.',
+            'Truly memorable experience! Highly recommend booking for weddings and milestone celebrations.',
           ),
         ],
       ),
@@ -811,7 +928,15 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildBottomActionBar() {
-    final selectedPkg = _vendorPackages[_selectedPackageIndex];
+    final pkgs = _activePackages;
+    final selectedPkg = pkgs.isNotEmpty
+        ? pkgs[_selectedPackageIndex < pkgs.length ? _selectedPackageIndex : 0]
+        : _PackageData(
+            'Standard Package',
+            widget.startingPrice,
+            const [],
+            AppColors.primary,
+          );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -874,8 +999,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 child: AnimatedTapWidget(
                   onTap: () => _showBookingSheet(selectedPkg),
                   child: Container(
-                    height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    height: 54,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       gradient: AppColors.primaryGradient,
                       borderRadius: BorderRadius.circular(14),
@@ -893,6 +1018,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
@@ -902,7 +1028,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                                 style: const TextStyle(
                                   color: AppColors.goldLight,
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 11,
+                                  fontSize: 10.5,
+                                  height: 1.1,
                                 ),
                               ),
                               Text(
@@ -910,7 +1037,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                                 style: const TextStyle(
                                   color: AppColors.white,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 16,
+                                  fontSize: 15,
+                                  height: 1.15,
                                 ),
                               ),
                             ],
@@ -1114,19 +1242,35 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             const SizedBox(height: 20),
             AnimatedTapWidget(
               onTap: () {
+                final loggedInName = StorageHelper().getUserName();
+                final loggedInPhone = StorageHelper().getUserMobile();
+                final weddingDate = StorageHelper().getWeddingDate();
+                final weddingLoc = StorageHelper().getWeddingLocation();
+
                 AppBookingService.instance.createBooking(
                   vendorName: widget.vendorName,
                   category: 'Event Services',
                   package: '${pkg.name} (₹${_formatCurrency(pkg.price)})',
                   total: '₹${_formatCurrency(pkg.price)}',
                   price: pkg.price,
-                  clientName: 'Simran & Rahul 💍',
-                  clientPhone: '+91 98765 11223',
-                  vendorPhone: '+91 98765 43210',
-                  date: '28 Dec 2026',
+                  clientName: (loggedInName != null && loggedInName.trim().isNotEmpty)
+                      ? loggedInName.trim()
+                      : 'Customer',
+                  clientPhone: (loggedInPhone != null && loggedInPhone.trim().isNotEmpty)
+                      ? loggedInPhone.trim()
+                      : '+91 98765 11223',
+                  vendorPhone: '+91 98154 36396',
+                  date: (weddingDate != null && weddingDate.trim().isNotEmpty)
+                      ? weddingDate.trim()
+                      : '28 Dec 2026',
                   time: 'Full Day Event',
-                  venue: 'The Oberoi Sukhvilas, New Chandigarh',
-                  eventName: 'Grand Royal Vivah',
+                  venue: (weddingLoc != null && weddingLoc.trim().isNotEmpty)
+                      ? weddingLoc.trim()
+                      : 'The Oberoi Sukhvilas, New Chandigarh',
+                  city: (weddingLoc != null && weddingLoc.trim().isNotEmpty)
+                      ? weddingLoc.trim()
+                      : 'Chandigarh',
+                  eventName: 'Wedding Celebration',
                   eventType: 'Wedding',
                   eventIcon: Icons.favorite_rounded,
                   eventColor: AppColors.primary,
