@@ -10,7 +10,9 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
+        onPrimary: AppColors.white,
         secondary: AppColors.gold,
+        onSecondary: AppColors.white,
         surface: AppColors.background,
         error: AppColors.error,
       ),

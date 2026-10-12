@@ -66,7 +66,7 @@ class _DashboardBodyState extends State<DashboardBody> {
         daysLeft: days,
         hoursLeft: hours,
         minLeft: mins,
-        gradientColors: const [Color(0xFF5E1B33), Color(0xFF380C1D)],
+        gradientColors: const [Color(0xFF9E1F3B), Color(0xFF8B1A2E)],
         icon: Icons.celebration_rounded,
       );
     }).toList();

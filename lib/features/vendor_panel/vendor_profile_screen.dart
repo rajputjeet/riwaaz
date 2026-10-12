@@ -617,17 +617,17 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                               child: OutlinedButton.icon(
                                 onPressed: () => _openChangePasswordScreen(context),
                                 icon: const Icon(Icons.lock_reset_rounded,
-                                    color: AppColors.secondary, size: 18),
+                                    color: AppColors.primary, size: 18),
                                 label: const Text(
                                   'Change Password',
                                   style: TextStyle(
-                                    color: AppColors.secondary,
+                                    color: AppColors.primary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.secondary, width: 1.2),
+                                  side: const BorderSide(color: AppColors.primary, width: 1.2),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

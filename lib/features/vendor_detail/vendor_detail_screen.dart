@@ -281,9 +281,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFF6B0F1E),
-                      Color(0xFF8B1A2E),
-                      Color(0xFF5C0F1E),
+                      AppColors.primaryLight,
+                      AppColors.primary,
+                      AppColors.primaryDark,
                     ],
                   ),
                 ),

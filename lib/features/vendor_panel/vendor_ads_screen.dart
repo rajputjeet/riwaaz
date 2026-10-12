@@ -530,11 +530,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2C1810), Color(0xFF6B1D2F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppColors.primaryGradient,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(

@@ -152,7 +152,7 @@ class _ExploreBodyState extends State<ExploreBody> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF380C1D).withValues(alpha: 0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),

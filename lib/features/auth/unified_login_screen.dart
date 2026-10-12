@@ -78,7 +78,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
       backgroundColor: AppColors.primaryDark,
       body: Stack(
         children: [
-          // ─── Background: Royal deep wine gradient ─────────────────────────
+          // ─── Background: Royal crimson theme gradient ─────────────────────────
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -86,10 +86,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFF4A1027), // Top soft wine
-                    Color(0xFF380C1D), // Main brand wine
-                    Color(0xFF220510), // Deep wine shade
-                    Color(0xFF14020A), // Rich dark floor
+                    Color(0xFF7D001E), // Top royal crimson
+                    Color(0xFF8B1A2E), // Main brand royal maroon
+                    Color(0xFF4A0210), // Deep maroon shade
+                    Color(0xFF2E040B), // Rich dark floor
                   ],
                   stops: [0.0, 0.35, 0.72, 1.0],
                 ),
@@ -310,7 +310,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.secondary,
-                                        foregroundColor: AppColors.primary,
+                                        foregroundColor: AppColors.white,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(14),
@@ -325,14 +325,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                         children: [
                                           const Icon(Icons.favorite_rounded,
                                               size: 18,
-                                              color: AppColors.primary),
+                                              color: AppColors.white),
                                           const SizedBox(width: 8),
                                           Text(
                                             'Register as User',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 15.5,
                                               fontWeight: FontWeight.w700,
-                                              color: AppColors.primary,
+                                              color: AppColors.white,
                                               letterSpacing: 0.3,
                                             ),
                                           ),

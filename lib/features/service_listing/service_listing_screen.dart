@@ -312,7 +312,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF380C1D).withValues(alpha: 0.04),
+                  color: AppColors.primary.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -584,7 +584,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                               isSelected ? FontWeight.w700 : FontWeight.w600,
                           color: isSelected
                               ? Colors.white
-                              : const Color(0xFF2A160F),
+                              : AppColors.darkGrey,
                         ),
                       ),
                     ],
@@ -657,7 +657,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
                             ? Colors.white
-                            : const Color(0xFF2A160F),
+                            : AppColors.darkGrey,
                       ),
                     ),
                   ],
@@ -714,7 +714,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF380C1D).withValues(alpha: 0.05),
+            color: AppColors.primary.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -869,11 +869,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: isActive
-                      ? const LinearGradient(
-                          colors: [Color(0xFF5E1B33), Color(0xFF380C1D)],
-                        )
-                      : null,
+                  gradient: isActive ? AppColors.primaryGradient : null,
                   color: isActive ? null : const Color(0xFFF7EFE6),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
@@ -885,7 +881,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                   boxShadow: isActive
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF380C1D).withValues(alpha: 0.2),
+                            color: AppColors.primary.withValues(alpha: 0.25),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),

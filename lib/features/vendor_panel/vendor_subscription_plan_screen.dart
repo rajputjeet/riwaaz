@@ -1021,11 +1021,7 @@ class _VendorSubscriptionPlanScreenState
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8B1A2E), Color(0xFF6A1021)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.primaryGradient,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(

@@ -214,7 +214,7 @@ class _VendorShellState extends State<VendorShell> {
         badgeText = 'DECLINED';
         subtitle = 'Your verification needs updates. Tap to review & resubmit.';
         iconData = Icons.error_outline_rounded;
-        gradientColors = const [Color(0xFF330C12), Color(0xFF1F050A)];
+        gradientColors = const [AppColors.primaryDark, Color(0xFF1F050A)];
       } else if (isUnderReview) {
         borderColor = const Color(0xFFF59E0B).withValues(alpha: 0.5);
         iconBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.18);

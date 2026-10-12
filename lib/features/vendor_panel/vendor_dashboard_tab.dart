@@ -430,11 +430,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2C1810), Color(0xFF4A1E18)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        gradient: AppColors.primaryGradient,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
         boxShadow: [
@@ -517,7 +513,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.black,
+              foregroundColor: AppColors.white,
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
@@ -529,7 +525,11 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
             ),
             child: const Text(
               'Plans',
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
+              ),
             ),
           ),
         ],
@@ -600,8 +600,8 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
               FadeScaleRoute(page: const VendorAdsScreen()),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEAB308),
-              foregroundColor: Colors.black,
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.white,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -612,7 +612,11 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
             ),
             child: const Text(
               'Boost Ad',
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.white,
+              ),
             ),
           ),
         ],

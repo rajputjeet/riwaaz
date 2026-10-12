@@ -411,14 +411,14 @@ class _SplashScreenState extends State<SplashScreen>
             Text(
               'Get Started',
               style: TextStyle(
-                color: AppColors.primary,
+                color: AppColors.white,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
               ),
             ),
             SizedBox(width: 8),
-            Icon(Icons.arrow_forward_rounded, color: AppColors.primary, size: 20),
+            Icon(Icons.arrow_forward_rounded, color: AppColors.white, size: 20),
           ],
         ),
       ),
