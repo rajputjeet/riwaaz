@@ -60,7 +60,7 @@ lib/
 
 | Role | Color | Hex |
 |------|-------|-----|
-| Primary | Deep Maroon | `#8B1A2E` |
+| Primary | Deep Crimson / Ruby | `#90002B` |
 | Gold Accent | Rich Gold | `#D4A017` |
 | Background | Warm Cream | `#FFF8F0` |
 | Success | Forest Green | `#2E7D32` |

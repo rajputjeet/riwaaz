@@ -183,8 +183,8 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF26050E), // Deep royal maroon
-            Color(0xFF1E040B),
+            Color(0xFF2A000D), // Deep royal ruby shade matching #90002B
+            Color(0xFF1B0008),
           ],
         ),
         boxShadow: [

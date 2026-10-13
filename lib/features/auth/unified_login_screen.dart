@@ -86,10 +86,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFF7D001E), // Top royal crimson
-                    Color(0xFF8B1A2E), // Main brand royal maroon
-                    Color(0xFF4A0210), // Deep maroon shade
-                    Color(0xFF2E040B), // Rich dark floor
+                    Color(0xFFB00E3D), // Top royal crimson
+                    Color(0xFF90002B), // Main brand ruby red (#90002B)
+                    Color(0xFF5E001C), // Deep ruby shade
+                    Color(0xFF380011), // Rich dark floor
                   ],
                   stops: [0.0, 0.35, 0.72, 1.0],
                 ),

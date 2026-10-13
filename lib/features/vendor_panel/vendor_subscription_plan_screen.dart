@@ -104,7 +104,7 @@ class _VendorSubscriptionPlanScreenState
       'badge': 'BEST VALUE',
       'savings': 'SAVE 25%',
       'tagline': 'Full year dominance & maximum client bookings',
-      'color': const Color(0xFF8B1A2E),
+      'color': const Color(0xFF90002B),
       'icon': Icons.diamond_rounded,
       'isPopular': false,
       'features': [
@@ -185,7 +185,7 @@ class _VendorSubscriptionPlanScreenState
             ? sp.description!
             : 'Vendor partner subscription access',
         'color': isBest
-            ? const Color(0xFF8B1A2E)
+            ? const Color(0xFF90002B)
             : (isPopular ? AppColors.primary : const Color(0xFF5A6270)),
         'icon': isBest
             ? Icons.diamond_rounded
@@ -772,7 +772,7 @@ class _VendorSubscriptionPlanScreenState
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 5),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF8B1A2E),
+                          color: Color(0xFF90002B),
                           borderRadius:
                               BorderRadius.vertical(top: Radius.circular(16)),
                         ),
@@ -1252,7 +1252,7 @@ class _VendorSubscriptionPlanScreenState
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF8B1A2E),
+                color: const Color(0xFF90002B),
               ),
             ),
           ),

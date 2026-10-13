@@ -123,7 +123,7 @@ class _VendorRegistrationWizardScreenState
         final color = isPopular
             ? AppColors.primary
             : (isBestValue
-                ? const Color(0xFF8B1A2E)
+                ? const Color(0xFF90002B)
                 : const Color(0xFF6B7280));
         final icon = isPopular
             ? Icons.stars_rounded
@@ -2698,7 +2698,7 @@ class _VendorRegistrationWizardScreenState
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           decoration: const BoxDecoration(
-                            color: Color(0xFF8B1A2E),
+                            color: Color(0xFF90002B),
                             borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
                           ),
                           child: Row(

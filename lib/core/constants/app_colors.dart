@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Brand Colors (Deep Royal Maroon / Crimson)
-  static const Color primary = Color(0xFF8B1A2E);         // Deep Royal Maroon / Crimson (Main Brand)
-  static const Color primaryLight = Color(0xFF9E1F3B);    // Vibrant Royal Crimson
-  static const Color primaryDark = Color(0xFF4A0210);     // Deep Royal Crimson Dark
+  // Primary Brand Colors (Deep Crimson / Ruby #90002B)
+  static const Color primary = Color(0xFF90002B);         // Deep Ruby Crimson (Main Brand)
+  static const Color primaryLight = Color(0xFFB00E3D);    // Vibrant Crimson Highlight
+  static const Color primaryDark = Color(0xFF5E001C);     // Deep Crimson Shade
 
   // Secondary Brand Color (Rich Royal Wedding Gold)
   static const Color secondary = Color(0xFFD4A017);       // Royal Indian Wedding Gold
@@ -42,7 +42,7 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF9E1F3B), Color(0xFF8B1A2E)],
+    colors: [Color(0xFFB00E3D), Color(0xFF90002B)],
   );
 
   static const LinearGradient secondaryGradient = LinearGradient(
@@ -60,6 +60,6 @@ class AppColors {
   static const LinearGradient splashGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF7D001E), Color(0xFF98012A), Color(0xFF4A0210)],
+    colors: [Color(0xFFB00E3D), Color(0xFF90002B), Color(0xFF5E001C)],
   );
 }
