@@ -49,7 +49,7 @@ class AppHtmlContentView extends StatelessWidget {
               return {
                 'font-size': '20px',
                 'font-weight': '800',
-                'color': '#90002B',
+                'color': '#790D16',
                 'margin-top': '18px',
                 'margin-bottom': '8px',
                 'line-height': '1.3',
@@ -58,7 +58,7 @@ class AppHtmlContentView extends StatelessWidget {
               return {
                 'font-size': '17px',
                 'font-weight': '700',
-                'color': '#90002B',
+                'color': '#790D16',
                 'margin-top': '16px',
                 'margin-bottom': '6px',
                 'line-height': '1.35',
@@ -103,7 +103,7 @@ class AppHtmlContentView extends StatelessWidget {
               };
             case 'a':
               return {
-                'color': '#90002B',
+                'color': '#790D16',
                 'text-decoration': 'underline',
                 'font-weight': '600',
               };

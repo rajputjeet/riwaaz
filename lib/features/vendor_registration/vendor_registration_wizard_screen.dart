@@ -123,7 +123,7 @@ class _VendorRegistrationWizardScreenState
         final color = isPopular
             ? AppColors.primary
             : (isBestValue
-                ? const Color(0xFF90002B)
+                ? const Color(0xFF790D16)
                 : const Color(0xFF6B7280));
         final icon = isPopular
             ? Icons.stars_rounded
@@ -1271,93 +1271,96 @@ class _VendorRegistrationWizardScreenState
         ] else ...[
           // 3-Column Grid
           GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.76,
-          ),
-          itemCount: _businessTypes.length,
-          itemBuilder: (context, index) {
-            final type = _businessTypes[index];
-            final isSelected = _selectedCategory == type.title;
-            final query = _searchTypeController.text.toLowerCase().trim();
-            if (query.isNotEmpty &&
-                !type.title.toLowerCase().contains(query) &&
-                !type.desc.toLowerCase().contains(query)) {
-              return const SizedBox.shrink();
-            }
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.68,
+            ),
+            itemCount: _businessTypes.length,
+            itemBuilder: (context, index) {
+              final type = _businessTypes[index];
+              final isSelected = _selectedCategory == type.title;
+              final query = _searchTypeController.text.toLowerCase().trim();
+              if (query.isNotEmpty &&
+                  !type.title.toLowerCase().contains(query) &&
+                  !type.desc.toLowerCase().contains(query)) {
+                return const SizedBox.shrink();
+              }
 
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedCategory = type.title;
-                });
-                _syncCategory(type.title);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? type.bgColor : AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = type.title;
+                  });
+                  _syncCategory(type.title);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                  decoration: BoxDecoration(
                     color: isSelected
-                        ? type.color
-                        : AppColors.grey.withValues(alpha: 0.22),
-                    width: isSelected ? 2 : 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
+                        ? AppColors.primarySoft
+                        : AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
                       color: isSelected
-                          ? type.color.withValues(alpha: 0.18)
-                          : Colors.black.withValues(alpha: 0.04),
-                      blurRadius: isSelected ? 10 : 6,
-                      offset: const Offset(0, 3),
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: isSelected ? 2.5 : 1,
                     ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (type.hasServerIcon)
-                      CachedImageView(
-                        imageUrl: type.iconUrl,
-                        width: 52,
-                        height: 52,
-                        fit: BoxFit.contain,
-                        fallbackIcon: type.icon,
-                        iconColor: type.color,
-                        iconSize: 48,
-                      )
-                    else
-                      Icon(
-                        type.icon,
-                        color: type.color,
-                        size: 48,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.22)
+                            : Colors.black.withValues(alpha: 0.04),
+                        blurRadius: isSelected ? 12 : 6,
+                        offset: const Offset(0, 3),
                       ),
-                    const SizedBox(height: 8),
-                    Text(
-                      type.title,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: 13,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
-                        color: isSelected ? type.color : AppColors.black,
-                        height: 1.15,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (type.hasServerIcon)
+                        CachedImageView(
+                          imageUrl: type.iconUrl,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.contain,
+                          fallbackIcon: type.icon,
+                          iconColor: isSelected ? AppColors.primary : type.color,
+                          iconSize: 58,
+                        )
+                      else
+                        Icon(
+                          type.icon,
+                          color: isSelected ? AppColors.primary : type.color,
+                          size: 58,
+                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        type.title,
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 13,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: isSelected ? AppColors.primary : AppColors.black,
+                          height: 1.15,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
       ],
       ],
     );
@@ -2698,7 +2701,7 @@ class _VendorRegistrationWizardScreenState
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           decoration: const BoxDecoration(
-                            color: Color(0xFF90002B),
+                            color: Color(0xFF790D16),
                             borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
                           ),
                           child: Row(

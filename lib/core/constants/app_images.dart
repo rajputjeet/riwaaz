@@ -22,4 +22,14 @@ class AppImages {
   static const String shaadihubLogo = '$_base/widoora_logo.png';
   static const String weddingHero   = '$_base/wedding_hero.jpg';
   static const String riwaazCouple  = '$_base/riwaaz_couple.png';
+
+  // Onboarding screens
+  static const String onboardingWelcomeCouple = '$_base/onboarding_welcome_couple.jpg';
+  static const String onboardingMandap        = '$_base/onboarding_mandap.jpg';
+  static const String onboardingCoupleIcon    = '$_base/onboarding_couple.png';
+  static const String onboardingOutfitsIcon   = '$_base/onboarding_outfits.png';
+  static const String onboardingCarIcon       = '$_base/onboarding_car.png';
+  static const String onboardingCameraIcon    = '$_base/onboarding_camera.png';
+  static const String onboardingDholIcon      = '$_base/onboarding_dhol.png';
+  static const String onboardingInvitationIcon= '$_base/onboarding_invitation.png';
 }

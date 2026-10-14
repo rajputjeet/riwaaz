@@ -72,7 +72,6 @@ class _AppSupportSheetBody extends StatelessWidget {
     required this.isVendor,
   });
 
-  static const _phone = '+91 98765 43210';
   static const _email = 'support@widoora.com';
   static const _website = 'https://widoora.com';
 
@@ -213,7 +212,7 @@ class _AppSupportSheetBody extends StatelessWidget {
                     SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        'Call Helpline · $_phone',
+                        'Call Helpline',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
@@ -475,7 +474,6 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
 
   const _ForgotPasswordAdminSheet({required this.isVendor});
 
-  static const _phoneDisplay = '+91 98765 43210';
   static const _phoneDial = '9876543210';
   static const _whatsAppNumber = '919876543210';
   static const _email = 'support@widoora.com';
@@ -641,7 +639,7 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
               onPressed: _handleCall,
               icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
               label: const Text(
-                'Call Support  ($_phoneDisplay)',
+                'Call Support',
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,

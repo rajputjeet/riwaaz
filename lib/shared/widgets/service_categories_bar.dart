@@ -23,8 +23,8 @@ class ServiceIconWrap extends StatelessWidget {
   const ServiceIconWrap({
     super.key,
     required this.item,
-    this.size = 74,
-    this.iconSize = 44,
+    this.size = 78,
+    this.iconSize = 50,
     this.borderRadius = 18,
     this.isSelected = false,
   });
@@ -37,10 +37,12 @@ class ServiceIconWrap extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: item.bgColor,
+        color: isSelected
+            ? AppColors.primarySoft
+            : item.bgColor,
         borderRadius: BorderRadius.circular(borderRadius),
         border: isSelected
-            ? Border.all(color: item.color, width: 2.2)
+            ? Border.all(color: AppColors.primary, width: 2.5)
             : Border.all(color: item.color.withValues(alpha: 0.12), width: 1),
         boxShadow: [
           BoxShadow(
@@ -50,7 +52,7 @@ class ServiceIconWrap extends StatelessWidget {
           ),
           if (isSelected)
             BoxShadow(
-              color: item.color.withValues(alpha: 0.3),
+              color: AppColors.primary.withValues(alpha: 0.35),
               blurRadius: 12,
               spreadRadius: 1,
             ),
@@ -64,12 +66,12 @@ class ServiceIconWrap extends StatelessWidget {
                 height: iconSize,
                 fit: BoxFit.contain,
                 fallbackIcon: item.icon,
-                iconColor: item.color,
+                iconColor: isSelected ? AppColors.primary : item.color,
                 iconSize: iconSize,
               )
             : Icon(
                 item.icon,
-                color: item.color,
+                color: isSelected ? AppColors.primary : item.color,
                 size: iconSize,
               ),
       ),
@@ -139,7 +141,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: SizedBox(
-        height: 128,
+        height: 142,
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
@@ -183,8 +185,8 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF2A000D), // Deep royal ruby shade matching #90002B
-            Color(0xFF1B0008),
+            Color(0xFF240407), // Deep royal shade matching #790D16
+            Color(0xFF160204),
           ],
         ),
         boxShadow: [
@@ -237,7 +239,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           SizedBox(
-            height: 128,
+            height: 142,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -261,14 +263,14 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                     }
                   },
                   child: SizedBox(
-                    width: 92,
+                    width: 96,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ServiceIconWrap(
                           item: cat,
-                          size: 74,
-                          iconSize: 46,
+                          size: 78,
+                          iconSize: 50,
                           borderRadius: 18,
                           isSelected: isSelected,
                         ),
@@ -276,7 +278,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                         Text(
                           cat.title,
                           textAlign: TextAlign.center,
-                          maxLines: 2,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.cormorantGaramond(
                             fontSize: 12.5,

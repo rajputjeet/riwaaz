@@ -134,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToDetails() {
-    Navigator.of(context).push(
+    Navigator.of(context).pushReplacement(
       FadeScaleRoute(page: const UnifiedLoginScreen()),
     );
   }

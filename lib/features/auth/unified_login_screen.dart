@@ -6,6 +6,7 @@ import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/cached_image_view.dart';
+
 import 'login_screen.dart';
 import 'user_signup_screen.dart';
 import 'vendor_signup_screen.dart';
@@ -23,6 +24,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
     with TickerProviderStateMixin {
   late AnimationController _entranceController;
   late AnimationController _pulseController;
+  late AnimationController _particleController;
 
   late Animation<double> _logoScale;
   late Animation<double> _logoOpacity;
@@ -40,6 +42,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
+    )..repeat();
+
+    _particleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
     )..repeat();
 
     _logoScale = Tween<double>(begin: 0.4, end: 1.0).animate(
@@ -67,6 +74,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
   void dispose() {
     _entranceController.dispose();
     _pulseController.dispose();
+    _particleController.dispose();
     super.dispose();
   }
 
@@ -86,14 +94,23 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFFB00E3D), // Top royal crimson
-                    Color(0xFF90002B), // Main brand ruby red (#90002B)
-                    Color(0xFF5E001C), // Deep ruby shade
-                    Color(0xFF380011), // Rich dark floor
+                    Color(0xFF961622), // Top royal crimson highlight
+                    Color(0xFF790D16), // Main brand crimson (#790D16)
+                    Color(0xFF4E070E), // Deep garnet dark
+                    Color(0xFF2E0407), // Rich dark floor
                   ],
                   stops: [0.0, 0.35, 0.72, 1.0],
                 ),
               ),
+            ),
+          ),
+
+          // ─── Floating animated golden dots / particles like splash ────────
+          AnimatedBuilder(
+            animation: _particleController,
+            builder: (context, child) => CustomPaint(
+              painter: _ParticlePainter(_particleController.value),
+              size: size,
             ),
           ),
 
@@ -115,29 +132,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                       Colors.transparent,
                     ],
                     stops: const [0.0, 0.55, 1.0],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Decorative arched outline ring
-          Positioned(
-            top: size.height * 0.06,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: size.width * 0.80,
-                height: size.width * 0.90,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(size.width * 0.40),
-                    bottom: const Radius.circular(40),
-                  ),
-                  border: Border.all(
-                    color: AppColors.secondary.withValues(alpha: 0.08),
-                    width: 1.5,
                   ),
                 ),
               ),
@@ -185,24 +179,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Column(
                           children: [
-                            // ─── Top Support / Help Bar ───────────────────────
-                            Align(
-                              alignment: Alignment.topRight,
-                              child: IconButton(
-                                onPressed: () =>
-                                    AppSupportSheet.showForgotPasswordAdminSheet(
-                                  context,
-                                  isVendor: false,
-                                ),
-                                icon: const Icon(
-                                  Icons.help_outline_rounded,
-                                  color: AppColors.secondary,
-                                  size: 22,
-                                ),
-                                tooltip: 'Support & Help',
-                              ),
-                            ),
-
                             const Spacer(flex: 2),
 
                             // ─── Center Animated Logo with Round White BG ─────
@@ -224,7 +200,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                 child: Column(
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         _buildOrnament(),
                                         const SizedBox(width: 12),
@@ -319,24 +296,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                         shadowColor: Colors.black
                                             .withValues(alpha: 0.35),
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.favorite_rounded,
-                                              size: 18,
-                                              color: AppColors.white),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Register as User',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 15.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.white,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        'Register as User',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.white,
+                                          letterSpacing: 0.3,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -368,24 +335,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                               BorderRadius.circular(14),
                                         ),
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.storefront_rounded,
-                                              size: 18,
-                                              color: AppColors.secondary),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Register as Vendor',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 15.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.secondary,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        'Register as Vendor',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.secondary,
+                                          letterSpacing: 0.3,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -434,29 +391,47 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                                     ),
                                   ),
 
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 10),
 
+                                  // ─── Contact Support: Need Support? Help ───
                                   Center(
-                                    child: TextButton(
-                                      onPressed: () => AppSupportSheet
-                                          .showForgotPasswordAdminSheet(
-                                        context,
-                                        isVendor: false,
-                                      ),
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 4),
-                                      ),
-                                      child: Text(
-                                        'Forgot Password? Contact Admin',
-                                        style:
-                                            GoogleFonts.plusJakartaSans(
-                                          fontSize: 12.5,
-                                          color: AppColors.secondary
-                                              .withValues(alpha: 0.75),
-                                          fontWeight: FontWeight.w600,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Need Support?',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 12.5,
+                                            color: AppColors.white
+                                                .withValues(alpha: 0.88),
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () =>
+                                              AppSupportSheet.show(context),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4, vertical: 2),
+                                            child: Text(
+                                              'Help',
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                fontSize: 12.5,
+                                                color: AppColors.secondary,
+                                                fontWeight: FontWeight.w700,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                decorationColor:
+                                                    AppColors.secondary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
 
@@ -575,4 +550,34 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
       }),
     );
   }
+}
+
+// Particle effect painter matching splash screen
+class _ParticlePainter extends CustomPainter {
+  final double progress;
+
+  _ParticlePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final random = math.Random(42);
+
+    for (int i = 0; i < 24; i++) {
+      final x = random.nextDouble() * size.width;
+      final baseY = random.nextDouble() * size.height;
+      final speed = 0.3 + random.nextDouble() * 0.7;
+      final y = (baseY - progress * speed * size.height * 0.5) % size.height;
+      final radius = 1.0 + random.nextDouble() * 2.5;
+      final opacity =
+          0.15 + (math.sin((progress + i) * math.pi) * 0.5 + 0.5) * 0.35;
+
+      paint.color =
+          AppColors.secondary.withValues(alpha: opacity.clamp(0.0, 0.6));
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter oldDelegate) => true;
 }

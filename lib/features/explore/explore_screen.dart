@@ -457,7 +457,7 @@ class _ExploreBodyState extends State<ExploreBody> {
               crossAxisCount: 3,
               crossAxisSpacing: 12,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.78,
+              childAspectRatio: 0.72,
             ),
             itemCount: displayedCategories.length,
             itemBuilder: (context, i) {
@@ -489,7 +489,7 @@ class _ExploreBodyState extends State<ExploreBody> {
                       Text(
                         cat.title,
                         textAlign: TextAlign.center,
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 12.5,

@@ -45,7 +45,7 @@ class BookingRecord {
     required this.eventName,
     required this.eventType,
     this.eventIcon = Icons.celebration_rounded,
-    this.eventColor = const Color(0xFF90002B),
+    this.eventColor = const Color(0xFF790D16),
     this.status = 'Pending',
     this.paymentMode = 'Pay In Person (Direct)',
     this.balance = 'Settle on Event Day',
@@ -60,7 +60,7 @@ class BookingRecord {
 
   factory BookingRecord.fromBookingModel(BookingModel model) {
     IconData icon = Icons.celebration_rounded;
-    Color color = const Color(0xFF90002B);
+    Color color = const Color(0xFF790D16);
 
     final eventType = model.eventType ?? 'Wedding';
     if (eventType.toLowerCase().contains('office') ||
@@ -364,7 +364,7 @@ class AppBookingService extends ChangeNotifier {
       eventName: eventName ?? 'Wedding Celebration',
       eventType: eventType ?? 'Wedding',
       eventIcon: eventIcon ?? Icons.celebration_rounded,
-      eventColor: eventColor ?? const Color(0xFF90002B),
+      eventColor: eventColor ?? const Color(0xFF790D16),
       status: 'Pending',
       paymentMode: 'Pay In Person (Direct)',
       balance: 'Settle on Event Day',
@@ -540,7 +540,7 @@ class AppBookingService extends ChangeNotifier {
         eventName: 'Grand Royal Vivah',
         eventType: 'Wedding',
         eventIcon: Icons.camera_alt_rounded,
-        eventColor: const Color(0xFF90002B),
+        eventColor: const Color(0xFF790D16),
         status: 'Confirmed',
         paymentMode: 'Pay In Person',
         balance: 'Settle on Event Day',

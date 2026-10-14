@@ -60,7 +60,7 @@ lib/
 
 | Role | Color | Hex |
 |------|-------|-----|
-| Primary | Deep Crimson / Ruby | `#90002B` |
+| Primary | Deep Imperial Crimson | `#790D16` |
 | Gold Accent | Rich Gold | `#D4A017` |
 | Background | Warm Cream | `#FFF8F0` |
 | Success | Forest Green | `#2E7D32` |
