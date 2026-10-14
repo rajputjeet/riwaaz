@@ -23,9 +23,9 @@ class ServiceIconWrap extends StatelessWidget {
   const ServiceIconWrap({
     super.key,
     required this.item,
-    this.size = 78,
-    this.iconSize = 50,
-    this.borderRadius = 18,
+    this.size = 84,
+    this.iconSize = 58,
+    this.borderRadius = 20,
     this.isSelected = false,
   });
 
@@ -39,15 +39,15 @@ class ServiceIconWrap extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? AppColors.primarySoft
-            : item.bgColor,
+            : AppColors.white,
         borderRadius: BorderRadius.circular(borderRadius),
         border: isSelected
             ? Border.all(color: AppColors.primary, width: 2.5)
-            : Border.all(color: item.color.withValues(alpha: 0.12), width: 1),
+            : Border.all(color: AppColors.grey.withValues(alpha: 0.22), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isSelected ? 0.25 : 0.14),
-            blurRadius: isSelected ? 16 : 12,
+            color: Colors.black.withValues(alpha: isSelected ? 0.22 : 0.08),
+            blurRadius: isSelected ? 16 : 10,
             offset: const Offset(0, 4),
           ),
           if (isSelected)
@@ -239,7 +239,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           SizedBox(
-            height: 142,
+            height: 148,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -263,15 +263,15 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                     }
                   },
                   child: SizedBox(
-                    width: 96,
+                    width: 98,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ServiceIconWrap(
                           item: cat,
-                          size: 78,
-                          iconSize: 50,
-                          borderRadius: 18,
+                          size: 82,
+                          iconSize: 56,
+                          borderRadius: 20,
                           isSelected: isSelected,
                         ),
                         const SizedBox(height: 6),

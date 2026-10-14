@@ -457,7 +457,7 @@ class _ExploreBodyState extends State<ExploreBody> {
               crossAxisCount: 3,
               crossAxisSpacing: 12,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.72,
+              childAspectRatio: 0.68,
             ),
             itemCount: displayedCategories.length,
             itemBuilder: (context, i) {
@@ -480,8 +480,8 @@ class _ExploreBodyState extends State<ExploreBody> {
                     children: [
                       ServiceIconWrap(
                         item: cat,
-                        size: 88,
-                        iconSize: 54,
+                        size: 94,
+                        iconSize: 62,
                         borderRadius: 22,
                         isSelected: false,
                       ),

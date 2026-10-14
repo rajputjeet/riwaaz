@@ -608,25 +608,25 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
                   gradient: isSelected
-                      ? LinearGradient(
-                          colors: [cat.color, cat.color.withValues(alpha: 0.85)],
+                      ? const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryDark],
                         )
                       : null,
-                  color: isSelected ? null : cat.bgColor,
+                  color: isSelected ? null : AppColors.white,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
                     color: isSelected
-                        ? cat.color
-                        : cat.color.withValues(alpha: 0.35),
-                    width: isSelected ? 1.4 : 1,
+                        ? AppColors.primary
+                        : AppColors.grey.withValues(alpha: 0.3),
+                    width: isSelected ? 1.5 : 1,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: cat.color.withValues(alpha: 0.3),
+                            color: AppColors.primary.withValues(alpha: 0.35),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -639,15 +639,15 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     cat.hasServerIcon
                         ? CachedImageView(
                             imageUrl: cat.iconUrl,
-                            width: 26,
-                            height: 26,
+                            width: 28,
+                            height: 28,
                             fit: BoxFit.contain,
                             fallbackIcon: cat.icon,
-                            iconColor: isSelected ? Colors.white : cat.color,
+                            iconColor: isSelected ? Colors.white : AppColors.primary,
                           )
                         : Icon(cat.icon,
-                            size: 24,
-                            color: isSelected ? Colors.white : cat.color),
+                            size: 26,
+                            color: isSelected ? Colors.white : AppColors.primary),
                     const SizedBox(width: 7),
                     Text(
                       cat.title.split(' & ').first,

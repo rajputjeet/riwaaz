@@ -1,11 +1,11 @@
 {
-    "name": "shaadi_hub",
-    "short_name": "shaadi_hub",
+    "name": "Widoora",
+    "short_name": "Widoora",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#790D16",
     "theme_color": "#790D16",
-    "description": "A new Flutter project.",
+    "description": "Widoora - Everything You Need to Make Your Event Special",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
