@@ -9,7 +9,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/app_search_bar.dart';
-import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/service_categories_bar.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import 'controllers/vendor_registration_controller.dart';
@@ -1269,95 +1269,113 @@ class _VendorRegistrationWizardScreenState
             ),
           ),
         ] else ...[
-          // 3-Column Grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.62,
-            ),
-            itemCount: _businessTypes.length,
-            itemBuilder: (context, index) {
-              final type = _businessTypes[index];
-              final isSelected = _selectedCategory == type.title;
+          // 3-Column Grid matching user category layout
+          Builder(
+            builder: (context) {
               final query = _searchTypeController.text.toLowerCase().trim();
-              if (query.isNotEmpty &&
-                  !type.title.toLowerCase().contains(query) &&
-                  !type.desc.toLowerCase().contains(query)) {
-                return const SizedBox.shrink();
+              final filteredTypes = query.isEmpty
+                  ? _businessTypes
+                  : _businessTypes
+                      .where((t) =>
+                          t.title.toLowerCase().contains(query) ||
+                          t.desc.toLowerCase().contains(query))
+                      .toList();
+
+              if (filteredTypes.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32.0),
+                    child: Text(
+                      'No business types match "$query"',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
               }
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedCategory = type.title;
-                  });
-                  _syncCategory(type.title);
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primarySoft
-                        : AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.primary.withValues(alpha: 0.15),
-                      width: isSelected ? 2.5 : 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.22)
-                            : Colors.black.withValues(alpha: 0.04),
-                        blurRadius: isSelected ? 12 : 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (type.hasServerIcon)
-                        CachedImageView(
-                          imageUrl: type.iconUrl,
-                          width: 92,
-                          height: 92,
-                          fit: BoxFit.contain,
-                          fallbackIcon: type.icon,
-                          iconColor: isSelected ? AppColors.primary : type.color,
-                          iconSize: 84,
-                        )
-                      else
-                        Icon(
-                          type.icon,
-                          color: isSelected ? AppColors.primary : type.color,
-                          size: 84,
-                        ),
-                      const SizedBox(height: 6),
-                      Text(
-                        type.title,
-                        textAlign: TextAlign.center,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.cormorantGaramond(
-                          fontSize: 13,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w600,
-                          color: isSelected ? AppColors.primary : AppColors.black,
-                          height: 1.15,
-                        ),
-                      ),
-                    ],
-                  ),
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.82,
                 ),
+                itemCount: filteredTypes.length,
+                itemBuilder: (context, index) {
+                  final type = filteredTypes[index];
+                  final isSelected = _selectedCategory == type.title;
+
+                  return AnimatedTapWidget(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = type.title;
+                      });
+                      _syncCategory(type.title);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            ServiceIconWrap(
+                              item: type,
+                              size: 84,
+                              iconSize: 64,
+                              borderRadius: 18,
+                              isSelected: isSelected,
+                            ),
+                            if (isSelected)
+                              Positioned(
+                                top: -3,
+                                right: -3,
+                                child: Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          type.title,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w600,
+                            color: isSelected
+                                ? AppColors.primary
+                                : const Color(0xFF2C2424),
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
