@@ -8,7 +8,7 @@ import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
-import '../auth/unified_login_screen.dart';
+import '../auth/login_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
 import '../service_listing/service_listing_screen.dart';
 import '../../core/services/booking_service.dart';
@@ -73,7 +73,7 @@ class _MainShellState extends State<MainShell> {
         index: _currentIndex,
         sizing: StackFit.expand,
         children: [
-          const DashboardBody(),
+          DashboardBody(onNavigateTab: (index) => _onTabTap(index)),
           const ExploreBody(),
           const _CustomerWeddingTab(),
           const _CustomerBookingsTab(),
@@ -2538,7 +2538,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                FadeScaleRoute(page: const LoginScreen()),
                 (route) => false,
               );
             },
@@ -2631,7 +2631,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               Utils.showSuccess('Your account has been deleted successfully.');
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                FadeScaleRoute(page: const LoginScreen()),
                 (route) => false,
               );
             },
@@ -2730,46 +2730,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                                 ),
                         ),
                       ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: InkWell(
-                            onTap: () async {
-                              final updated = await Navigator.of(context).push<bool>(
-                                FadeScaleRoute(
-                                  page: const CustomerEditProfileScreen(),
-                                ),
-                              );
-                              if (updated == true || mounted) {
-                                loadProfile();
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.white,
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.25),
-                                    blurRadius: 5,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.edit_rounded,
-                                color: AppColors.white,
-                                size: 15,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -2856,7 +2816,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               _buildActionItem(
                 context: context,
                 icon: Icons.edit_note_rounded,
-                title: 'Edit Wedding & Host Profile',
+                title: 'Profile',
                 subtitle: 'Update names, celebration date, city & guest count',
                 onTap: () async {
                   final updated = await Navigator.of(context).push<bool>(
@@ -2880,21 +2840,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   ),
                 ),
               ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.checklist_rounded,
-                title: 'Wedding Checklist & Tasks',
-                subtitle: 'Track wedding milestones and preparation tasks',
-                onTap: () => _showChecklistSheet(context),
-              ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.account_balance_wallet_outlined,
-                title: 'Wedding Budget Tracker',
-                subtitle: 'Manage budget allocations and planned expenses',
-                onTap: () => _showBudgetSheet(context),
-              ),
-
+            
               const SizedBox(height: 18),
 
               const Text(
@@ -2966,34 +2912,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               ),
 
               const SizedBox(height: 28),
-
-              // ─── BOTTOM ACTIONS (CHANGE PASSWORD, LOGOUT & DELETE ACCOUNT) ─────
-              // Change Password
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openChangePasswordScreen(context),
-                  icon: const Icon(Icons.lock_reset_rounded,
-                      color: AppColors.primary, size: 18),
-                  label: const Text(
-                    'Change Password',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary, width: 1.2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
 
               // ─── BOTTOM ACTIONS (LOGOUT & DELETE ACCOUNT) ───────────────────
               SizedBox(

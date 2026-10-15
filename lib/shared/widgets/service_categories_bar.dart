@@ -23,8 +23,8 @@ class ServiceIconWrap extends StatelessWidget {
   const ServiceIconWrap({
     super.key,
     required this.item,
-    this.size = 84,
-    this.iconSize = 58,
+    this.size = 94,
+    this.iconSize = 78,
     this.borderRadius = 20,
     this.isSelected = false,
   });
@@ -39,11 +39,11 @@ class ServiceIconWrap extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? AppColors.primarySoft
-            : AppColors.white,
+            : AppColors.primary.withValues(alpha: 0.045),
         borderRadius: BorderRadius.circular(borderRadius),
         border: isSelected
-            ? Border.all(color: AppColors.primary, width: 2.5)
-            : Border.all(color: AppColors.grey.withValues(alpha: 0.22), width: 1),
+            ? Border.all(color: AppColors.primary, width: 2.2)
+            : Border.all(color: AppColors.primary.withValues(alpha: 0.10), width: 0.8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isSelected ? 0.22 : 0.08),
@@ -141,7 +141,7 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: SizedBox(
-        height: 142,
+        height: 154,
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
@@ -153,8 +153,8 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 74,
-                  height: 74,
+                  width: 82,
+                  height: 82,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
@@ -239,13 +239,13 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           SizedBox(
-            height: 148,
+            height: 160,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: categories.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 14),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final cat = categories[index];
                 final isSelected = selectedCategory == cat.title;
@@ -263,14 +263,14 @@ class ServiceCategoriesHorizontalBar extends StatelessWidget {
                     }
                   },
                   child: SizedBox(
-                    width: 98,
+                    width: 96,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ServiceIconWrap(
                           item: cat,
-                          size: 82,
-                          iconSize: 56,
+                          size: 92,
+                          iconSize: 78,
                           borderRadius: 20,
                           isSelected: isSelected,
                         ),

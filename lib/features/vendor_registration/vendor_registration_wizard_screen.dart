@@ -1277,7 +1277,7 @@ class _VendorRegistrationWizardScreenState
               crossAxisCount: 3,
               crossAxisSpacing: 10,
               mainAxisSpacing: 12,
-              childAspectRatio: 0.68,
+              childAspectRatio: 0.62,
             ),
             itemCount: _businessTypes.length,
             itemBuilder: (context, index) {
@@ -1304,12 +1304,12 @@ class _VendorRegistrationWizardScreenState
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primarySoft
-                        : AppColors.white,
+                        : AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.22),
+                          : AppColors.primary.withValues(alpha: 0.15),
                       width: isSelected ? 2.5 : 1,
                     ),
                     boxShadow: [
@@ -1328,18 +1328,18 @@ class _VendorRegistrationWizardScreenState
                       if (type.hasServerIcon)
                         CachedImageView(
                           imageUrl: type.iconUrl,
-                          width: 64,
-                          height: 64,
+                          width: 92,
+                          height: 92,
                           fit: BoxFit.contain,
                           fallbackIcon: type.icon,
                           iconColor: isSelected ? AppColors.primary : type.color,
-                          iconSize: 58,
+                          iconSize: 84,
                         )
                       else
                         Icon(
                           type.icon,
                           color: isSelected ? AppColors.primary : type.color,
-                          size: 58,
+                          size: 84,
                         ),
                       const SizedBox(height: 6),
                       Text(

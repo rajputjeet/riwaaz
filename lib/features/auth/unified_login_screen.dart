@@ -190,51 +190,45 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                               ),
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
 
-                            // Brand Name & Tagline
+                            // Heading & Subheading right under app logo
                             SlideTransition(
                               position: _contentSlide,
                               child: FadeTransition(
                                 opacity: _logoOpacity,
                                 child: Column(
                                   children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        _buildOrnament(),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          'WIDOORA',
-                                          style: GoogleFonts.cormorantGaramond(
-                                            fontSize: 30,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppColors.white,
-                                            letterSpacing: 4.0,
-                                            shadows: [
-                                              Shadow(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.6),
-                                                blurRadius: 16,
-                                              ),
-                                            ],
+                                    Text(
+                                      'Join Widoora',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.cormorantGaramond(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.white,
+                                        letterSpacing: 0.8,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.5),
+                                            blurRadius: 16,
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        _buildOrnament(),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      'Everything You Need to Make Your Event Special',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.secondary
-                                            .withValues(alpha: 0.88),
-                                        letterSpacing: 0.4,
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: Text(
+                                        'Plan your dream wedding or grow your wedding business.',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13.5,
+                                          color: AppColors.secondary
+                                              .withValues(alpha: 0.90),
+                                          height: 1.4,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -242,7 +236,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                               ),
                             ),
 
-                            const Spacer(flex: 3),
+                            const Spacer(flex: 2),
 
                             // ─── Bottom Actions Panel ─────────────────────────
                             SlideTransition(
@@ -250,29 +244,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Welcome Title
-                                  Text(
-                                    'Join Widoora',
-                                    style: GoogleFonts.cormorantGaramond(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.white,
-                                      height: 1.1,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Plan your dream wedding or grow your wedding business.',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 13.5,
-                                      color: AppColors.secondary
-                                          .withValues(alpha: 0.88),
-                                      height: 1.45,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 20),
 
                                   // ─── BUTTON 1: Register as User ────────────────
                                   SizedBox(
@@ -532,22 +503,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen>
           ],
         );
       },
-    );
-  }
-
-  Widget _buildOrnament() {
-    return Row(
-      children: List.generate(3, (i) {
-        return Container(
-          width: 4 + (i * 2.0),
-          height: 1.5,
-          margin: const EdgeInsets.symmetric(horizontal: 1),
-          decoration: BoxDecoration(
-            color: AppColors.secondary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        );
-      }),
     );
   }
 }

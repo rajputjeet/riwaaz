@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/api_provider/cms_api_provider.dart';
+import '../../data/models/cms_model.dart';
+import '../../data/shared/data_response.dart';
+import 'app_html_content_view.dart';
+import 'app_states.dart';
 
 class AppSupportSheet {
   static void show(
@@ -59,6 +64,118 @@ class AppSupportSheet {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _ForgotPasswordAdminSheet(isVendor: isVendor),
+    );
+  }
+
+  /// Dedicated modal for Terms of Service & Privacy Policy
+  static void showTermsOfServiceSheet(
+    BuildContext context, {
+    String type = 'terms',
+  }) {
+    final cmsApi = CmsApiProvider();
+    final isPrivacy = type == 'privacy';
+    final title = isPrivacy ? 'Privacy Policy' : 'Terms of Service';
+    final subtitle = isPrivacy
+        ? 'Platform Privacy • Data & Security Terms'
+        : 'Platform Usage Agreement • Customer Terms';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        isPrivacy ? Icons.security_rounded : Icons.gavel_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                ),
+              ],
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: FutureBuilder<DataResponse<CmsModel>>(
+                future: cmsApi.getCmsData(type),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return AppLoadingState(message: 'Loading $title...');
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorState(
+                      message: snapshot.error.toString(),
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  final response = snapshot.data;
+                  final content = response?.data?.description ?? '';
+                  if (response?.isSuccess != true && content.isEmpty) {
+                    return AppErrorState(
+                      message: response?.message ?? 'Could not load $title.',
+                      onRetry: () => Navigator.pop(ctx),
+                    );
+                  }
+                  if (content.isEmpty) {
+                    return AppEmptyState(
+                      icon: isPrivacy ? Icons.security_rounded : Icons.gavel_rounded,
+                      title: '$title Pending',
+                      subtitle: 'The $title will appear here once published by admin.',
+                    );
+                  }
+                  return AppHtmlContentView(htmlContent: content);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

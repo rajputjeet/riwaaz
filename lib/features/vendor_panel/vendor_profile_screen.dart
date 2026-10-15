@@ -19,7 +19,7 @@ import '../../shared/widgets/app_support_sheet.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
-import '../auth/unified_login_screen.dart';
+import '../auth/login_screen.dart';
 import 'vendor_packages_screen.dart';
 import 'vendor_portfolio_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
@@ -1090,7 +1090,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
               }
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                FadeScaleRoute(page: const LoginScreen()),
                 (route) => false,
               );
             },
@@ -1183,7 +1183,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
               Utils.showSuccess('Your vendor account has been deleted successfully.');
               if (!context.mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const UnifiedLoginScreen()),
+                FadeScaleRoute(page: const LoginScreen()),
                 (route) => false,
               );
             },

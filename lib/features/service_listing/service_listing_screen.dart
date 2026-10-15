@@ -5,7 +5,6 @@ import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
-import '../../data/api_provider/ad_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/user_model.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
@@ -19,10 +18,12 @@ import '../../shared/widgets/cached_image_view.dart';
 
 class ServiceListingScreen extends StatefulWidget {
   final String category;
+  final bool showBottomNav;
 
   const ServiceListingScreen({
     super.key,
     this.category = 'Photographers & Videographers',
+    this.showBottomNav = false,
   });
 
   @override
@@ -42,7 +43,6 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   late String _currentCategory;
   List<_VendorData> _vendors = [];
   bool _isLoading = true;
-  String? _errorMessage;
   final VendorApiProvider _vendorApi = VendorApiProvider();
 
   @override
@@ -65,12 +65,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   }
 
   /// Fetches real vendors dynamically from live backend API:
-  /// GET /api/ad/active-vendors (optionally filtered by ?categoryId=<ID>)
+  /// GET /api/ad/active-vendors (optionally filtered by ?categoryId=[ID])
   Future<void> _fetchVendors() async {
     if (mounted) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
     }
 
@@ -127,15 +126,13 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
         setState(() {
           _isLoading = false;
           _vendors = [];
-          _errorMessage = res.message ?? res.error;
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _vendors = [];
-        _errorMessage = e.toString();
       });
     }
   }
@@ -197,19 +194,21 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           ),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: _navIndex,
-        onTap: (i) {
-          if (i == 1) {
-            Navigator.pop(context);
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => MainShell(initialIndex: i)),
-              (route) => false,
-            );
-          }
-        },
-      ),
+      bottomNavigationBar: widget.showBottomNav
+          ? AppBottomNav(
+              currentIndex: _navIndex,
+              onTap: (i) {
+                if (i == 1) {
+                  Navigator.pop(context);
+                } else {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => MainShell(initialIndex: i)),
+                    (route) => false,
+                  );
+                }
+              },
+            )
+          : null,
     );
   }
 
@@ -544,23 +543,20 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? const LinearGradient(
-                            colors: [AppColors.primary, AppColors.primaryDark],
-                          )
-                        : null,
-                    color: isSelected ? null : AppColors.white,
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : AppColors.white,
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
-                          : const Color(0xFFD4AF37).withValues(alpha: 0.45),
-                      width: isSelected ? 1.4 : 1,
+                          : const Color(0xFFEADBCE),
+                      width: isSelected ? 1.5 : 1,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.35),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -573,7 +569,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       Icon(
                         Icons.grid_view_rounded,
                         size: 20,
-                        color: isSelected ? Colors.white : AppColors.primary,
+                        color: isSelected
+                            ? AppColors.primary
+                            : const Color(0xFF555555),
                       ),
                       const SizedBox(width: 7),
                       Text(
@@ -583,8 +581,8 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w600,
                           color: isSelected
-                              ? Colors.white
-                              : AppColors.darkGrey,
+                              ? AppColors.primary
+                              : const Color(0xFF555555),
                         ),
                       ),
                     ],
@@ -610,23 +608,20 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? const LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryDark],
-                        )
-                      : null,
-                  color: isSelected ? null : AppColors.white,
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : AppColors.white,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.primary
-                        : AppColors.grey.withValues(alpha: 0.3),
+                        : const Color(0xFFEADBCE),
                     width: isSelected ? 1.5 : 1,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.35),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -639,15 +634,18 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     cat.hasServerIcon
                         ? CachedImageView(
                             imageUrl: cat.iconUrl,
-                            width: 28,
-                            height: 28,
+                            width: 30,
+                            height: 30,
                             fit: BoxFit.contain,
                             fallbackIcon: cat.icon,
-                            iconColor: isSelected ? Colors.white : AppColors.primary,
+                            iconColor: const Color(0xFF790D16),
+                            iconSize: 26,
                           )
-                        : Icon(cat.icon,
+                        : Icon(
+                            cat.icon,
                             size: 26,
-                            color: isSelected ? Colors.white : AppColors.primary),
+                            color: const Color(0xFF790D16),
+                          ),
                     const SizedBox(width: 7),
                     Text(
                       cat.title.split(' & ').first,
@@ -656,8 +654,8 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
-                            ? Colors.white
-                            : AppColors.darkGrey,
+                            ? AppColors.primary
+                            : const Color(0xFF555555),
                       ),
                     ),
                   ],
@@ -770,30 +768,32 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              width: 36,
-                              height: 36,
+                              width: 42,
+                              height: 42,
                               decoration: BoxDecoration(
-                                color: activeCat.bgColor,
-                                borderRadius: BorderRadius.circular(10),
+                                color: AppColors.primary.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: activeCat.color.withValues(alpha: 0.35),
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  width: 1,
                                 ),
                               ),
                               child: activeCat.hasServerIcon
                                   ? Center(
                                       child: CachedImageView(
                                         imageUrl: activeCat.iconUrl,
-                                        width: 22,
-                                        height: 22,
+                                        width: 28,
+                                        height: 28,
                                         fit: BoxFit.contain,
                                         fallbackIcon: activeCat.icon,
-                                        iconColor: activeCat.color,
+                                        iconColor: const Color(0xFF790D16),
+                                        iconSize: 28,
                                       ),
                                     )
-                                  : Icon(
-                                      activeCat.icon,
-                                      size: 22,
-                                      color: activeCat.color,
+                                  : const Icon(
+                                      Icons.storefront_rounded,
+                                      size: 26,
+                                      color: Color(0xFF790D16),
                                     ),
                             ),
                             const SizedBox(width: 8),
@@ -1236,10 +1236,10 @@ class _VendorData {
       img = AppImages.vendorRoyalClick;
     }
 
-    final categoryStr =
-        (profile?.services != null && profile!.services!.isNotEmpty)
-            ? profile!.services!.join(', ')
-            : (profile?.adTitle ?? '');
+    final services = profile?.services;
+    final categoryStr = (services != null && services.isNotEmpty)
+        ? services.join(', ')
+        : (profile?.adTitle ?? '');
 
     return _VendorData(
       id: user.id ?? '',

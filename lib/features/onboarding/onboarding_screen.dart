@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
-import '../auth/unified_login_screen.dart';
+import '../auth/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,10 +19,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final PageController _pageController;
   late final AnimationController _particleController;
   late final AnimationController _floatingController;
+  late final AnimationController _pulseController;
 
   int _currentPage = 0;
 
-  // Theme constants matching the reference design
+  // Theme constants matching Widoora's royal palette
   static const Color _bgCreamTop = Color(0xFFFBF6F0);
   static const Color _bgCreamBottom = Color(0xFFF4ECE4);
   static const Color _maroonPrimary = Color(0xFF790D16);
@@ -41,16 +42,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     _pageController = PageController();
 
-    // Subtle floating golden sparkle particles
+    // Golden sparkle particles
     _particleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat();
 
-    // Floating breathing animation for badges in Screen 2
+    // Floating breathing animation for badges in Vendors Screen
     _floatingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+
+    // Subtle gentle pulse for card borders & accents
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
     )..repeat(reverse: true);
   }
 
@@ -59,13 +66,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageController.dispose();
     _particleController.dispose();
     _floatingController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   void _onNext() {
-    if (_currentPage < 2) {
+    if (_currentPage < 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 380),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
     } else {
@@ -75,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _onFinish() {
     Navigator.of(context).pushReplacement(
-      FadeScaleRoute(page: const UnifiedLoginScreen()),
+      FadeScaleRoute(page: const LoginScreen()),
     );
   }
 
@@ -87,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       backgroundColor: _bgCreamTop,
       body: Stack(
         children: [
-          // ─── 1. Luxury Warm Ivory / Cream Background ──────────────────────
+          // ─── 1. Luxury Warm Cream Background Gradient ─────────────────────
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -100,10 +108,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
 
-          // ─── 2. Decorative Corner Botanical Motifs ────────────────────────
+          // ─── 2. Decorative Vignette / Botanical Glow ───────────────────────
           _buildDecorativeVines(),
 
-          // ─── 3. Animated Floating Golden Dots ─────────────────────────────
+          // ─── 3. Animated Floating Golden Sparkles ──────────────────────────
           AnimatedBuilder(
             animation: _particleController,
             builder: (context, child) => CustomPaint(
@@ -112,14 +120,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
 
-          // ─── 4. Main Foreground Content (PageView + Controls) ──────────────
+          // ─── 4. Main Foreground Content (Top Bar, 2 Pages, Bottom Controls) ─
           SafeArea(
             child: Column(
               children: [
-                // Top Skip Bar (NO call or message icons)
+                // Top Bar with Skip Button
                 _buildTopBar(),
 
-                // 3 Onboarding Pages
+                // 2 Onboarding Pages (Screen 1 removed -> Vendors & Dream Wedding)
                 Expanded(
                   child: PageView(
                     controller: _pageController,
@@ -127,14 +135,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       setState(() => _currentPage = index);
                     },
                     children: [
-                      _buildScreen1(size),
-                      _buildScreen2(size),
-                      _buildScreen3(size),
+                      _buildVendorsScreen(size),
+                      _buildDreamWeddingScreen(size),
                     ],
                   ),
                 ),
 
-                // Bottom Indicator Dots and Primary Button
+                // Bottom Indicator (2 Dots) and Dynamic Action Button (Next / Get Started)
                 _buildBottomControls(),
               ],
             ),
@@ -144,9 +151,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ─── TOP BAR (Clean Skip button on right - No call/msg icons) ──────────────
+  // ─── TOP BAR (Skip button on right) ─────────────────────────────────────────
   Widget _buildTopBar() {
-    final showSkip = _currentPage > 0;
+    final showSkip = _currentPage == 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 4),
@@ -164,12 +171,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.65),
+                    color: Colors.white.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _goldAccent.withValues(alpha: 0.35),
                       width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _maroonPrimary.withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Text(
                     'Skip',
@@ -190,252 +204,76 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ─── SCREEN 1: Welcome / Plan Discover Celebrate / Starts Here ─────────────
-  Widget _buildScreen1(Size size) {
+  // ─── PAGE 0: Find Trusted Wedding Vendors (Centered Phone + Floating Badges)
+  Widget _buildVendorsScreen(Size size) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 4),
+          const Spacer(flex: 1),
 
-          // Circular Brand Emblem
-          Container(
-            width: 86,
-            height: 86,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.white,
-              border: Border.all(color: _goldAccent, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: _maroonPrimary.withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(8),
-            child: ClipOval(
-              child: Image.asset(
-                AppImages.widooraLogo,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.favorite_rounded,
-                  color: _maroonPrimary,
-                  size: 34,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // WIDOORA Title
-          Text(
-            'WIDOORA',
-            style: GoogleFonts.cormorantGaramond(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: _maroonTitle,
-              letterSpacing: 3.5,
-            ),
-          ),
-
-          const SizedBox(height: 2),
-
-          Text(
-            'Your Wedding, Your Way',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: _subtitleColor,
-              letterSpacing: 0.8,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Script Ribbon: Plan ~ Discover ~ Celebrate
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSmallDiamond(),
-              const SizedBox(width: 8),
-              Text(
-                'Plan  ~  Discover  ~  Celebrate',
-                style: GoogleFonts.cormorantGaramond(
-                  fontSize: 16,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w700,
-                  color: _maroonPrimary,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildSmallDiamond(),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // Photographic Visual of Couple with Dark Bottom Gradient
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: [
-                  BoxShadow(
-                    color: _maroonPrimary.withValues(alpha: 0.18),
-                    blurRadius: 22,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(26),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      AppImages.onboardingWelcomeCouple,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        AppImages.weddingHero,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    // Bottom dark gradient overlay for text readability
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.20),
-                              const Color(0xFF2E0407).withValues(alpha: 0.92),
-                            ],
-                            stops: const [0.55, 0.76, 1.0],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Overlay Caption
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 18,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Your Dream Wedding',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.cormorantGaramond(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.white,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Starts Here...',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: _goldAccent,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 6),
-        ],
-      ),
-    );
-  }
-
-  // ─── SCREEN 2: Find Trusted Wedding Vendors (Phone + 6 Icons) ───────────────
-  Widget _buildScreen2(Size size) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        children: [
-          const SizedBox(height: 4),
-
-          // Title
+          // Title - Centered
           Text(
             'Find Trusted\nWedding Vendors',
             textAlign: TextAlign.center,
             style: GoogleFonts.cormorantGaramond(
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: FontWeight.w800,
               color: _maroonTitle,
               letterSpacing: 0.4,
-              height: 1.12,
+              height: 1.15,
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
 
-          // Subtitle
+          // Subtitle - Centered
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'From photographers to caterers,\nfind the best vendors for your special day.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w400,
                 color: _subtitleColor,
-                height: 1.3,
+                height: 1.35,
               ),
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
 
           // Center phone mockup with 6 floating badges in side columns
           Expanded(
+            flex: 8,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final availH = constraints.maxHeight;
                 final availW = constraints.maxWidth;
 
-                // Phone dimensions scaled to available space
-                final phoneW = (availW * 0.36).clamp(110.0, 150.0);
-                final phoneH = (availH * 0.88).clamp(180.0, 310.0);
+                // Responsive phone mockup proportions
+                final phoneW = (availW * 0.38).clamp(120.0, 160.0);
+                final phoneH = (availH * 0.92).clamp(200.0, 320.0);
 
-                // Badge column width = remaining space on each side
-                final sideW = ((availW - phoneW) / 2).clamp(60.0, 100.0);
+                // Badge side column width
+                final sideW = ((availW - phoneW) / 2).clamp(65.0, 110.0);
 
                 return AnimatedBuilder(
                   animation: _floatingController,
                   builder: (context, child) {
                     final t = _floatingController.value;
-                    final f0 = math.sin(t * math.pi) * 4.0;
-                    final f1 = math.sin(t * math.pi + 1.0) * 4.0;
-                    final f2 = math.sin(t * math.pi + 2.0) * 4.0;
+                    final f0 = math.sin(t * math.pi) * 5.0;
+                    final f1 = math.sin(t * math.pi + 1.0) * 5.0;
+                    final f2 = math.sin(t * math.pi + 2.0) * 5.0;
 
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Left column: 3 badges ──────────────────────────
+                        // ── Left Column: 3 Badges (Photographers, Makeup Artists, Decorators)
                         SizedBox(
                           width: sideW,
                           height: phoneH,
@@ -445,25 +283,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             children: [
                               Transform.translate(
                                 offset: Offset(0, f0),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingCameraIcon,
-                                  label: 'Photos',
+                                  label: 'Photographers',
                                   fallback: Icons.camera_alt_rounded,
                                 ),
                               ),
                               Transform.translate(
                                 offset: Offset(0, -f1),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingOutfitsIcon,
-                                  label: 'Outfits',
-                                  fallback: Icons.brush_rounded,
+                                  label: 'Makeup Artists',
+                                  fallback: Icons.face_retouching_natural_rounded,
                                 ),
                               ),
                               Transform.translate(
                                 offset: Offset(0, f2),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingCoupleIcon,
-                                  label: 'Couple',
+                                  label: 'Decorators',
                                   fallback: Icons.celebration_rounded,
                                 ),
                               ),
@@ -474,7 +312,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         // ── Center: Phone Mockup ────────────────────────────
                         _buildPhoneMockupSized(phoneW, phoneH),
 
-                        // ── Right column: 3 badges ─────────────────────────
+                        // ── Right Column: 3 Badges (Caterers, Wedding Venues, & More)
                         SizedBox(
                           width: sideW,
                           height: phoneH,
@@ -484,26 +322,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             children: [
                               Transform.translate(
                                 offset: Offset(0, -f0),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingDholIcon,
-                                  label: 'Music',
-                                  fallback: Icons.music_note_rounded,
+                                  label: 'Caterers',
+                                  fallback: Icons.restaurant_rounded,
                                 ),
                               ),
                               Transform.translate(
                                 offset: Offset(0, f1),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingCarIcon,
-                                  label: 'Venues',
+                                  label: 'Wedding Venues',
                                   fallback: Icons.apartment_rounded,
                                 ),
                               ),
                               Transform.translate(
                                 offset: Offset(0, -f2),
-                                child: _buildBadgeCompact(
+                                child: _buildBadge(
                                   iconPath: AppImages.onboardingInvitationIcon,
-                                  label: 'Cards',
-                                  fallback: Icons.mail_outline_rounded,
+                                  label: '& More',
+                                  fallback: Icons.apps_rounded,
                                 ),
                               ),
                             ],
@@ -517,43 +355,45 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
 
-          const SizedBox(height: 6),
+          const Spacer(flex: 1),
         ],
       ),
     );
   }
 
-  // ─── SCREEN 3: Plan Your Dream Wedding (Mandap Stage Visual) ────────────────
-  Widget _buildScreen3(Size size) {
+  // ─── PAGE 1: Plan Your Dream Wedding (Mandap Stage Visual) ─────────────────
+  Widget _buildDreamWeddingScreen(Size size) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 4),
+          const Spacer(flex: 1),
 
-          // Title
+          // Title - Centered
           Text(
             'Plan Your\nDream Wedding',
             textAlign: TextAlign.center,
             style: GoogleFonts.cormorantGaramond(
-              fontSize: 30,
+              fontSize: 32,
               fontWeight: FontWeight.w800,
               color: _maroonTitle,
               letterSpacing: 0.4,
-              height: 1.12,
+              height: 1.15,
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
-          // Subtitle
+          // Subtitle - Centered
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Text(
               'Save time, compare options,\nread reviews and book with ease.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w400,
                 color: _subtitleColor,
                 height: 1.35,
@@ -561,104 +401,116 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // Mandap Floral Stage Card
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                color: AppColors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: _maroonPrimary.withValues(alpha: 0.16),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(
-                  color: _goldAccent.withValues(alpha: 0.45),
-                  width: 1.5,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      AppImages.onboardingMandap,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        AppImages.exploreDecoration,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    // Atmospheric gradient
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withValues(alpha: 0.15),
-                              const Color(0xFF2E0407).withValues(alpha: 0.88),
-                            ],
-                            stops: const [0.55, 0.78, 1.0],
-                          ),
+            flex: 8,
+            child: AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                final pulse = _pulseController.value * 0.02 + 0.99;
+                return Transform.scale(
+                  scale: pulse,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(26),
+                      color: AppColors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _maroonPrimary.withValues(alpha: 0.18),
+                          blurRadius: 26,
+                          offset: const Offset(0, 10),
                         ),
+                      ],
+                      border: Border.all(
+                        color: _goldAccent.withValues(alpha: 0.50),
+                        width: 1.5,
                       ),
                     ),
-
-                    // Feature highlights pill row
-                    Positioned(
-                      left: 12,
-                      right: 12,
-                      bottom: 16,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          _buildValuePill(Icons.verified_rounded, 'Verified'),
-                          _buildValuePill(Icons.star_rounded, 'Reviews'),
-                          _buildValuePill(Icons.lock_outline_rounded, 'Easy Book'),
+                          Image.asset(
+                            AppImages.onboardingMandap,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            errorBuilder: (context, error, stackTrace) => Image.asset(
+                              AppImages.exploreDecoration,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+
+                          // Warm gradient overlay for bottom pills
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.15),
+                                    const Color(0xFF2E0407).withValues(alpha: 0.88),
+                                  ],
+                                  stops: const [0.52, 0.75, 1.0],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Feature highlights pill row
+                          Positioned(
+                            left: 12,
+                            right: 12,
+                            bottom: 18,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildValuePill(Icons.verified_rounded, 'Verified'),
+                                _buildValuePill(Icons.star_rounded, 'Reviews'),
+                                _buildValuePill(Icons.lock_outline_rounded, 'Easy Book'),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
 
-          const SizedBox(height: 6),
+          const Spacer(flex: 1),
         ],
       ),
     );
   }
 
-  // ─── BOTTOM CONTROLS (Dots + Deep Maroon Button) ────────────────────────────
+  // ─── BOTTOM CONTROLS (2 Dots + Dynamic Next / Get Started Button) ───────────
   Widget _buildBottomControls() {
+    final isLastPage = _currentPage == 1;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ─── Dots Indicator (Matching mockup: round dots, active is maroon) ──
+          // ─── Dots Indicator (Exactly 2 dots) ──────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (index) {
+            children: List.generate(2, (index) {
               final isActive = index == _currentPage;
               return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 320),
                 curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: isActive ? 18 : 6.5,
-                height: 6.5,
+                margin: const EdgeInsets.symmetric(horizontal: 4.5),
+                width: isActive ? 22 : 7.0,
+                height: 7.0,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   color: isActive ? _maroonPrimary : _dotInactive,
@@ -669,7 +521,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
           const SizedBox(height: 18),
 
-          // ─── Primary Full-Width Maroon Button: Next -> ───────────────────
+          // ─── Primary Full-Width Button: Next -> or Get Started -> ───────────
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -678,31 +530,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: _maroonPrimary,
                 foregroundColor: AppColors.white,
-                elevation: 3,
-                shadowColor: _maroonPrimary.withValues(alpha: 0.40),
+                elevation: 4,
+                shadowColor: _maroonPrimary.withValues(alpha: 0.45),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Next',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.white,
-                      letterSpacing: 0.4,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: ScaleTransition(scale: anim, child: child),
+                ),
+                child: Row(
+                  key: ValueKey<bool>(isLastPage),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      isLastPage ? 'Get Started' : 'Next',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 19,
-                    color: AppColors.white,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 19,
+                      color: AppColors.white,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -715,18 +575,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Widget _buildDecorativeVines() {
     return Positioned(
-      top: -10,
-      left: -10,
+      top: -15,
+      left: -15,
       child: Opacity(
-        opacity: 0.25,
+        opacity: 0.22,
         child: Container(
-          width: 140,
-          height: 140,
+          width: 150,
+          height: 150,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
               colors: [
-                _goldAccent.withValues(alpha: 0.35),
+                _goldAccent.withValues(alpha: 0.40),
                 Colors.transparent,
               ],
             ),
@@ -736,25 +596,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildSmallDiamond() {
-    return Transform.rotate(
-      angle: math.pi / 4,
-      child: Container(
-        width: 5,
-        height: 5,
-        color: _goldAccent,
-      ),
-    );
-  }
-
   Widget _buildValuePill(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
+        color: Colors.black.withValues(alpha: 0.50),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _goldAccent.withValues(alpha: 0.40),
+          color: _goldAccent.withValues(alpha: 0.45),
           width: 1,
         ),
       ),
@@ -776,10 +625,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-
-
-  // Compact badge for side columns in screen 2 (44px circle, short label)
-  Widget _buildBadgeCompact({
+  // Elegant badge for side columns with label and icon
+  Widget _buildBadge({
     required String iconPath,
     required String label,
     required IconData fallback,
@@ -788,21 +635,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 44,
-          height: 44,
-          padding: const EdgeInsets.all(8),
+          width: 48,
+          height: 48,
+          padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFFFBF2EC),
             border: Border.all(
               color: const Color(0xFFEBD4CA),
-              width: 1.2,
+              width: 1.3,
             ),
             boxShadow: [
               BoxShadow(
-                color: _maroonPrimary.withValues(alpha: 0.10),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                color: _maroonPrimary.withValues(alpha: 0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -812,28 +659,30 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             errorBuilder: (context, error, stackTrace) => Icon(
               fallback,
               color: _maroonPrimary,
-              size: 20,
+              size: 22,
             ),
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 4),
         Text(
           label,
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 10,
             fontWeight: FontWeight.w600,
             color: _maroonTitle,
             letterSpacing: 0.1,
+            height: 1.15,
           ),
         ),
       ],
     );
   }
 
-  // White phone mockup with explicit w/h (from LayoutBuilder)
+  // White phone mockup with internal app preview
   Widget _buildPhoneMockupSized(double phoneWidth, double phoneHeight) {
-
     return Container(
       width: phoneWidth,
       height: phoneHeight,
@@ -846,9 +695,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: _maroonPrimary.withValues(alpha: 0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: _maroonPrimary.withValues(alpha: 0.20),
+            blurRadius: 20,
+            offset: const Offset(0, 9),
           ),
         ],
       ),
@@ -964,7 +813,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
 
-            // Mini bottom bar
+            // Mini home indicator bar
             Container(
               margin: const EdgeInsets.only(bottom: 4),
               width: 32,

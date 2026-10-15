@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
+import '../../shared/widgets/app_support_sheet.dart';
 import '../../utils/utils.dart';
 import '../vendor_registration/vendor_registration_wizard_screen.dart';
 import 'controllers/auth_controller.dart';
@@ -27,6 +28,8 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _agreedToTerms = false;
+  bool _termsError = false;
 
   @override
   void dispose() {
@@ -39,7 +42,18 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
   }
 
   void _handleContinue() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (!_agreedToTerms) setState(() => _termsError = true);
+      return;
+    }
+
+    if (!_agreedToTerms) {
+      setState(() => _termsError = true);
+      Utils.showError(
+        'Please accept the Terms & Conditions and Privacy Policy to continue',
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     final authController = Get.isRegistered<AuthController>()
@@ -369,6 +383,10 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 const Spacer(),
                 const SizedBox(height: 24),
 
+                // Mandatory Terms & Conditions Checkbox
+                _buildTermsCheckbox(),
+                const SizedBox(height: 16),
+
                 // Register Business Button
                 SizedBox(
                   width: double.infinity,
@@ -408,20 +426,6 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                               const Icon(Icons.arrow_forward_rounded, size: 20),
                             ],
                           ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Terms disclaimer
-                Center(
-                  child: Text(
-                    'By continuing, you agree to Widoora Partner Terms, Commission Policy & Code of Conduct.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11.5,
-                      color: AppColors.grey,
-                      height: 1.4,
-                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -552,6 +556,123 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
         horizontal: 16,
         vertical: 16,
       ),
+    );
+  }
+
+  Widget _buildTermsCheckbox() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () {
+            setState(() {
+              _agreedToTerms = !_agreedToTerms;
+              if (_agreedToTerms) _termsError = false;
+            });
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: _agreedToTerms,
+                    onChanged: (val) {
+                      setState(() {
+                        _agreedToTerms = val ?? false;
+                        if (_agreedToTerms) _termsError = false;
+                      });
+                    },
+                    activeColor: AppColors.primary,
+                    checkColor: AppColors.white,
+                    side: BorderSide(
+                      color: _termsError
+                          ? AppColors.error
+                          : const Color(0xFFC4B29E),
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        color: _termsError ? AppColors.error : AppColors.black,
+                        height: 1.35,
+                      ),
+                      children: [
+                        const TextSpan(text: 'I agree to the '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: () => AppSupportSheet.showTermsOfServiceSheet(
+                              context,
+                              type: 'terms',
+                            ),
+                            child: Text(
+                              'Terms & Conditions',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const TextSpan(text: ' & '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: () => AppSupportSheet.showTermsOfServiceSheet(
+                              context,
+                              type: 'privacy',
+                            ),
+                            child: Text(
+                              'Privacy Policy',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12.5,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_termsError)
+          Padding(
+            padding: const EdgeInsets.only(left: 32, top: 4),
+            child: Text(
+              'Please accept the Terms & Conditions to register',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

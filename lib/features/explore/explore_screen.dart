@@ -113,12 +113,12 @@ class _ExploreBodyState extends State<ExploreBody> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     FadeInWidget(
                       delay: const Duration(milliseconds: 150),
                       child: _buildServiceGrid(),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 6),
                     FadeInWidget(
                       delay: const Duration(milliseconds: 250),
                       child: _buildFeaturedSection(),
@@ -136,35 +136,9 @@ class _ExploreBodyState extends State<ExploreBody> {
 
   Widget _buildSearchHeader() {
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFFDFC),
-            Color(0xFFFAF2E9),
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        border: const Border(
-          bottom: BorderSide(color: Color(0xFFEADBCE), width: 1.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      color: AppColors.background,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -175,10 +149,10 @@ class _ExploreBodyState extends State<ExploreBody> {
                   child: Text(
                     'Our Services',
                     style: GoogleFonts.cormorantGaramond(
-                      fontSize: 24,
+                      fontSize: 27,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF26050E),
-                      letterSpacing: 0.2,
+                      color: const Color(0xFF6B1426),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -192,18 +166,15 @@ class _ExploreBodyState extends State<ExploreBody> {
                     );
                   },
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFAF3EB),
+                      color: AppColors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFEADBCE),
-                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -237,7 +208,7 @@ class _ExploreBodyState extends State<ExploreBody> {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // Unified Luxury Search Bar with instant tap highlight & pristine rounded corners
             AppSearchBar(
@@ -294,51 +265,50 @@ class _ExploreBodyState extends State<ExploreBody> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 10,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.90,
+              mainAxisSpacing: 2,
+              childAspectRatio: 0.89,
             ),
             itemCount: 6,
             itemBuilder: (context, index) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.grey.withValues(alpha: 0.15),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.greyLight.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        width: 0.8,
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 60,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: AppColors.greyLight.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.category_outlined,
+                        size: 30,
+                        color: AppColors.primary.withValues(alpha: 0.20),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Container(
+                    width: 52,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: AppColors.greyLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -449,15 +419,15 @@ class _ExploreBodyState extends State<ExploreBody> {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.68,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 2,
+              childAspectRatio: 0.89,
             ),
             itemCount: displayedCategories.length,
             itemBuilder: (context, i) {
@@ -476,26 +446,26 @@ class _ExploreBodyState extends State<ExploreBody> {
                     );
                   },
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       ServiceIconWrap(
                         item: cat,
-                        size: 94,
-                        iconSize: 62,
-                        borderRadius: 22,
+                        size: 84,
+                        iconSize: 64,
+                        borderRadius: 18,
                         isSelected: false,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 2),
                       Text(
                         cat.title,
                         textAlign: TextAlign.center,
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.cormorantGaramond(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.black,
-                          height: 1.15,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF2C2424),
+                          height: 1.1,
                         ),
                       ),
                     ],

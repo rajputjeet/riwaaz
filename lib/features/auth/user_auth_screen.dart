@@ -24,7 +24,7 @@ class _UserAuthScreenState extends State<UserAuthScreen> {
   final _passwordController = TextEditingController();
   bool _usePhoneAuth = true;
   bool _obscurePassword = true;
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {

@@ -1,9 +1,12 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/app_support_sheet.dart';
+import '../../shared/widgets/cached_image_view.dart';
 import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
@@ -24,16 +27,28 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  late final AnimationController _pulseController;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
   void dispose() {
+    _pulseController.dispose();
     _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -108,23 +123,13 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'WIDOORA',
-          style: GoogleFonts.cormorantGaramond(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
-            letterSpacing: 2.5,
-          ),
-        ),
-        centerTitle: true,
       ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight - 24,
@@ -135,28 +140,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
 
-                        // Heading
-                        Text(
-                          'Welcome Back',
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primaryDark,
-                            height: 1.15,
+                        // App Logo on top (Matching Get Started screen style)
+                        Center(
+                          child: Column(
+                            children: [
+                              _buildGetStartedStyleLogo(),
+                              const SizedBox(height: 18),
+                              Text(
+                                'Welcome Back',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.cormorantGaramond(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryDark,
+                                  height: 1.15,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Login to continue your journey',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  color: AppColors.darkGrey,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Log in to your account to continue planning your event or managing your services.',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            color: AppColors.darkGrey,
-                            height: 1.45,
-                          ),
-                        ),
-                        const Spacer(flex: 3),
+                        const SizedBox(height: 24),
 
                         // Email or Phone field
                         _buildFieldLabel('Email Address or Phone Number'),
@@ -273,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () => _showContactAdminSheet(context),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 8),
+                                  horizontal: 4, vertical: 6),
                             ),
                             child: Text(
                               'Forgot Password?',
@@ -285,12 +300,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 12),
 
-                        // Spacer pushes button and register section to the bottom
-                        const Spacer(flex: 2),
-                        const SizedBox(height: 24),
-
-                        // Login Button at bottom
+                        // Login Button (Moved Up directly under form)
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -333,79 +345,162 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 20),
 
-                        // Don't have an account? Sign Up
-                        Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Don't have an account? ",
+                        // OR Section
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Divider(
+                                color: Color(0xFFE2D6C7),
+                                thickness: 1,
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
+                              child: Text(
+                                'OR',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
-                                  color: AppColors.darkGrey,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.grey,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.of(context).pushReplacement(
-                                    FadeScaleRoute(
-                                      page: const UserSignupScreen(),
-                                    ),
-                                  );
-                                },
-                                child: Text(
-                                  'Sign Up',
+                            ),
+                            const Expanded(
+                              child: Divider(
+                                color: Color(0xFFE2D6C7),
+                                thickness: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Registration Buttons under OR section
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                FadeScaleRoute(
+                                  page: const UserSignupScreen(),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(
+                                color: AppColors.primary,
+                                width: 1.3,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.person_add_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Register as User',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: AppColors.primary,
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.2,
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
 
-                        // Partner registration option
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                FadeScaleRoute(
+                                  page: const VendorSignupScreen(),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF8C6616),
+                              side: const BorderSide(
+                                color: Color(0xFFD4AF37),
+                                width: 1.3,
+                              ),
+                              backgroundColor: const Color(0xFFD4AF37)
+                                  .withValues(alpha: 0.08),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.storefront_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Register as Vendor',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Spacer pushes support section to the bottom
+                        const Spacer(flex: 2),
+                        const SizedBox(height: 16),
+
+                        // Need Support? Help section under bottom
                         Center(
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                "Are you a vendor? ",
+                                'Need Support?',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
+                                  fontSize: 12.5,
                                   color: AppColors.darkGrey,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.of(context).pushReplacement(
-                                    FadeScaleRoute(
-                                      page: const VendorSignupScreen(),
+                              const SizedBox(width: 6),
+                              InkWell(
+                                onTap: () => AppSupportSheet.show(context),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 2),
+                                  child: Text(
+                                    'Help',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 12.5,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: AppColors.primary,
                                     ),
-                                  );
-                                },
-                                child: Text(
-                                  'Partner Register',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: AppColors.primary,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -436,6 +531,88 @@ class _LoginScreenState extends State<LoginScreen> {
     AppSupportSheet.showForgotPasswordAdminSheet(
       context,
       isVendor: widget.initialIsVendor,
+    );
+  }
+
+  /// Center animated logo matching Get Started screen style with luxury golden halo
+  Widget _buildGetStartedStyleLogo() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        final pulse =
+            math.sin(_pulseController.value * 2 * math.pi) * 0.04 + 1.0;
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Ambient outer breathing golden halo
+            Transform.scale(
+              scale: pulse * 1.08,
+              child: Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.28),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+
+            // Outer golden luxury rim with metallic gradient
+            Container(
+              width: 154,
+              height: 154,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFF7D9A0),
+                    Color(0xFFC89950),
+                    Color(0xFFF3D088),
+                    Color(0xFF9E7030),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    spreadRadius: 3,
+                  ),
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.22),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(3.0),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: CachedImageView(
+                      imageUrl: AppImages.widooraLogo,
+                      fit: BoxFit.contain,
+                      fallbackIcon: Icons.favorite_rounded,
+                      iconColor: AppColors.gold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
