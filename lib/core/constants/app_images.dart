@@ -32,4 +32,16 @@ class AppImages {
   static const String onboardingCameraIcon    = '$_base/onboarding_camera.png';
   static const String onboardingDholIcon      = '$_base/onboarding_dhol.png';
   static const String onboardingInvitationIcon= '$_base/onboarding_invitation.png';
+  static const String onboardingWalkCouple    = '$_base/onboarding_walk_couple.jpg';
+  static const String onboardingPhoneMockup   = '$_base/onboarding_phone_mockup.png';
+  static const String onboardingMandapStage   = '$_base/onboarding_mandap_stage.jpg';
+  static const String onboardingBottomGradient= '$_base/onboarding_bottom_gradient.jpg';
+
+  // Badges for Onboarding Screen 2
+  static const String onboardingBadgePhotographers = '$_base/onboarding_badge_photographers.png';
+  static const String onboardingBadgeMakeup        = '$_base/onboarding_badge_makeup.png';
+  static const String onboardingBadgeDecorators    = '$_base/onboarding_badge_decorators.png';
+  static const String onboardingBadgeCaterers      = '$_base/onboarding_badge_caterers.png';
+  static const String onboardingBadgeVenues        = '$_base/onboarding_badge_venues.png';
+  static const String onboardingBadgeMore          = '$_base/onboarding_badge_more.png';
 }
