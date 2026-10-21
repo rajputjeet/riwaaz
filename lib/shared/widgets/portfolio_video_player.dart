@@ -223,10 +223,13 @@ class _PortfolioVideoPlayerState extends State<PortfolioVideoPlayer> {
                   onPressed: () async {
                     try {
                       final uri = Uri.parse(_resolvedUrl);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
+                      try {
+                        final launched = await launchUrl(uri,
                             mode: LaunchMode.externalApplication);
-                      }
+                        if (launched) return;
+                      } catch (_) {}
+                      await launchUrl(uri,
+                          mode: LaunchMode.platformDefault);
                     } catch (_) {}
                   },
                   icon: const Icon(Icons.open_in_new_rounded, size: 16),

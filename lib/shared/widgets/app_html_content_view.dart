@@ -36,10 +36,16 @@ class AppHtmlContentView extends StatelessWidget {
         onTapUrl: (url) async {
           try {
             final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-              return true;
-            }
+            try {
+              final launched =
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (launched) return true;
+            } catch (_) {}
+            try {
+              final launched =
+                  await launchUrl(uri, mode: LaunchMode.platformDefault);
+              if (launched) return true;
+            } catch (_) {}
           } catch (_) {}
           return false;
         },

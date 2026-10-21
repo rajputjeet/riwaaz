@@ -22,6 +22,10 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -36,6 +40,10 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -63,6 +71,10 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     final fullName = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
+    final address = _addressController.text.trim();
+    final city = _cityController.text.trim();
+    final state = _stateController.text.trim();
+    final pincode = _pincodeController.text.trim();
     final password = _passwordController.text;
 
     final res = await authController.signUpAndSignIn(
@@ -71,6 +83,10 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
       phone: phone,
       password: password,
       roleId: 2, // 2 = Customer
+      address: address.isNotEmpty ? address : null,
+      city: city.isNotEmpty ? city : null,
+      state: state.isNotEmpty ? state : null,
+      pincode: pincode.isNotEmpty ? pincode : null,
     );
 
     if (!mounted) return;
@@ -90,22 +106,36 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
     }
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppColors.primary,
-            size: 20,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            onPressed: _handleBack,
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: Text(
           'WIDOORA',
           style: GoogleFonts.cormorantGaramond(
@@ -252,6 +282,111 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                 ),
                 const SizedBox(height: 18),
 
+                // Residential Address
+                _buildFieldLabel('Street Address / Locality'),
+                TextFormField(
+                  controller: _addressController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: _buildInputDecoration(
+                    hintText: 'House / Flat no., Street, Area, Landmark',
+                    prefixIcon: Icons.home_outlined,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter your residential address';
+                    }
+                    if (val.trim().length < 5) {
+                      return 'Please enter a complete address (min 5 chars)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 18),
+
+                // City
+                _buildFieldLabel('City'),
+                TextFormField(
+                  controller: _cityController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _buildInputDecoration(
+                    hintText: 'e.g. Mumbai',
+                    prefixIcon: Icons.location_city_rounded,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter your city';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 18),
+
+                // State & PIN Code Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('State'),
+                          TextFormField(
+                            controller: _stateController,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: _buildInputDecoration(
+                              hintText: 'e.g. Maharashtra',
+                              prefixIcon: Icons.map_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Please enter your state';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('PIN Code'),
+                          TextFormField(
+                            controller: _pincodeController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            buildCounter: (context,
+                                    {required currentLength,
+                                    required isFocused,
+                                    maxLength}) =>
+                                null,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: _buildInputDecoration(
+                              hintText: 'e.g. 400001',
+                              prefixIcon: Icons.pin_drop_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Please enter PIN code';
+                              }
+                              if (val.trim().length != 6) {
+                                return 'Must be 6 digits';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
                 // Password
                 _buildFieldLabel('Password'),
                 TextFormField(
@@ -372,8 +507,6 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
                     return null;
                   },
                 ),
-                // Spacer pushes Continue button and Login link to the bottom
-                const Spacer(),
                 const SizedBox(height: 24),
 
                 // Mandatory Terms & Conditions Checkbox
@@ -465,6 +598,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
       ),
     );
   },
+),
 ),
 ),
 );

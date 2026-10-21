@@ -7,10 +7,12 @@ import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/cached_image_view.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import 'controllers/auth_controller.dart';
 import '../shell/main_shell.dart';
 import '../vendor_panel/vendor_shell.dart';
+import '../vendor_registration/vendor_registration_wizard_screen.dart';
 import '../vendor_registration/vendor_verification_tracker_screen.dart';
 import 'user_signup_screen.dart';
 import 'vendor_signup_screen.dart';
@@ -86,6 +88,21 @@ class _LoginScreenState extends State<LoginScreen>
 
     // Redirect to the appropriate flow based on detected role
     if (isVendorRole) {
+      final storage = StorageHelper();
+      final isOnboardingCompleted = storage.getVendorOnboardingCompleted();
+      final draft = storage.getVendorDraft();
+
+      if (!isOnboardingCompleted || draft != null) {
+        final draftStep = (draft?['step'] as int?) ?? 1;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(
+            page: VendorRegistrationWizardScreen(initialStep: draftStep),
+          ),
+          (route) => false,
+        );
+        return;
+      }
+
       if (user.isVerified == false &&
           (user.vendorProfile?.applicationStatus == 'Under Review' ||
               user.vendorProfile?.applicationStatus == 'Pending')) {
@@ -107,23 +124,37 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppColors.primary,
-            size: 20,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            onPressed: _handleBack,
           ),
-          onPressed: () => Navigator.of(context).pop(),
         ),
-      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -510,7 +541,8 @@ class _LoginScreenState extends State<LoginScreen>
           },
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildFieldLabel(String label) {

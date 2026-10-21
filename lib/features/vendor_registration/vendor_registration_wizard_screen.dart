@@ -13,6 +13,8 @@ import '../../shared/widgets/service_categories_bar.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import 'controllers/vendor_registration_controller.dart';
+import '../auth/controllers/auth_controller.dart';
+import '../auth/vendor_signup_screen.dart';
 import 'vendor_submitted_screen.dart';
 
 class VendorRegistrationWizardScreen extends StatefulWidget {
@@ -68,6 +70,9 @@ class _VendorRegistrationWizardScreenState
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
   final _addressUrlController = TextEditingController();
 
   // Step 3 State: Business Details
@@ -175,8 +180,10 @@ class _VendorRegistrationWizardScreenState
     return (plan['price'] as int?) ?? 0;
   }
 
-  // Step 3 State: Documents with real ImagePickers
-  String? _aadharPath;
+  // Step 3 State: Documents & KYC with real ImagePickers
+  String? _aadharPath; // Aadhaar Card (Front)
+  String? _aadharBackPath; // Aadhaar Card (Back)
+  String? _liveSelfiePath; // Live Selfie verification photo
   String? _panPath;
   String? _businessCertPath;
   String? _addressProofPath;
@@ -187,8 +194,14 @@ class _VendorRegistrationWizardScreenState
 
   List<String> _getMissingRequiredDocs() {
     final List<String> missing = [];
+    if (_liveSelfiePath == null || _liveSelfiePath!.trim().isEmpty) {
+      missing.add('Live Selfie');
+    }
     if (_aadharPath == null || _aadharPath!.trim().isEmpty) {
-      missing.add('Aadhaar / ID Proof');
+      missing.add('Aadhaar Card (Front)');
+    }
+    if (_aadharBackPath == null || _aadharBackPath!.trim().isEmpty) {
+      missing.add('Aadhaar Card (Back)');
     }
     if (_panPath == null || _panPath!.trim().isEmpty) {
       missing.add('PAN Card');
@@ -198,9 +211,36 @@ class _VendorRegistrationWizardScreenState
 
   int _getUploadedRequiredDocsCount() {
     int count = 0;
+    if (_liveSelfiePath != null && _liveSelfiePath!.trim().isNotEmpty) count++;
     if (_aadharPath != null && _aadharPath!.trim().isNotEmpty) count++;
+    if (_aadharBackPath != null && _aadharBackPath!.trim().isNotEmpty) count++;
     if (_panPath != null && _panPath!.trim().isNotEmpty) count++;
     return count;
+  }
+
+  Future<void> _captureLiveSelfie() async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+        maxWidth: 1600,
+        maxHeight: 1600,
+      );
+      if (picked != null) {
+        setState(() {
+          _liveSelfiePath = picked.path;
+          if (_getMissingRequiredDocs().isEmpty) {
+            _showDocValidationErrors = false;
+          }
+        });
+        if (mounted) {
+          Utils.showSuccess('Live selfie captured successfully!');
+        }
+      }
+    } catch (e) {
+      if (mounted) Utils.showError('Could not capture selfie: $e');
+    }
   }
 
   Future<void> _pickDocumentImage(String key, ImageSource source) async {
@@ -213,7 +253,9 @@ class _VendorRegistrationWizardScreenState
       );
       if (picked != null) {
         setState(() {
-          if (key == 'aadhar') _aadharPath = picked.path;
+          if (key == 'aadhar' || key == 'aadharFront') _aadharPath = picked.path;
+          if (key == 'aadharBack') _aadharBackPath = picked.path;
+          if (key == 'liveSelfie') _liveSelfiePath = picked.path;
           if (key == 'pan') _panPath = picked.path;
           if (key == 'businessCert') _businessCertPath = picked.path;
           if (key == 'addressProof') _addressProofPath = picked.path;
@@ -426,11 +468,16 @@ class _VendorRegistrationWizardScreenState
       'mobile': _mobileController.text.trim(),
       'email': _emailController.text.trim(),
       'address': _addressController.text.trim(),
+      'city': _cityController.text.trim(),
+      'state': _stateController.text.trim(),
+      'pincode': _pincodeController.text.trim(),
       'addressUrl': _addressUrlController.text.trim(),
       'experience': _experience,
       'description': _descriptionController.text.trim(),
       'gstNumber': _gstController.text.trim(),
       'aadharPath': _aadharPath,
+      'aadharBackPath': _aadharBackPath,
+      'liveSelfiePath': _liveSelfiePath,
       'panPath': _panPath,
       'businessCertPath': _businessCertPath,
       'addressProofPath': _addressProofPath,
@@ -471,16 +518,27 @@ class _VendorRegistrationWizardScreenState
           : 'Professional wedding services and premium deliverables on Widoora.',
       businessAddress: _addressController.text.trim().isNotEmpty
           ? _addressController.text.trim()
-          : 'SCO 142, Sector 70, Mohali, Punjab',
+          : (StorageHelper().getUserAddress() ?? 'SCO 142, Sector 70, Mohali, Punjab'),
       addressUrl: _addressUrlController.text.trim().isNotEmpty
           ? _addressUrlController.text.trim()
           : null,
-      city: 'Mohali',
+      city: _cityController.text.trim().isNotEmpty
+          ? _cityController.text.trim()
+          : (StorageHelper().getUserCity() ?? 'Mohali'),
+      state: _stateController.text.trim().isNotEmpty
+          ? _stateController.text.trim()
+          : (StorageHelper().getUserState() ?? 'Punjab'),
+      pincode: _pincodeController.text.trim().isNotEmpty
+          ? _pincodeController.text.trim()
+          : (StorageHelper().getUserPincode() ?? '160071'),
       gstNumber: _gstController.text.trim(),
       categoryId: categoryId,
       categoryName: _selectedCategory,
       subscriptionPlanId: planId,
       aadharFile: _aadharPath,
+      aadharFrontFile: _aadharPath,
+      aadharBackFile: _aadharBackPath,
+      liveSelfieFile: _liveSelfiePath,
       panFile: _panPath,
       businessCertFile: _businessCertPath,
       addressProofFile: _addressProofPath,
@@ -539,12 +597,25 @@ class _VendorRegistrationWizardScreenState
       _ownerNameController.text = (draft['ownerName'] as String?) ?? '';
       _mobileController.text = (draft['mobile'] as String?) ?? '';
       _emailController.text = (draft['email'] as String?) ?? '';
-      _addressController.text = (draft['address'] as String?) ?? '';
+      _addressController.text = (draft['address'] as String?)?.trim().isNotEmpty == true
+          ? (draft['address'] as String).trim()
+          : (storage.getUserAddress() ?? '');
+      _cityController.text = (draft['city'] as String?)?.trim().isNotEmpty == true
+          ? (draft['city'] as String).trim()
+          : (storage.getUserCity() ?? '');
+      _stateController.text = (draft['state'] as String?)?.trim().isNotEmpty == true
+          ? (draft['state'] as String).trim()
+          : (storage.getUserState() ?? '');
+      _pincodeController.text = (draft['pincode'] as String?)?.trim().isNotEmpty == true
+          ? (draft['pincode'] as String).trim()
+          : (storage.getUserPincode() ?? '');
       _addressUrlController.text = (draft['addressUrl'] as String?) ?? '';
       _experience = (draft['experience'] as String?) ?? '5+ Years';
       _descriptionController.text = (draft['description'] as String?) ?? '';
       _gstController.text = (draft['gstNumber'] as String?) ?? '';
       _aadharPath = draft['aadharPath'] as String?;
+      _aadharBackPath = draft['aadharBackPath'] as String?;
+      _liveSelfiePath = draft['liveSelfiePath'] as String?;
       _panPath = draft['panPath'] as String?;
       _businessCertPath = draft['businessCertPath'] as String?;
       _addressProofPath = draft['addressProofPath'] as String?;
@@ -582,6 +653,30 @@ class _VendorRegistrationWizardScreenState
       if (widget.initialExperience?.trim().isNotEmpty == true) {
         _experience = widget.initialExperience!.trim();
       }
+      if (_addressController.text.trim().isEmpty) {
+        final savedAddr = storage.getUserAddress();
+        if (savedAddr != null && savedAddr.isNotEmpty) {
+          _addressController.text = savedAddr;
+        }
+      }
+      if (_cityController.text.trim().isEmpty) {
+        final savedCity = storage.getUserCity();
+        if (savedCity != null && savedCity.isNotEmpty) {
+          _cityController.text = savedCity;
+        }
+      }
+      if (_stateController.text.trim().isEmpty) {
+        final savedState = storage.getUserState();
+        if (savedState != null && savedState.isNotEmpty) {
+          _stateController.text = savedState;
+        }
+      }
+      if (_pincodeController.text.trim().isEmpty) {
+        final savedPincode = storage.getUserPincode();
+        if (savedPincode != null && savedPincode.isNotEmpty) {
+          _pincodeController.text = savedPincode;
+        }
+      }
     }
 
     // Auto-save draft on any text keystroke
@@ -591,6 +686,10 @@ class _VendorRegistrationWizardScreenState
       _mobileController,
       _emailController,
       _addressController,
+      _cityController,
+      _stateController,
+      _pincodeController,
+      _addressUrlController,
       _descriptionController,
       _gstController,
     ]) {
@@ -606,6 +705,10 @@ class _VendorRegistrationWizardScreenState
       _mobileController,
       _emailController,
       _addressController,
+      _cityController,
+      _stateController,
+      _pincodeController,
+      _addressUrlController,
       _descriptionController,
       _gstController,
     ]) {
@@ -617,6 +720,9 @@ class _VendorRegistrationWizardScreenState
     _mobileController.dispose();
     _emailController.dispose();
     _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
     _addressUrlController.dispose();
     _descriptionController.dispose();
     _gstController.dispose();
@@ -638,13 +744,19 @@ class _VendorRegistrationWizardScreenState
       final businessName = _businessNameController.text.trim();
       final desc = _descriptionController.text.trim();
       final address = _addressController.text.trim();
+      final city = _cityController.text.trim();
+      final state = _stateController.text.trim();
+      final pincode = _pincodeController.text.trim();
 
       final List<String> missingFields = [];
       if (ownerName.length < 2) missingFields.add('Owner Full Name (min 2 chars)');
       if (businessName.length < 2) missingFields.add('Business / Studio Name (min 2 chars)');
       if (_experience.trim().isEmpty) missingFields.add('Years of Experience');
       if (desc.length < 10) missingFields.add('Business Description (min 10 chars)');
-      if (address.length < 5) missingFields.add('Business Address / City (min 5 chars)');
+      if (address.length < 3) missingFields.add('Street Address / Locality (min 3 chars)');
+      if (city.length < 2) missingFields.add('City (min 2 chars)');
+      if (state.length < 2) missingFields.add('State (min 2 chars)');
+      if (pincode.length < 4) missingFields.add('PIN Code (min 4 chars)');
 
       if (missingFields.isNotEmpty) {
         setState(() {
@@ -656,6 +768,13 @@ class _VendorRegistrationWizardScreenState
         );
         return;
       }
+
+      // Persist latest address details into storage
+      final storage = StorageHelper();
+      storage.saveUserAddress(address);
+      storage.saveUserCity(city);
+      storage.saveUserState(state);
+      storage.saveUserPincode(pincode);
     }
 
     // Step 3 Validation: Required documents CANNOT be skipped
@@ -710,11 +829,18 @@ class _VendorRegistrationWizardScreenState
   }
 
   void _prevStep() {
-    _persistCurrentDraft();
     if (_currentStep > 1) {
       setState(() => _currentStep--);
+      _persistCurrentDraft();
     } else {
-      Navigator.of(context).pop();
+      _persistCurrentDraft();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+          FadeScaleRoute(page: const VendorSignupScreen()),
+        );
+      }
     }
   }
 
@@ -750,16 +876,27 @@ class _VendorRegistrationWizardScreenState
             : 'Professional wedding services and premium deliverables on Widoora.',
         businessAddress: _addressController.text.trim().isNotEmpty
             ? _addressController.text.trim()
-            : 'SCO 142, Sector 70, Mohali, Punjab',
+            : (StorageHelper().getUserAddress() ?? 'SCO 142, Sector 70, Mohali, Punjab'),
         addressUrl: _addressUrlController.text.trim().isNotEmpty
             ? _addressUrlController.text.trim()
             : null,
-        city: 'Mohali',
+        city: _cityController.text.trim().isNotEmpty
+            ? _cityController.text.trim()
+            : (StorageHelper().getUserCity() ?? 'Mohali'),
+        state: _stateController.text.trim().isNotEmpty
+            ? _stateController.text.trim()
+            : (StorageHelper().getUserState() ?? 'Punjab'),
+        pincode: _pincodeController.text.trim().isNotEmpty
+            ? _pincodeController.text.trim()
+            : (StorageHelper().getUserPincode() ?? '160071'),
         gstNumber: _gstController.text.trim(),
         categoryId: categoryId,
         categoryName: _selectedCategory,
         subscriptionPlanId: planId,
         aadharFile: _aadharPath,
+        aadharFrontFile: _aadharPath,
+        aadharBackFile: _aadharBackPath,
+        liveSelfieFile: _liveSelfiePath,
         panFile: _panPath,
         businessCertFile: _businessCertPath,
         addressProofFile: _addressProofPath,
@@ -773,6 +910,7 @@ class _VendorRegistrationWizardScreenState
         final nav = Navigator.of(context);
         // Clear local draft upon final submission
         await StorageHelper().clearVendorDraft();
+        await StorageHelper().saveVendorOnboardingCompleted(true);
 
         nav.pushReplacement(
           FadeScaleRoute(
@@ -1066,8 +1204,14 @@ class _VendorRegistrationWizardScreenState
       statusBarIconBrightness: Brightness.dark,
     ));
 
-    return Scaffold(
-      backgroundColor: AppColors.white,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _prevStep();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.white,
       appBar: AppBar(
         backgroundColor: AppColors.white,
         elevation: 0,
@@ -1138,7 +1282,8 @@ class _VendorRegistrationWizardScreenState
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   String _getStepTitle() {
@@ -1396,8 +1541,17 @@ class _VendorRegistrationWizardScreenState
     final descErr = _showStep2ValidationErrors && _descriptionController.text.trim().length < 10
         ? 'Please describe your services (min 10 characters)'
         : null;
-    final addressErr = _showStep2ValidationErrors && _addressController.text.trim().length < 5
-        ? 'Please enter complete business address / city (min 5 characters)'
+    final addressErr = _showStep2ValidationErrors && _addressController.text.trim().length < 3
+        ? 'Please enter street address / locality (min 3 characters)'
+        : null;
+    final cityErr = _showStep2ValidationErrors && _cityController.text.trim().length < 2
+        ? 'Please enter city'
+        : null;
+    final stateErr = _showStep2ValidationErrors && _stateController.text.trim().length < 2
+        ? 'Please enter state'
+        : null;
+    final pincodeErr = _showStep2ValidationErrors && _pincodeController.text.trim().length < 4
+        ? 'Please enter valid PIN code'
         : null;
 
     return Column(
@@ -1561,31 +1715,74 @@ class _VendorRegistrationWizardScreenState
 
         const SizedBox(height: 16),
 
-        // 5. Business Address / City
+        // 5. Street Address / Locality
         _buildFormField(
-          label: 'Business Address / City',
-          hint: 'e.g. SCO 142, Sector 70, Mohali, Punjab',
+          label: 'Business Address',
+          hint: 'Shop / Plot / Studio No., Street, Landmark',
           controller: _addressController,
-          icon: Icons.location_on_outlined,
+          icon: Icons.home_work_outlined,
           isRequired: true,
           errorText: addressErr,
         ),
 
         const SizedBox(height: 16),
 
-        // 5b. Map / Google Maps Location URL (Optional)
+        // 6. City (Full Width / Prominent)
+        _buildFormField(
+          label: 'City',
+          hint: 'e.g. Mumbai',
+          controller: _cityController,
+          icon: Icons.location_city_rounded,
+          isRequired: true,
+          errorText: cityErr,
+        ),
+
+        const SizedBox(height: 16),
+
+        // 7. State & PIN Code (Half & Half)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildFormField(
+                label: 'State',
+                hint: 'e.g. Maharashtra',
+                controller: _stateController,
+                icon: Icons.map_outlined,
+                isRequired: true,
+                errorText: stateErr,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildFormField(
+                label: 'PIN Code',
+                hint: 'e.g. 400001',
+                controller: _pincodeController,
+                icon: Icons.pin_drop_outlined,
+                keyboardType: TextInputType.number,
+                isRequired: true,
+                errorText: pincodeErr,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // 8. Map / Google Maps Location URL (Optional)
         _buildFormField(
           label: 'Map Location URL (Optional)',
-          hint: 'Paste your Google Maps or Apple Maps link',
+          hint: 'Paste your Google Maps link',
           controller: _addressUrlController,
-          icon: Icons.map_outlined,
+          icon: Icons.map_rounded,
           keyboardType: TextInputType.url,
           isRequired: false,
         ),
 
         const SizedBox(height: 16),
 
-        // 6. GST Number (Optional) - added in Basic Info
+        // 9. GST Number (Optional)
         _buildFormField(
           label: 'GST Number (Optional)',
           hint: 'Enter GST number (e.g. 03AABCR1234F1Z8)',
@@ -1795,12 +1992,226 @@ class _VendorRegistrationWizardScreenState
     );
   }
 
+  Widget _buildLiveSelfiePickerCard() {
+    final isSelected = _liveSelfiePath != null && _liveSelfiePath!.isNotEmpty;
+    final isMissingError = _showDocValidationErrors && !isSelected;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isMissingError ? const Color(0xFFFFF6F6) : AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected
+              ? AppColors.success.withValues(alpha: 0.6)
+              : (isMissingError
+                  ? AppColors.error
+                  : AppColors.grey.withValues(alpha: 0.3)),
+          width: isSelected || isMissingError ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.success.withValues(alpha: 0.12)
+                      : (isMissingError
+                          ? AppColors.error.withValues(alpha: 0.1)
+                          : AppColors.primary.withValues(alpha: 0.08)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isSelected
+                      ? Icons.check_circle_rounded
+                      : Icons.face_retouching_natural_rounded,
+                  color: isSelected
+                      ? AppColors.success
+                      : (isMissingError ? AppColors.error : AppColors.primary),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Live Selfie Verification',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.success.withValues(alpha: 0.12)
+                                : (isMissingError
+                                    ? AppColors.error
+                                    : AppColors.error.withValues(alpha: 0.1)),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            isSelected ? 'VERIFIED' : 'REQUIRED',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
+                              color: isSelected
+                                  ? AppColors.success
+                                  : (isMissingError
+                                      ? Colors.white
+                                      : AppColors.error),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      isSelected
+                          ? 'Live portrait selfie captured with camera'
+                          : (isMissingError
+                              ? 'Live selfie is required for admin verification'
+                              : 'Take a clear front-camera photo of vendor owner'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isSelected
+                            ? AppColors.success
+                            : (isMissingError
+                                ? AppColors.error
+                                : AppColors.darkGrey),
+                        fontWeight: isSelected || isMissingError
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (isSelected) ...[
+            Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.success,
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: Image.file(
+                      File(_liveSelfiePath!),
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Live Selfie Attached ✓',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _shortenFileName(_liveSelfiePath!.split(RegExp(r'[\\/]')).last),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.darkGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _captureLiveSelfie,
+                  icon: const Icon(Icons.camera_alt_outlined, size: 14),
+                  label: const Text('Retake',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _captureLiveSelfie,
+                icon: const Icon(Icons.camera_front_rounded,
+                    color: AppColors.white, size: 18),
+                label: const Text(
+                  'Open Camera & Take Live Selfie',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isMissingError ? AppColors.error : AppColors.primary,
+                  elevation: 1,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────
   // STEP 3: DOCUMENTS
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep3Documents() {
     final uploadedCount = _getUploadedRequiredDocsCount();
-    final allUploaded = uploadedCount == 2;
+    final allUploaded = uploadedCount == 4;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1831,7 +2242,7 @@ class _VendorRegistrationWizardScreenState
                 ),
               ),
               child: Text(
-                '$uploadedCount/2 Required',
+                '$uploadedCount/4 Required',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1846,8 +2257,8 @@ class _VendorRegistrationWizardScreenState
         const SizedBox(height: 6),
         Text(
           allUploaded
-              ? 'All required documents attached. You can proceed to review.'
-              : 'Aadhaar & PAN Card are required. Business Registration & Address Proof are optional but recommended.',
+              ? 'All required documents and KYC verification attached. You can proceed to review.'
+              : 'Aadhaar Card (Front & Back), Live Selfie, and PAN Card are required for verification.',
           style: TextStyle(
             fontSize: 12.5,
             color: _showDocValidationErrors && !allUploaded ? AppColors.error : AppColors.darkGrey,
@@ -1859,7 +2270,7 @@ class _VendorRegistrationWizardScreenState
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: uploadedCount / 2,
+            value: uploadedCount / 4,
             backgroundColor: AppColors.greyLight.withValues(alpha: 0.5),
             valueColor: AlwaysStoppedAnimation<Color>(
               allUploaded
@@ -1870,13 +2281,22 @@ class _VendorRegistrationWizardScreenState
           ),
         ),
         const SizedBox(height: 18),
+        _buildLiveSelfiePickerCard(),
         _buildDocPickerCard(
           key: 'aadhar',
-          title: 'Aadhaar / ID Proof',
-          subtitle: 'Government ID card of owner',
+          title: 'Aadhaar Card (Front)',
+          subtitle: 'Clear photo of front side of Aadhaar card',
           filePath: _aadharPath,
           isRequired: true,
           icon: Icons.badge_outlined,
+        ),
+        _buildDocPickerCard(
+          key: 'aadharBack',
+          title: 'Aadhaar Card (Back)',
+          subtitle: 'Clear photo of back side showing address',
+          filePath: _aadharBackPath,
+          isRequired: true,
+          icon: Icons.contact_page_outlined,
         ),
         _buildDocPickerCard(
           key: 'pan',
@@ -2080,65 +2500,187 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 14),
 
-        // Card 2: Location & Compliance
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2D6C7)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.location_on_rounded,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Location & Tax Compliance',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryDark,
-                    ),
+        // Card 2: Business Address & Tax Details
+        Builder(
+          builder: (context) {
+            final storage = StorageHelper();
+            final authUser = Get.isRegistered<AuthController>()
+                ? Get.find<AuthController>().currentUser.value
+                : null;
+
+            final displayAddress = _addressController.text.trim().isNotEmpty
+                ? _addressController.text.trim()
+                : (storage.getUserAddress() ?? authUser?.address ?? 'Not Provided');
+            final displayCity = _cityController.text.trim().isNotEmpty
+                ? _cityController.text.trim()
+                : (storage.getUserCity() ?? authUser?.city ?? 'Not Provided');
+            final displayState = _stateController.text.trim().isNotEmpty
+                ? _stateController.text.trim()
+                : (storage.getUserState() ?? authUser?.state ?? 'Not Provided');
+            final displayPincode = _pincodeController.text.trim().isNotEmpty
+                ? _pincodeController.text.trim()
+                : (storage.getUserPincode() ?? authUser?.pincode ?? 'Not Provided');
+            final displayMapUrl = _addressUrlController.text.trim();
+
+            final addressParts = [
+              if (displayAddress.isNotEmpty && displayAddress != 'Not Provided') displayAddress,
+              if (displayCity.isNotEmpty && displayCity != 'Not Provided') displayCity,
+              if (displayState.isNotEmpty && displayState != 'Not Provided') displayState,
+              if (displayPincode.isNotEmpty && displayPincode != 'Not Provided') displayPincode,
+            ];
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2D6C7)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              _buildReviewInfoRow(
-                'City / Address',
-                _addressController.text.trim().isNotEmpty
-                    ? _addressController.text.trim()
-                    : 'Chandigarh & Tricity',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.location_on_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Business Address',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentStep = 2;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.edit_outlined, color: AppColors.primary, size: 12),
+                              SizedBox(width: 3),
+                              Text(
+                                'Edit',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Formatted Complete Address Box
+                  if (addressParts.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.offWhite,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFEFE6DC)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Complete Address',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.darkGrey,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  addressParts.join(', '),
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.black,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  _buildReviewInfoRow(
+                    'Business Address',
+                    displayAddress,
+                  ),
+                  _buildReviewInfoRow(
+                    'City',
+                    displayCity,
+                  ),
+                  _buildReviewInfoRow(
+                    'State',
+                    displayState,
+                  ),
+                  _buildReviewInfoRow(
+                    'PIN Code',
+                    displayPincode,
+                  ),
+                  if (displayMapUrl.isNotEmpty)
+                    _buildReviewInfoRow(
+                      'Map Location Link',
+                      displayMapUrl,
+                      isLink: true,
+                    ),
+                  _buildReviewInfoRow(
+                    'GSTIN Number',
+                    _gstController.text.trim().isNotEmpty
+                        ? _gstController.text.trim()
+                        : 'Not Provided (Exempt)',
+                  ),
+                ],
               ),
-              _buildReviewInfoRow(
-                'GSTIN Number',
-                _gstController.text.trim().isNotEmpty
-                    ? _gstController.text.trim()
-                    : 'Not Provided (Exempt)',
-              ),
-            ],
-          ),
+            );
+          },
         ),
         const SizedBox(height: 14),
 
@@ -2316,10 +2858,12 @@ class _VendorRegistrationWizardScreenState
               ),
               const SizedBox(height: 12),
               ...[
-                {'name': 'Aadhaar / ID Proof', 'path': _aadharPath, 'req': true},
+                {'name': 'Live Selfie Verification', 'path': _liveSelfiePath, 'req': true},
+                {'name': 'Aadhaar Card (Front)', 'path': _aadharPath, 'req': true},
+                {'name': 'Aadhaar Card (Back)', 'path': _aadharBackPath, 'req': true},
                 {'name': 'PAN Card', 'path': _panPath, 'req': true},
-                {'name': 'Business Registration', 'path': _businessCertPath, 'req': true},
-                {'name': 'Address Proof', 'path': _addressProofPath, 'req': true},
+                {'name': 'Business Registration', 'path': _businessCertPath, 'req': false},
+                {'name': 'Address Proof', 'path': _addressProofPath, 'req': false},
                 {'name': 'GST Certificate', 'path': _gstDocPath, 'req': false},
               ].map((doc) {
                 final hasPath = doc['path'] != null && (doc['path'] as String).isNotEmpty;
@@ -2425,7 +2969,7 @@ class _VendorRegistrationWizardScreenState
     );
   }
 
-  Widget _buildReviewInfoRow(String label, String value) {
+  Widget _buildReviewInfoRow(String label, String value, {bool isLink = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: Row(
@@ -2447,10 +2991,13 @@ class _VendorRegistrationWizardScreenState
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              maxLines: isLink ? 2 : 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppColors.black,
+                color: isLink ? const Color(0xFF1E88E5) : AppColors.black,
+                decoration: isLink ? TextDecoration.underline : TextDecoration.none,
               ),
             ),
           ),
@@ -3193,9 +3740,9 @@ class _VendorRegistrationWizardScreenState
       buttonText = 'Save Details & View Plans';
     } else if (_currentStep == 3) {
       final uploadedCount = _getUploadedRequiredDocsCount();
-      buttonText = uploadedCount == 2
-          ? 'Continue to Review (2/2 Uploaded ✓)'
-          : 'Upload Required Documents ($uploadedCount/2)';
+      buttonText = uploadedCount == 4
+          ? 'Continue to Review (4/4 Uploaded ✓)'
+          : 'Upload Required Documents ($uploadedCount/4)';
     } else {
       buttonText = 'Continue';
     }

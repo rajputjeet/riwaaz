@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../shared/widgets/app_support_sheet.dart';
+import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import '../vendor_registration/vendor_registration_wizard_screen.dart';
 import 'controllers/auth_controller.dart';
@@ -19,9 +20,14 @@ class VendorSignupScreen extends StatefulWidget {
 
 class _VendorSignupScreenState extends State<VendorSignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _ownerNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -32,10 +38,48 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
   bool _termsError = false;
 
   @override
+  void initState() {
+    super.initState();
+    final storage = StorageHelper();
+    final draft = storage.getVendorDraft();
+    if (draft != null) {
+      if ((draft['businessName'] as String?)?.isNotEmpty == true) {
+        _businessNameController.text = draft['businessName'] as String;
+      }
+      if ((draft['ownerName'] as String?)?.isNotEmpty == true) {
+        _ownerNameController.text = draft['ownerName'] as String;
+      }
+      if ((draft['email'] as String?)?.isNotEmpty == true) {
+        _emailController.text = draft['email'] as String;
+      }
+      if ((draft['mobile'] as String?)?.isNotEmpty == true) {
+        _phoneController.text = draft['mobile'] as String;
+      }
+      if ((draft['address'] as String?)?.isNotEmpty == true) {
+        _addressController.text = draft['address'] as String;
+      }
+      if ((draft['city'] as String?)?.isNotEmpty == true) {
+        _cityController.text = draft['city'] as String;
+      }
+      if ((draft['state'] as String?)?.isNotEmpty == true) {
+        _stateController.text = draft['state'] as String;
+      }
+      if ((draft['pincode'] as String?)?.isNotEmpty == true) {
+        _pincodeController.text = draft['pincode'] as String;
+      }
+    }
+  }
+
+  @override
   void dispose() {
-    _nameController.dispose();
+    _businessNameController.dispose();
+    _ownerNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -55,62 +99,109 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
       return;
     }
 
+    final businessName = _businessNameController.text.trim();
+    final ownerName = _ownerNameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final address = _addressController.text.trim();
+    final city = _cityController.text.trim();
+    final state = _stateController.text.trim();
+    final pincode = _pincodeController.text.trim();
+    final password = _passwordController.text;
+
+    final storage = StorageHelper();
+    // If vendor already signed up in this session, navigate directly without duplicate signup error
+    if (storage.getIsLoggedIn() == true &&
+        (storage.getUserEmail()?.trim().toLowerCase() == email.toLowerCase() ||
+            storage.getUserMobile()?.trim() == phone)) {
+      Navigator.of(context).push(
+        FadeScaleRoute(
+          page: const VendorRegistrationWizardScreen(initialStep: 1),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     final authController = Get.isRegistered<AuthController>()
         ? Get.find<AuthController>()
         : Get.put(AuthController());
 
-    final businessName = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    final password = _passwordController.text;
-
     final res = await authController.signUpAndSignIn(
-      fullName: businessName.isNotEmpty ? businessName : 'Royal Click Studio',
+      fullName: ownerName.isNotEmpty ? ownerName : businessName,
+      businessName: businessName,
       email: email,
       phone: phone,
       password: password,
-      roleId: 3, // 3 = Vendor Partner (per FLUTTER_AUTH_API_DOCUMENTATION.md)
+      roleId: 3, // 3 = Vendor Partner
+      address: address,
+      city: city,
+      state: state,
+      pincode: pincode.isNotEmpty ? pincode : null,
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (res.isSuccess == true) {
+      final storage = StorageHelper();
+      await storage.saveVendorOnboardingCompleted(false);
+      await storage.saveVendorDraft({
+        'step': 1,
+        'businessName': businessName,
+        'ownerName': ownerName,
+        'email': email,
+        'mobile': phone,
+        'address': address,
+        'city': city,
+        'state': state,
+        'pincode': pincode,
+      });
+
       Utils.showSuccess(
-        'Welcome, ${businessName.isNotEmpty ? businessName : "Partner"}! Partner account created.',
+        'Welcome, $businessName! Your account has been created.',
         title: 'Account Created',
       );
 
-      // Navigate directly into vendor onboarding wizard without OTP
-      Navigator.of(context).pushAndRemoveUntil(
+      if (!mounted) return;
+      Navigator.of(context).push(
         FadeScaleRoute(
-          page: const VendorRegistrationWizardScreen(
-            initialStep: 1,
-            initialCategory: 'Photography & Videography',
-          ),
+          page: const VendorRegistrationWizardScreen(initialStep: 1),
         ),
-        (route) => false,
       );
+    }
+  }
+
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      SystemNavigator.pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppColors.primary,
-            size: 20,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            onPressed: _handleBack,
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: Text(
           'WIDOORA PARTNER',
           style: GoogleFonts.cormorantGaramond(
@@ -123,21 +214,14 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 24,
-                ),
-                child: IntrinsicHeight(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const SizedBox(height: 8),
                 // Heading
                 Text(
@@ -151,24 +235,30 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Register as a vendor on Widoora & connect with thousands of couples planning events',
+                  'Register your business on Widoora and setup your partner storefront to reach clients',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: AppColors.darkGrey,
                     height: 1.45,
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
-                // Business Name / Owner Name
+                // SECTION 1: BUSINESS DETAILS
+                _buildSectionHeader(
+                  title: 'Business Information',
+                  icon: Icons.storefront_rounded,
+                ),
+                const SizedBox(height: 14),
+
+                // Business / Studio Name
                 _buildFieldLabel('Business / Studio Name'),
                 TextFormField(
-                  controller: _nameController,
-                  keyboardType: TextInputType.text,
+                  controller: _businessNameController,
                   textCapitalization: TextCapitalization.words,
                   decoration: _buildInputDecoration(
                     hintText: 'e.g. Royal Click Studio',
-                    prefixIcon: Icons.storefront_outlined,
+                    prefixIcon: Icons.business_rounded,
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
@@ -180,7 +270,28 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
+
+                // Owner Name
+                _buildFieldLabel('Owner / Contact Person Name'),
+                TextFormField(
+                  controller: _ownerNameController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _buildInputDecoration(
+                    hintText: 'e.g. Amit Verma',
+                    prefixIcon: Icons.person_outline_rounded,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter owner / contact person name';
+                    }
+                    if (val.trim().length < 2) {
+                      return 'Name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
 
                 // Business Email
                 _buildFieldLabel('Business Email Address (Optional)',
@@ -200,10 +311,10 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
                 // Mobile Number
-                _buildFieldLabel('Mobile Number (For Verification)'),
+                _buildFieldLabel('Mobile Number'),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -257,7 +368,111 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
+
+                // SECTION 2: LOCATION & ADDRESS
+
+                // Studio / Business Address
+                _buildFieldLabel('Street Address / Locality'),
+                TextFormField(
+                  controller: _addressController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: _buildInputDecoration(
+                    hintText: 'Shop / Plot / Studio No., Street, Landmark',
+                    prefixIcon: Icons.home_work_outlined,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter your studio / business address';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // City
+                _buildFieldLabel('City'),
+                TextFormField(
+                  controller: _cityController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _buildInputDecoration(
+                    hintText: 'e.g. Mumbai',
+                    prefixIcon: Icons.location_city_rounded,
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Enter city';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // State & PIN Code Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('State'),
+                          TextFormField(
+                            controller: _stateController,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: _buildInputDecoration(
+                              hintText: 'e.g. Maharashtra',
+                              prefixIcon: Icons.map_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Enter state';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildFieldLabel('PIN Code'),
+                          TextFormField(
+                            controller: _pincodeController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            buildCounter: (context,
+                                    {required currentLength,
+                                    required isFocused,
+                                    maxLength}) =>
+                                null,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: _buildInputDecoration(
+                              hintText: 'e.g. 400001',
+                              prefixIcon: Icons.pin_drop_outlined,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Please enter PIN code';
+                              }
+                              if (val.trim().length != 6) {
+                                return 'PIN code must be 6 digits';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
                 // Password
                 _buildFieldLabel('Create Account Password'),
@@ -318,7 +533,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
                 // Confirm Password
                 _buildFieldLabel('Confirm Password'),
@@ -379,8 +594,6 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     return null;
                   },
                 ),
-                // Spacer pushes Continue button and Log In link to the bottom
-                const Spacer(),
                 const SizedBox(height: 24),
 
                 // Mandatory Terms & Conditions Checkbox
@@ -415,7 +628,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Register Business',
+                                'Register Business & Continue',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
@@ -464,17 +677,61 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
       ),
+    ),
+  );
+  }
+
+  Widget _buildSectionHeader({
+    required String title,
+    required IconData icon,
+    String? badge,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primaryDark,
+          ),
+        ),
+        if (badge != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              badge,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
-  },
-),
-),
-);
   }
 
   Widget _buildFieldLabel(String label, {bool isRequired = true}) {

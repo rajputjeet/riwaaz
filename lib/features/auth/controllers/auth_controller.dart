@@ -1,4 +1,6 @@
-import 'package:get/get.dart';
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../../../core/services/booking_service.dart';
 import '../../vendor_registration/controllers/vendor_registration_controller.dart';
 import '../../../data/api_provider/auth_api_provider.dart';
@@ -34,19 +36,99 @@ class AuthController extends GetxController {
     required String email,
     required String phone,
     required String password,
-    required int roleId, // 2 = Customer, 4 = Vendor Partner
+    required int roleId, // 2 = Customer, 3 = Vendor Partner
+    String? businessName,
+    String? address,
+    String? city,
+    String? state,
+    String? pincode,
+    String? categoryId,
+    dynamic aadharFront,
+    dynamic aadharBack,
+    dynamic liveSelfie,
+    dynamic profileImg,
   }) async {
     isLoading.value = true;
 
-    final requestBody = {
-      'fullName': fullName.trim(),
-      if (email.trim().isNotEmpty) 'email': email.trim().toLowerCase(),
-      'phone': phone.trim(),
-      'password': password,
-      'roleId': roleId,
-    };
+    final bool hasFiles = aadharFront != null ||
+        aadharBack != null ||
+        liveSelfie != null ||
+        profileImg != null;
 
-    final signUpRes = await _authApiProvider.signUp(requestBody);
+    dynamic requestPayload;
+
+    if (hasFiles) {
+      final map = <String, dynamic>{
+        'fullName': fullName.trim(),
+        'ownerName': fullName.trim(),
+        if (businessName != null && businessName.trim().isNotEmpty)
+          'businessName': businessName.trim(),
+        if (email.trim().isNotEmpty) 'email': email.trim().toLowerCase(),
+        'phone': phone.trim(),
+        'mobile': phone.trim(),
+        'password': password,
+        'roleId': roleId,
+        if (address != null && address.trim().isNotEmpty) ...{
+          'address': address.trim(),
+          'businessAddress': address.trim(),
+        },
+        if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+        if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+        if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
+        if (categoryId != null && categoryId.trim().isNotEmpty)
+          'categoryId': categoryId.trim(),
+      };
+
+      Future<MultipartFile?> toMultipart(dynamic f, String fallbackName) async {
+        if (f == null) return null;
+        if (f is MultipartFile) return f;
+        if (f is File) {
+          final fileName = f.path.split(RegExp(r'[\\/]')).last;
+          return await MultipartFile.fromFile(f.path, filename: fileName);
+        }
+        if (f is String && f.trim().isNotEmpty) {
+          final fileName = f.split(RegExp(r'[\\/]')).last;
+          return await MultipartFile.fromFile(f, filename: fileName);
+        }
+        return null;
+      }
+
+      final fFront = await toMultipart(aadharFront, 'aadhar_front.jpg');
+      if (fFront != null) map['aadharFront'] = fFront;
+
+      final fBack = await toMultipart(aadharBack, 'aadhar_back.jpg');
+      if (fBack != null) map['aadharBack'] = fBack;
+
+      final fSelfie = await toMultipart(liveSelfie, 'live_selfie.jpg');
+      if (fSelfie != null) map['liveSelfie'] = fSelfie;
+
+      final fProfile = await toMultipart(profileImg, 'profile_img.jpg');
+      if (fProfile != null) {
+        map['profileImgId'] = fProfile;
+        map['profileImg'] = fProfile;
+      }
+
+      requestPayload = FormData.fromMap(map);
+    } else {
+      requestPayload = {
+        'fullName': fullName.trim(),
+        if (businessName != null && businessName.trim().isNotEmpty)
+          'businessName': businessName.trim(),
+        if (email.trim().isNotEmpty) 'email': email.trim().toLowerCase(),
+        'phone': phone.trim(),
+        'password': password,
+        'roleId': roleId,
+        if (address != null && address.trim().isNotEmpty) ...{
+          'address': address.trim(),
+          'businessAddress': address.trim(),
+        },
+        if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+        if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+        if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
+      };
+    }
+
+    final signUpRes = await _authApiProvider.signUp(requestPayload);
 
     if (signUpRes.isSuccess != true || signUpRes.data == null) {
       isLoading.value = false;
@@ -60,7 +142,24 @@ class AuthController extends GetxController {
     final user = signUpRes.data!;
     final identifier = email.trim().isNotEmpty ? email.trim() : phone.trim();
 
-    // 1. If backend returned an OTP, auto-verify it silently behind the scenes to activate account & retrieve tokens
+    // Helper to persist geographic details
+    Future<void> persistLocationDetails() async {
+      if (address != null && address.isNotEmpty) {
+        await _storageHelper.saveUserAddress(address);
+        await _storageHelper.saveWeddingLocation(address);
+      }
+      if (city != null && city.isNotEmpty) {
+        await _storageHelper.saveUserCity(city);
+      }
+      if (state != null && state.isNotEmpty) {
+        await _storageHelper.saveUserState(state);
+      }
+      if (pincode != null && pincode.isNotEmpty) {
+        await _storageHelper.saveUserPincode(pincode);
+      }
+    }
+
+    // 1. If backend returned an OTP, auto-verify it silently behind the scenes
     if (user.otp != null) {
       final verifyRes = await _authApiProvider.verifyOtp(
         identifier: identifier,
@@ -84,13 +183,14 @@ class AuthController extends GetxController {
         await _storageHelper.saveUserMobile(verifiedUser.mobile ?? user.mobile);
         await _storageHelper.saveUserName(verifiedUser.fullName ?? fullName);
         await _storageHelper.saveRoleId(verifiedUser.roleId ?? roleId);
-        await _storageHelper.saveIsVerified(verifiedUser.isVerified ?? true);
+        await _storageHelper.saveIsVerified(verifiedUser.isVerified ?? (roleId == 2));
         await _storageHelper.saveIsLoggedIn(true);
         await _storageHelper.saveUserModel(verifiedUser.toJson());
+        await persistLocationDetails();
 
         if (verifiedUser.vendorProfile != null) {
           await _storageHelper.saveApplicationId(verifiedUser.vendorProfile?.applicationId);
-          await _storageHelper.saveApplicationStatus(verifiedUser.vendorProfile?.applicationStatus);
+          await _storageHelper.saveApplicationStatus(verifiedUser.vendorProfile?.applicationStatus ?? 'Pending');
         }
 
         isLoading.value = false;
@@ -110,13 +210,14 @@ class AuthController extends GetxController {
       await _storageHelper.saveUserMobile(user.mobile);
       await _storageHelper.saveUserName(user.fullName ?? fullName);
       await _storageHelper.saveRoleId(roleId);
-      await _storageHelper.saveIsVerified(true);
+      await _storageHelper.saveIsVerified(user.isVerified ?? (roleId == 2));
       await _storageHelper.saveIsLoggedIn(true);
       await _storageHelper.saveUserModel(user.toJson());
+      await persistLocationDetails();
 
       if (user.vendorProfile != null) {
         await _storageHelper.saveApplicationId(user.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(user.vendorProfile?.applicationStatus);
+        await _storageHelper.saveApplicationStatus(user.vendorProfile?.applicationStatus ?? 'Pending');
       }
 
       isLoading.value = false;
@@ -146,13 +247,14 @@ class AuthController extends GetxController {
       await _storageHelper.saveUserMobile(loggedInUser.mobile ?? user.mobile);
       await _storageHelper.saveUserName(loggedInUser.fullName ?? fullName);
       await _storageHelper.saveRoleId(loggedInUser.roleId ?? roleId);
-      await _storageHelper.saveIsVerified(loggedInUser.isVerified ?? true);
+      await _storageHelper.saveIsVerified(loggedInUser.isVerified ?? (roleId == 2));
       await _storageHelper.saveIsLoggedIn(true);
       await _storageHelper.saveUserModel(loggedInUser.toJson());
+      await persistLocationDetails();
 
       if (loggedInUser.vendorProfile != null) {
         await _storageHelper.saveApplicationId(loggedInUser.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(loggedInUser.vendorProfile?.applicationStatus);
+        await _storageHelper.saveApplicationStatus(loggedInUser.vendorProfile?.applicationStatus ?? 'Pending');
       }
 
       return loginRes;
@@ -165,9 +267,10 @@ class AuthController extends GetxController {
     await _storageHelper.saveUserMobile(user.mobile);
     await _storageHelper.saveUserName(user.fullName ?? fullName);
     await _storageHelper.saveRoleId(roleId);
-    await _storageHelper.saveIsVerified(true);
+    await _storageHelper.saveIsVerified(user.isVerified ?? (roleId == 2));
     await _storageHelper.saveIsLoggedIn(true);
     await _storageHelper.saveUserModel(user.toJson());
+    await persistLocationDetails();
 
     return signUpRes;
   }
@@ -322,6 +425,18 @@ class AuthController extends GetxController {
       await _storageHelper.saveIsVerified(user.isVerified ?? false);
       await _storageHelper.saveIsLoggedIn(true);
       await _storageHelper.saveUserModel(user.toJson());
+      if (user.address != null && user.address!.trim().isNotEmpty) {
+        await _storageHelper.saveUserAddress(user.address!.trim());
+      }
+      if (user.city != null && user.city!.trim().isNotEmpty) {
+        await _storageHelper.saveUserCity(user.city!.trim());
+      }
+      if (user.state != null && user.state!.trim().isNotEmpty) {
+        await _storageHelper.saveUserState(user.state!.trim());
+      }
+      if (user.pincode != null && user.pincode!.trim().isNotEmpty) {
+        await _storageHelper.saveUserPincode(user.pincode!.trim());
+      }
 
       if (user.vendorProfile != null) {
         await _storageHelper.saveApplicationId(user.vendorProfile?.applicationId);

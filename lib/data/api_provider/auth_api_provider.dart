@@ -13,7 +13,8 @@ class AuthApiProvider {
   }
 
   // 1. Sign Up (POST /api/auth/sign-up)
-  Future<DataResponse<UserModel>> signUp(Map<String, dynamic> requestData) async {
+  /// Accepts `Map<String, dynamic>` (for JSON) or `FormData` (for multipart with verification files)
+  Future<DataResponse<UserModel>> signUp(dynamic requestData) async {
     try {
       final response = await _dio.post(
         ApiConstants.signUp,

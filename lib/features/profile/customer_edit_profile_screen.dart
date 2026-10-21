@@ -28,6 +28,9 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
   late TextEditingController _nameCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _addressCtrl;
+  late TextEditingController _cityCtrl;
+  late TextEditingController _stateCtrl;
+  late TextEditingController _pincodeCtrl;
 
   XFile? _selectedImage;
   String? _currentProfileImgUrl;
@@ -38,7 +41,11 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
     final storage = StorageHelper();
     _nameCtrl = TextEditingController(text: storage.getUserName() ?? '');
     _emailCtrl = TextEditingController(text: storage.getUserEmail() ?? '');
-    _addressCtrl = TextEditingController(text: storage.getWeddingLocation() ?? '');
+    _addressCtrl = TextEditingController(
+        text: storage.getUserAddress() ?? storage.getWeddingLocation() ?? '');
+    _cityCtrl = TextEditingController(text: storage.getUserCity() ?? '');
+    _stateCtrl = TextEditingController(text: storage.getUserState() ?? '');
+    _pincodeCtrl = TextEditingController(text: storage.getUserPincode() ?? '');
     _currentProfileImgUrl = storage.getUserProfileImg();
 
     _loadExistingProfile();
@@ -53,6 +60,18 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
         final user = res.data!;
         _nameCtrl.text = user.fullName ?? '';
         _emailCtrl.text = user.email ?? '';
+        if (user.address != null && user.address!.isNotEmpty) {
+          _addressCtrl.text = user.address!;
+        }
+        if (user.city != null && user.city!.isNotEmpty) {
+          _cityCtrl.text = user.city!;
+        }
+        if (user.state != null && user.state!.isNotEmpty) {
+          _stateCtrl.text = user.state!;
+        }
+        if (user.pincode != null && user.pincode!.isNotEmpty) {
+          _pincodeCtrl.text = user.pincode!;
+        }
 
         if (user.profileImgUrl != null && user.profileImgUrl!.isNotEmpty) {
           _currentProfileImgUrl = user.profileImgUrl;
@@ -70,6 +89,9 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _addressCtrl.dispose();
+    _cityCtrl.dispose();
+    _stateCtrl.dispose();
+    _pincodeCtrl.dispose();
     super.dispose();
   }
 
@@ -200,13 +222,18 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
       final name = _nameCtrl.text.trim();
       final email = _emailCtrl.text.trim();
       final address = _addressCtrl.text.trim();
+      final city = _cityCtrl.text.trim();
+      final state = _stateCtrl.text.trim();
+      final pincode = _pincodeCtrl.text.trim();
 
       final formDataMap = <String, dynamic>{
         'fullName': name,
         'name': name,
         'email': email,
-        'address': address,
-        'city': address,
+        if (address.isNotEmpty) 'address': address,
+        if (city.isNotEmpty) 'city': city,
+        if (state.isNotEmpty) 'state': state,
+        if (pincode.isNotEmpty) 'pincode': pincode,
       };
 
       if (_selectedImage != null) {
@@ -231,7 +258,17 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
           await storage.saveUserEmail(email);
         }
         if (address.isNotEmpty) {
+          await storage.saveUserAddress(address);
           await storage.saveWeddingLocation(address);
+        }
+        if (city.isNotEmpty) {
+          await storage.saveUserCity(city);
+        }
+        if (state.isNotEmpty) {
+          await storage.saveUserState(state);
+        }
+        if (pincode.isNotEmpty) {
+          await storage.saveUserPincode(pincode);
         }
         if (res.data?.profileImgUrl != null) {
           await storage.saveUserProfileImg(res.data!.profileImgUrl);
@@ -407,23 +444,54 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
 
                     const SizedBox(height: 14),
 
-                    // 3. Address
+                    // 3. Street Address
                     _buildTextField(
-                      label: 'Address / City',
-                      hintText: 'e.g. Chandigarh, Punjab',
+                      label: 'Street Address / Locality',
+                      hintText: 'e.g. 42 Park Avenue, Civil Lines',
                       controller: _addressCtrl,
                       icon: Icons.location_on_outlined,
                       maxLines: 1,
-                      isRequired: true,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter address or city';
-                        }
-                        if (v.trim().length < 3) {
-                          return 'Address must be at least 3 characters';
-                        }
-                        return null;
-                      },
+                      isRequired: false,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 4. City
+                    _buildTextField(
+                      label: 'City',
+                      hintText: 'e.g. Jaipur',
+                      controller: _cityCtrl,
+                      icon: Icons.location_city_outlined,
+                      isRequired: false,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 5. State & Pincode Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'State',
+                            hintText: 'e.g. Rajasthan',
+                            controller: _stateCtrl,
+                            icon: Icons.map_outlined,
+                            isRequired: false,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'Pincode',
+                            hintText: 'e.g. 302001',
+                            controller: _pincodeCtrl,
+                            icon: Icons.pin_drop_outlined,
+                            keyboardType: TextInputType.number,
+                            isRequired: true,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 28),

@@ -70,4 +70,63 @@ class SettingModel {
     'eventServicesLabel': eventServicesLabel,
     'copyright': copyright,
   };
+
+  /// Default configuration matching current verified platform settings
+  static SettingModel get defaultSettings => SettingModel(
+        id: "6ad513469bb1f2746f42c3a0",
+        contactEmail: "contactwidoora@gmail.com",
+        contactPhone: "02269-622566 ",
+        instagram: "https://www.instagram.com/widoora.co/",
+        google: "https://widoora.com",
+        facebook: "https://www.facebook.com/profile.php?id=61594680102038",
+        happyCustomersCount: "200+",
+        happyCustomersLabel: "Happy Customers",
+        locationsCount: "50+",
+        locationsLabel: "Locations",
+        eventVendorsCount: "100+",
+        eventVendorsLabel: "Event Vendors",
+        eventServicesCount: "50+",
+        eventServicesLabel: "Event Services",
+        copyright: "www.widoora.com",
+      );
+
+  /// Numeric phone string suitable for tel: URI (e.g. 02269622566)
+  String get cleanPhone {
+    final raw = (contactPhone ?? '').trim();
+    if (raw.isEmpty) return '02269622566';
+    final digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+    return digits.isNotEmpty ? digits : '02269622566';
+  }
+
+  /// WhatsApp international formatted phone (e.g. 912269622566)
+  String get whatsAppPhone {
+    final rawDigits = cleanPhone.replaceAll('+', '');
+    if (rawDigits.startsWith('91') && rawDigits.length > 10) {
+      return rawDigits;
+    }
+    if (rawDigits.startsWith('0')) {
+      return '91${rawDigits.substring(1)}';
+    }
+    return '91$rawDigits';
+  }
+
+  /// Clean display telephone string
+  String get displayPhone => (contactPhone ?? '02269-622566').trim();
+
+  /// Clean display contact email
+  String get displayEmail => (contactEmail ?? 'contactwidoora@gmail.com').trim();
+
+  /// Clean Instagram profile URL
+  String get displayInstagram =>
+      (instagram ?? 'https://www.instagram.com/widoora.co/').trim();
+
+  /// Clean Facebook page URL
+  String get displayFacebook =>
+      (facebook ?? 'https://www.facebook.com/profile.php?id=61594680102038').trim();
+
+  /// Clean Website / Google URL
+  String get displayWebsite => (google ?? 'https://widoora.com').trim();
+
+  /// Clean Copyright text
+  String get displayCopyright => (copyright ?? 'www.widoora.com').trim();
 }

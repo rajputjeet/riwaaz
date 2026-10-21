@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../data/models/setting_model.dart';
 
 class StorageHelper {
   static SharedPreferences? _prefsInstance;
@@ -21,6 +22,19 @@ class StorageHelper {
   static const String _weddingDate      = "weddingDate";
   static const String _weddingLocation  = "weddingLocation";
   static const String _weddingEvents    = "weddingEvents";
+  static const String _userAddress      = "userAddress";
+  static const String _userCity         = "userCity";
+  static const String _userState        = "userState";
+  static const String _userPincode      = "userPincode";
+  static const String _userAbout        = "userAbout";
+  static const String _appSettings      = "appSettings";
+  static const String _contactEmail     = "setting_contactEmail";
+  static const String _contactPhone     = "setting_contactPhone";
+  static const String _instagramUrl     = "setting_instagram";
+  static const String _googleUrl        = "setting_google";
+  static const String _facebookUrl      = "setting_facebook";
+  static const String _copyrightText    = "setting_copyright";
+  static const String _vendorOnboardingCompleted = "vendorOnboardingCompleted";
 
   static final StorageHelper _singleton = StorageHelper._internal();
 
@@ -106,6 +120,26 @@ class StorageHelper {
     return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
   }
 
+  Future<void> saveUserAddress(String? address) async =>
+      _savePref(_userAddress, address);
+  String? getUserAddress() => _prefsInstance?.getString(_userAddress);
+
+  Future<void> saveUserCity(String? city) async =>
+      _savePref(_userCity, city);
+  String? getUserCity() => _prefsInstance?.getString(_userCity);
+
+  Future<void> saveUserState(String? state) async =>
+      _savePref(_userState, state);
+  String? getUserState() => _prefsInstance?.getString(_userState);
+
+  Future<void> saveUserPincode(String? pincode) async =>
+      _savePref(_userPincode, pincode);
+  String? getUserPincode() => _prefsInstance?.getString(_userPincode);
+
+  Future<void> saveUserAbout(String? about) async =>
+      _savePref(_userAbout, about);
+  String? getUserAbout() => _prefsInstance?.getString(_userAbout);
+
   // ── Vendor Application ─────────────────────────────────────────────────────
 
   Future<void> saveApplicationId(String? appId) async =>
@@ -161,6 +195,26 @@ class StorageHelper {
     await _prefsInstance!.remove(_vendorDraft);
   }
 
+  Future<void> saveVendorOnboardingCompleted(bool? completed) async =>
+      _savePref(_vendorOnboardingCompleted, completed);
+
+  bool getVendorOnboardingCompleted() {
+    final explicit = _prefsInstance?.getBool(_vendorOnboardingCompleted);
+    if (explicit != null) return explicit;
+    final draft = getVendorDraft();
+    if (draft != null) return false;
+    final status = getApplicationStatus();
+    if (status != null &&
+        status.isNotEmpty &&
+        status != 'Pending' &&
+        status != 'Draft' &&
+        status != 'Under Review') {
+      return true;
+    }
+    if (getIsVerified()) return true;
+    return false;
+  }
+
   // ── Wedding Details ────────────────────────────────────────────────────────
   Future<void> saveWeddingDate(String? date) async => _savePref(_weddingDate, date);
   String? getWeddingDate() => _prefsInstance?.getString(_weddingDate);
@@ -186,6 +240,85 @@ class StorageHelper {
       return null;
     }
   }
+
+  // ── Platform Settings & Support ───────────────────────────────────────────
+
+  /// Save platform settings JSON and individual preferences
+  Future<void> saveSettings(SettingModel? settings) async {
+    if (settings == null) {
+      await _savePref(_appSettings, null);
+      return;
+    }
+    await _savePref(_appSettings, jsonEncode(settings.toJson()));
+    if (settings.contactEmail != null) {
+      await _savePref(_contactEmail, settings.contactEmail!.trim());
+    }
+    if (settings.contactPhone != null) {
+      await _savePref(_contactPhone, settings.contactPhone!.trim());
+    }
+    if (settings.instagram != null) {
+      await _savePref(_instagramUrl, settings.instagram!.trim());
+    }
+    if (settings.google != null) {
+      await _savePref(_googleUrl, settings.google!.trim());
+    }
+    if (settings.facebook != null) {
+      await _savePref(_facebookUrl, settings.facebook!.trim());
+    }
+    if (settings.copyright != null) {
+      await _savePref(_copyrightText, settings.copyright!.trim());
+    }
+  }
+
+  /// Get platform settings with fallback to default verified values
+  SettingModel getSettings() {
+    final raw = _prefsInstance?.getString(_appSettings);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        return SettingModel.fromJson(map);
+      } catch (_) {}
+    }
+
+    final phone = _prefsInstance?.getString(_contactPhone);
+    final email = _prefsInstance?.getString(_contactEmail);
+    final insta = _prefsInstance?.getString(_instagramUrl);
+    final fb = _prefsInstance?.getString(_facebookUrl);
+    final google = _prefsInstance?.getString(_googleUrl);
+    final copyright = _prefsInstance?.getString(_copyrightText);
+
+    if (phone != null || email != null || insta != null || fb != null) {
+      return SettingModel(
+        contactPhone: phone ?? SettingModel.defaultSettings.contactPhone,
+        contactEmail: email ?? SettingModel.defaultSettings.contactEmail,
+        instagram: insta ?? SettingModel.defaultSettings.instagram,
+        facebook: fb ?? SettingModel.defaultSettings.facebook,
+        google: google ?? SettingModel.defaultSettings.google,
+        copyright: copyright ?? SettingModel.defaultSettings.copyright,
+        happyCustomersCount: SettingModel.defaultSettings.happyCustomersCount,
+        happyCustomersLabel: SettingModel.defaultSettings.happyCustomersLabel,
+        locationsCount: SettingModel.defaultSettings.locationsCount,
+        locationsLabel: SettingModel.defaultSettings.locationsLabel,
+        eventVendorsCount: SettingModel.defaultSettings.eventVendorsCount,
+        eventVendorsLabel: SettingModel.defaultSettings.eventVendorsLabel,
+        eventServicesCount: SettingModel.defaultSettings.eventServicesCount,
+        eventServicesLabel: SettingModel.defaultSettings.eventServicesLabel,
+      );
+    }
+
+    return SettingModel.defaultSettings;
+  }
+
+  String getContactEmail() => getSettings().displayEmail;
+  String getContactPhone() => getSettings().displayPhone;
+  String getInstagramUrl() => getSettings().displayInstagram;
+  String getFacebookUrl() => getSettings().displayFacebook;
+  String getGoogleUrl() => getSettings().displayWebsite;
+  String getCopyright() => getSettings().displayCopyright;
+  String getHappyCustomersCount() => getSettings().happyCustomersCount ?? '200+';
+  String getLocationsCount() => getSettings().locationsCount ?? '50+';
+  String getEventVendorsCount() => getSettings().eventVendorsCount ?? '100+';
+  String getEventServicesCount() => getSettings().eventServicesCount ?? '50+';
 
   // ── Session & All Data Clear ──────────────────────────────────────────────
 

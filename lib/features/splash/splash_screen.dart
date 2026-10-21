@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
+import '../../data/api_provider/setting_api_provider.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../shell/main_shell.dart';
 import '../vendor_panel/vendor_shell.dart';
+import '../vendor_registration/vendor_registration_wizard_screen.dart';
+import '../vendor_registration/vendor_verification_tracker_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -85,6 +88,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startAnimationSequence() async {
+    // Fetch latest verified platform settings and cache to prefs in background
+    SettingApiProvider().fetchAndCacheSettings();
+
     await Future.delayed(const Duration(milliseconds: 150));
     if (!mounted) return;
     _logoController.forward();
@@ -114,6 +120,35 @@ class _SplashScreenState extends State<SplashScreen>
     if (isLoggedIn == true && token != null && token.isNotEmpty) {
       final roleId = storage.getRoleId();
       if (roleId == 3 || roleId == 4) {
+        final isVerified = storage.getIsVerified();
+        final isOnboardingCompleted = storage.getVendorOnboardingCompleted();
+        final draft = storage.getVendorDraft();
+        final appStatus = storage.getApplicationStatus();
+
+        // 1. If vendor registered but has not completed/submitted onboarding wizard:
+        // Always resume directly from where they left the registration process!
+        if (!isOnboardingCompleted || draft != null) {
+          final draftStep = (draft?['step'] as int?) ?? 1;
+          Navigator.of(context).pushReplacement(
+            FadeScaleRoute(
+              page: VendorRegistrationWizardScreen(initialStep: draftStep),
+            ),
+          );
+          return;
+        }
+
+        // 2. If vendor completed the onboarding wizard but is awaiting admin review:
+        if (!isVerified ||
+            appStatus == 'Under Review' ||
+            appStatus == 'Pending' ||
+            appStatus == 'Submitted') {
+          Navigator.of(context).pushReplacement(
+            FadeScaleRoute(page: const VendorVerificationTrackerScreen()),
+          );
+          return;
+        }
+
+        // 3. Fully verified vendor with active dashboard access
         Navigator.of(context).pushReplacement(
           FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
         );

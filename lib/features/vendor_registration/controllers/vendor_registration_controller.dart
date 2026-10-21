@@ -91,11 +91,16 @@ class VendorRegistrationController extends GetxController {
     required String businessAddress,
     String? addressUrl,
     required String city,
+    String? state,
+    String? pincode,
     String? gstNumber,
     required String categoryId,
     String? categoryName,
     required String subscriptionPlanId,
     dynamic aadharFile,
+    dynamic aadharFrontFile,
+    dynamic aadharBackFile,
+    dynamic liveSelfieFile,
     dynamic panFile,
     dynamic businessCertFile,
     dynamic addressProofFile,
@@ -104,8 +109,11 @@ class VendorRegistrationController extends GetxController {
   }) async {
     isSubmitting.value = true;
 
-    final bool hasAadhar = aadharFile is MultipartFile || (aadharFile is String && aadharFile.trim().isNotEmpty);
-    final bool hasPan = panFile is MultipartFile || (panFile is String && panFile.trim().isNotEmpty);
+    final actualFront = aadharFrontFile ?? aadharFile;
+    final bool hasAadhar = actualFront is MultipartFile ||
+        (actualFront is String && actualFront.trim().isNotEmpty);
+    final bool hasPan = panFile is MultipartFile ||
+        (panFile is String && panFile.trim().isNotEmpty);
 
     if (!hasAadhar || !hasPan) {
       isSubmitting.value = false;
@@ -128,6 +136,8 @@ class VendorRegistrationController extends GetxController {
       'businessDescription': businessDescription.trim(),
       'businessAddress': businessAddress.trim(),
       'city': city.trim(),
+      if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+      if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
       if (addressUrl != null && addressUrl.trim().isNotEmpty)
         'addressUrl': addressUrl.trim(),
       if (gstNumber != null && gstNumber.trim().isNotEmpty)
@@ -155,7 +165,26 @@ class VendorRegistrationController extends GetxController {
       );
     }
 
-    formDataMap['aadhar'] = await toMultipart(aadharFile, 'aadhar_card.jpg');
+    if (actualFront != null) {
+      final fFront = await toMultipart(actualFront, 'aadhar_front.jpg');
+      formDataMap['aadhar'] = fFront;
+      formDataMap['aadharFront'] = fFront;
+    }
+
+    if (aadharBackFile != null &&
+        (aadharBackFile is MultipartFile ||
+            (aadharBackFile is String && aadharBackFile.trim().isNotEmpty))) {
+      formDataMap['aadharBack'] =
+          await toMultipart(aadharBackFile, 'aadhar_back.jpg');
+    }
+
+    if (liveSelfieFile != null &&
+        (liveSelfieFile is MultipartFile ||
+            (liveSelfieFile is String && liveSelfieFile.trim().isNotEmpty))) {
+      formDataMap['liveSelfie'] =
+          await toMultipart(liveSelfieFile, 'live_selfie.jpg');
+    }
+
     formDataMap['pan'] = await toMultipart(panFile, 'pan_card.jpg');
     if (businessCertFile != null && (businessCertFile is MultipartFile || (businessCertFile is String && businessCertFile.trim().isNotEmpty))) {
       formDataMap['businessCert'] = await toMultipart(businessCertFile, 'business_cert.jpg');

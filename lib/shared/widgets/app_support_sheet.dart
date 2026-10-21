@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import '../../utils/utils.dart';
 import '../../data/api_provider/cms_api_provider.dart';
+import '../../data/api_provider/setting_api_provider.dart';
 import '../../data/models/cms_model.dart';
+import '../../data/models/setting_model.dart';
 import '../../data/shared/data_response.dart';
+import '../../utils/helper/storage_helper.dart';
 import 'app_html_content_view.dart';
 import 'app_states.dart';
 
@@ -180,7 +185,7 @@ class AppSupportSheet {
   }
 }
 
-class _AppSupportSheetBody extends StatelessWidget {
+class _AppSupportSheetBody extends StatefulWidget {
   final ScrollController scrollController;
   final bool isVendor;
 
@@ -189,54 +194,135 @@ class _AppSupportSheetBody extends StatelessWidget {
     required this.isVendor,
   });
 
-  static const _email = 'support@widoora.com';
-  static const _website = 'https://widoora.com';
+  @override
+  State<_AppSupportSheetBody> createState() => _AppSupportSheetBodyState();
+}
 
-  static Future<void> _handleCall() async {
-    final uri = Uri.parse('tel:+919876543210');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+class _AppSupportSheetBodyState extends State<_AppSupportSheetBody> {
+  late SettingModel _settings;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings = StorageHelper().getSettings();
+    _fetchLiveSettings();
   }
 
-  static Future<void> _handleWhatsApp() async {
-    const message = 'Hello! I need help with my Widoora account.';
+  Future<void> _fetchLiveSettings() async {
+    try {
+      final res = await SettingApiProvider().getSettings();
+      if (mounted && res.isSuccess == true && res.data != null) {
+        setState(() {
+          _settings = res.data!;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _safeLaunch(
+    Uri uri, {
+    LaunchMode mode = LaunchMode.externalApplication,
+    String? fallbackCopyText,
+    String? fallbackMessage,
+  }) async {
+    try {
+      final launched = await launchUrl(uri, mode: mode);
+      if (launched) return;
+    } catch (_) {}
+
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      if (launched) return;
+    } catch (_) {}
+
+    if (fallbackCopyText != null && fallbackCopyText.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: fallbackCopyText));
+      if (mounted) {
+        Utils.showSuccess(fallbackMessage ?? 'Copied to clipboard: $fallbackCopyText');
+      }
+    } else {
+      if (mounted) {
+        Utils.showError('Could not open link: $uri');
+      }
+    }
+  }
+
+  Future<void> _handleCall() async {
+    final phone = _settings.cleanPhone;
+    final uri = Uri.parse('tel:$phone');
+    await _safeLaunch(
+      uri,
+      fallbackCopyText: phone,
+      fallbackMessage: 'Phone number ($phone) copied to clipboard',
+    );
+  }
+
+  Future<void> _handleWhatsApp() async {
+    final waNumber = _settings.whatsAppPhone;
+    final role = widget.isVendor ? 'Vendor Partner' : 'Customer';
+    final message = 'Hello Widoora Support! I need help with my $role account.';
+    final encodedMessage = Uri.encodeComponent(message);
+
+    // 1. Try native WhatsApp scheme directly
+    final appUri = Uri.parse('whatsapp://send?phone=$waNumber&text=$encodedMessage');
+    try {
+      final launched = await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    // 2. Try wa.me web link in external browser
+    final webUri = Uri.parse('https://wa.me/$waNumber?text=$encodedMessage');
+    try {
+      final launched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    // 3. Fallback to platform default
+    try {
+      final launched = await launchUrl(webUri, mode: LaunchMode.platformDefault);
+      if (launched) return;
+    } catch (_) {}
+
+    // 4. Fallback copy to clipboard
+    await Clipboard.setData(ClipboardData(text: waNumber));
+    if (mounted) {
+      Utils.showSuccess('WhatsApp number ($waNumber) copied to clipboard');
+    }
+  }
+
+  Future<void> _handleEmail() async {
+    final email = _settings.displayEmail;
     final uri = Uri.parse(
-        'https://wa.me/919876543210?text=${Uri.encodeComponent(message)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+        'mailto:$email?subject=${Uri.encodeComponent('Support Request - Widoora')}');
+    await _safeLaunch(
+      uri,
+      fallbackCopyText: email,
+      fallbackMessage: 'Email address ($email) copied to clipboard',
+    );
   }
 
-  static Future<void> _handleEmail() async {
-    final uri = Uri.parse(
-        'mailto:$_email?subject=${Uri.encodeComponent('Support Request')}');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  Future<void> _handleWebsite() async {
+    final raw = _settings.displayWebsite;
+    final url = raw.startsWith('http') ? raw : 'https://$raw';
+    await _safeLaunch(Uri.parse(url));
   }
 
-  static Future<void> _handleWebsite() async {
-    final uri = Uri.parse(_website);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  Future<void> _handleInstagram() async {
+    final raw = _settings.displayInstagram;
+    final url = raw.startsWith('http') ? raw : 'https://$raw';
+    await _safeLaunch(Uri.parse(url));
   }
 
-  static Future<void> _handleInstagram() async {
-    final uri = Uri.parse('https://instagram.com/widoora');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  static Future<void> _handleFacebook() async {
-    final uri = Uri.parse('https://facebook.com/widoora');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  Future<void> _handleFacebook() async {
+    final raw = _settings.displayFacebook;
+    final url = raw.startsWith('http') ? raw : 'https://$raw';
+    await _safeLaunch(Uri.parse(url));
   }
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      controller: scrollController,
+      controller: widget.scrollController,
       physics: const BouncingScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
@@ -322,19 +408,16 @@ class _AppSupportSheetBody extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                 ),
                 onPressed: _handleCall,
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.phone_in_talk_rounded, size: 20),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Call Helpline',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    const Icon(Icons.phone_in_talk_rounded, size: 20),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Call Support Helpline',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
                       ),
                     ),
                   ],
@@ -401,11 +484,11 @@ class _AppSupportSheetBody extends StatelessWidget {
                           size: 19, color: AppColors.primary),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Email Support',
                             style: TextStyle(
                               fontSize: 11,
@@ -413,10 +496,10 @@ class _AppSupportSheetBody extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           Text(
-                            _email,
-                            style: TextStyle(
+                            _settings.displayEmail,
+                            style: const TextStyle(
                               fontSize: 13.5,
                               color: AppColors.black,
                               fontWeight: FontWeight.w700,
@@ -459,11 +542,11 @@ class _AppSupportSheetBody extends StatelessWidget {
                           size: 19, color: AppColors.primary),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Visit our Website',
                             style: TextStyle(
                               fontSize: 11,
@@ -471,10 +554,12 @@ class _AppSupportSheetBody extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           Text(
-                            'www.widoora.com',
-                            style: TextStyle(
+                            _settings.displayWebsite.isNotEmpty
+                                ? _settings.displayWebsite
+                                : 'https://widoora.com',
+                            style: const TextStyle(
                               fontSize: 13.5,
                               color: AppColors.black,
                               fontWeight: FontWeight.w700,
@@ -533,6 +618,19 @@ class _AppSupportSheetBody extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+
+            // ── Copyright Footer ──────────────────────────────────
+            Center(
+              child: Text(
+                '© ${_settings.displayCopyright} • All Rights Reserved',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.darkGrey.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
             const SizedBox(height: 6),
           ],
         ),
@@ -586,40 +684,114 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-class _ForgotPasswordAdminSheet extends StatelessWidget {
+class _ForgotPasswordAdminSheet extends StatefulWidget {
   final bool isVendor;
 
   const _ForgotPasswordAdminSheet({required this.isVendor});
 
-  static const _phoneDial = '9876543210';
-  static const _whatsAppNumber = '919876543210';
-  static const _email = 'support@widoora.com';
+  @override
+  State<_ForgotPasswordAdminSheet> createState() =>
+      _ForgotPasswordAdminSheetState();
+}
 
-  static Future<void> _handleCall() async {
-    final uri = Uri.parse('tel:+91$_phoneDial');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+class _ForgotPasswordAdminSheetState extends State<_ForgotPasswordAdminSheet> {
+  late SettingModel _settings;
+
+  @override
+  void initState() {
+    super.initState();
+    _settings = StorageHelper().getSettings();
+    SettingApiProvider().getSettings().then((res) {
+      if (mounted && res.isSuccess == true && res.data != null) {
+        setState(() {
+          _settings = res.data!;
+        });
+      }
+    });
+  }
+
+  Future<void> _safeLaunch(
+    Uri uri, {
+    LaunchMode mode = LaunchMode.externalApplication,
+    String? fallbackCopyText,
+    String? fallbackMessage,
+  }) async {
+    try {
+      final launched = await launchUrl(uri, mode: mode);
+      if (launched) return;
+    } catch (_) {}
+
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      if (launched) return;
+    } catch (_) {}
+
+    if (fallbackCopyText != null && fallbackCopyText.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: fallbackCopyText));
+      if (mounted) {
+        Utils.showSuccess(fallbackMessage ?? 'Copied to clipboard: $fallbackCopyText');
+      }
+    } else {
+      if (mounted) {
+        Utils.showError('Could not open link: $uri');
+      }
     }
   }
 
-  static Future<void> _handleWhatsApp(bool isVendor) async {
-    final role = isVendor ? 'Vendor Partner' : 'Customer';
+  Future<void> _handleCall() async {
+    final phone = _settings.cleanPhone;
+    final uri = Uri.parse('tel:$phone');
+    await _safeLaunch(
+      uri,
+      fallbackCopyText: phone,
+      fallbackMessage: 'Phone number ($phone) copied to clipboard',
+    );
+  }
+
+  Future<void> _handleWhatsApp() async {
+    final waNumber = _settings.whatsAppPhone;
+    final role = widget.isVendor ? 'Vendor Partner' : 'Customer';
     final message =
         'Hello Widoora Admin,\nI forgot my password for my $role account. Please help me reset my account password.\nRegistered Phone/Email: ';
-    final uri = Uri.parse(
-        'https://wa.me/$_whatsAppNumber?text=${Uri.encodeComponent(message)}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final encodedMessage = Uri.encodeComponent(message);
+
+    // 1. Try native WhatsApp scheme directly
+    final appUri = Uri.parse('whatsapp://send?phone=$waNumber&text=$encodedMessage');
+    try {
+      final launched = await launchUrl(appUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    // 2. Try wa.me web link in external browser
+    final webUri = Uri.parse('https://wa.me/$waNumber?text=$encodedMessage');
+    try {
+      final launched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (launched) return;
+    } catch (_) {}
+
+    // 3. Fallback to platform default
+    try {
+      final launched = await launchUrl(webUri, mode: LaunchMode.platformDefault);
+      if (launched) return;
+    } catch (_) {}
+
+    // 4. Fallback copy to clipboard
+    await Clipboard.setData(ClipboardData(text: waNumber));
+    if (mounted) {
+      Utils.showSuccess('WhatsApp number ($waNumber) copied to clipboard');
     }
   }
 
-  static Future<void> _handleEmail(bool isVendor) async {
-    final role = isVendor ? 'Vendor Partner' : 'Customer';
+  Future<void> _handleEmail() async {
+    final email = _settings.displayEmail;
+    final role = widget.isVendor ? 'Vendor Partner' : 'Customer';
     final uri = Uri.parse(
-        'mailto:$_email?subject=${Uri.encodeComponent('Password Reset Request - Widoora $role')}&body=${Uri.encodeComponent('Hello Widoora Admin,\n\nI forgot my password for my $role account. Please help me reset my account password.\n\nRegistered Phone / Email: ')}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+        'mailto:$email?subject=${Uri.encodeComponent('Password Reset Request - Widoora $role')}&body=${Uri.encodeComponent('Hello Widoora Admin,\n\nI forgot my password for my $role account. Please help me reset my account password.\n\nRegistered Phone / Email: ')}');
+    await _safeLaunch(
+      uri,
+      fallbackCopyText: email,
+      fallbackMessage: 'Email address ($email) copied to clipboard',
+    );
   }
 
   @override
@@ -687,7 +859,7 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              isVendor ? 'Vendor Partner Account' : 'Customer Account',
+              widget.isVendor ? 'Vendor Partner Account' : 'Customer Account',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -756,7 +928,7 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
               onPressed: _handleCall,
               icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
               label: const Text(
-                'Call Support',
+                'Call Support Helpline',
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,
@@ -779,7 +951,7 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: () => _handleWhatsApp(isVendor),
+              onPressed: _handleWhatsApp,
               icon: const Icon(Icons.chat_rounded, size: 20),
               label: const Text(
                 'Message Admin on WhatsApp',
@@ -802,7 +974,7 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
 
           // Email Support Option
           InkWell(
-            onTap: () => _handleEmail(isVendor),
+            onTap: _handleEmail,
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -820,9 +992,9 @@ class _ForgotPasswordAdminSheet extends StatelessWidget {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Email Support: $_email',
+                      'Email Admin Support',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: AppColors.black,
                       ),

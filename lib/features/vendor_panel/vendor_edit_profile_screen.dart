@@ -29,6 +29,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
   late TextEditingController _discCtrl;
   late TextEditingController _emailCtrl;
   late TextEditingController _addressCtrl;
+  late TextEditingController _cityCtrl;
+  late TextEditingController _stateCtrl;
+  late TextEditingController _pincodeCtrl;
 
   XFile? _selectedImage;
   String? _currentProfileImgUrl;
@@ -41,7 +44,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
     _businessNameCtrl = TextEditingController(text: storage.getUserName() ?? '');
     _discCtrl = TextEditingController();
     _emailCtrl = TextEditingController(text: storage.getUserEmail() ?? '');
-    _addressCtrl = TextEditingController();
+    _addressCtrl = TextEditingController(text: storage.getUserAddress() ?? '');
+    _cityCtrl = TextEditingController(text: storage.getUserCity() ?? '');
+    _stateCtrl = TextEditingController(text: storage.getUserState() ?? '');
+    _pincodeCtrl = TextEditingController(text: storage.getUserPincode() ?? '');
     _currentProfileImgUrl = storage.getUserProfileImg();
 
     _loadExistingProfile();
@@ -58,9 +64,12 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
 
         _nameCtrl.text = v?.ownerName ?? user.fullName ?? '';
         _businessNameCtrl.text = v?.businessName ?? '';
-        _discCtrl.text = v?.businessDescription ?? '';
+        _discCtrl.text = v?.businessDescription ?? user.about ?? '';
         _emailCtrl.text = user.email ?? '';
-        _addressCtrl.text = v?.businessAddress ?? v?.city ?? '';
+        _addressCtrl.text = v?.businessAddress ?? user.address ?? '';
+        _cityCtrl.text = v?.city ?? user.city ?? '';
+        _stateCtrl.text = v?.state ?? user.state ?? '';
+        _pincodeCtrl.text = v?.pincode ?? user.pincode ?? '';
 
         if (user.profileImgUrl != null && user.profileImgUrl!.isNotEmpty) {
           _currentProfileImgUrl = user.profileImgUrl;
@@ -80,6 +89,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
     _discCtrl.dispose();
     _emailCtrl.dispose();
     _addressCtrl.dispose();
+    _cityCtrl.dispose();
+    _stateCtrl.dispose();
+    _pincodeCtrl.dispose();
     super.dispose();
   }
 
@@ -212,6 +224,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
       final disc = _discCtrl.text.trim();
       final email = _emailCtrl.text.trim();
       final address = _addressCtrl.text.trim();
+      final city = _cityCtrl.text.trim();
+      final state = _stateCtrl.text.trim();
+      final pincode = _pincodeCtrl.text.trim();
 
       final formDataMap = <String, dynamic>{
         'fullName': name.isNotEmpty ? name : businessName,
@@ -224,7 +239,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         'email': email,
         'businessAddress': address,
         'address': address,
-        'city': address,
+        'city': city,
+        'state': state,
+        if (pincode.isNotEmpty) 'pincode': pincode,
       };
 
       if (_selectedImage != null) {
@@ -247,6 +264,18 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         }
         if (email.isNotEmpty) {
           await storage.saveUserEmail(email);
+        }
+        if (address.isNotEmpty) {
+          await storage.saveUserAddress(address);
+        }
+        if (city.isNotEmpty) {
+          await storage.saveUserCity(city);
+        }
+        if (state.isNotEmpty) {
+          await storage.saveUserState(state);
+        }
+        if (pincode.isNotEmpty) {
+          await storage.saveUserPincode(pincode);
         }
         if (res.data?.profileImgUrl != null) {
           await storage.saveUserProfileImg(res.data!.profileImgUrl);
@@ -452,23 +481,75 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
 
                     const SizedBox(height: 14),
 
-                    // 5. Address
+                    // 5. Business Address
                     _buildTextField(
-                      label: 'Business Address / City',
-                      hintText: 'e.g. C-127, Mohali Industrial Area, Mohali',
+                      label: 'Studio / Business Address',
+                      hintText: 'e.g. 123 MG Road, Bandra West',
                       controller: _addressCtrl,
-                      icon: Icons.location_on_outlined,
+                      icon: Icons.storefront_outlined,
                       maxLines: 1,
                       isRequired: true,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) {
-                          return 'Please enter business address and city';
+                          return 'Please enter business address';
                         }
                         if (v.trim().length < 3) {
                           return 'Address must be at least 3 characters';
                         }
                         return null;
                       },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 6. City
+                    _buildTextField(
+                      label: 'City',
+                      hintText: 'e.g. Mumbai',
+                      controller: _cityCtrl,
+                      icon: Icons.location_city_outlined,
+                      isRequired: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Enter city';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 7. State & Pincode Row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'State',
+                            hintText: 'e.g. Maharashtra',
+                            controller: _stateCtrl,
+                            icon: Icons.map_outlined,
+                            isRequired: true,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Enter state';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'Pincode (Optional)',
+                            hintText: 'e.g. 400050',
+                            controller: _pincodeCtrl,
+                            icon: Icons.pin_drop_outlined,
+                            keyboardType: TextInputType.number,
+                            isRequired: false,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 28),
