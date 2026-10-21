@@ -152,7 +152,7 @@ class VendorRegistrationController extends GetxController {
 
     // Convert file paths or MultipartFiles to actual multipart form files
     Future<MultipartFile> toMultipart(dynamic file, String fallbackFilename) async {
-      if (file is MultipartFile) return file;
+      if (file is MultipartFile) return file.clone();
       if (file is String && file.trim().isNotEmpty) {
         try {
           final fileName = file.split(RegExp(r'[\\/]')).last;
@@ -166,9 +166,7 @@ class VendorRegistrationController extends GetxController {
     }
 
     if (actualFront != null) {
-      final fFront = await toMultipart(actualFront, 'aadhar_front.jpg');
-      formDataMap['aadhar'] = fFront;
-      formDataMap['aadharFront'] = fFront;
+      formDataMap['aadharFront'] = await toMultipart(actualFront, 'aadhar_front.jpg');
     }
 
     if (aadharBackFile != null &&

@@ -227,12 +227,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildVendorsVisual({required Key key}) {
     return Padding(
       key: key,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final availH = constraints.maxHeight;
-          final phoneW = (constraints.maxWidth * 0.44).clamp(145.0, 195.0);
-          final sideW = ((constraints.maxWidth - phoneW) / 2).clamp(75.0, 105.0);
+          final phoneW = (constraints.maxWidth * 0.48).clamp(165.0, 225.0);
+          final sideW = ((constraints.maxWidth - phoneW) / 2).clamp(68.0, 95.0);
 
           return AnimatedBuilder(
             animation: _floatingController,
@@ -279,14 +279,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                   ),
 
-                  // Center: 3D Tilted Phone Mockup
+                  // Center: 3D Tilted Phone Mockup (Enlarged)
                   SizedBox(
                     width: phoneW,
-                    height: availH * 0.95,
+                    height: availH,
                     child: Center(
-                      child: Image.asset(
-                        AppImages.onboardingPhoneMockup,
-                        fit: BoxFit.contain,
+                      child: Transform.scale(
+                        scale: 1.15,
+                        child: Image.asset(
+                          AppImages.onboardingPhoneMockup,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

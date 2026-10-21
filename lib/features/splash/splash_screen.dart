@@ -184,31 +184,31 @@ class _SplashScreenState extends State<SplashScreen>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // ─── 1. Full-Bleed Couple Walking Image ─────────────────────────
+            // ─── 1. Full-Bleed Couple Walking Image (Centered & Clear)
             Image.asset(
               AppImages.onboardingWalkCouple,
               fit: BoxFit.cover,
-              alignment: const Alignment(0, -0.1),
+              alignment: Alignment.center,
               errorBuilder: (context, error, stackTrace) => Image.asset(
                 AppImages.weddingHero,
                 fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
             ),
 
-            // ─── 2. Rich Dark Wine-Red / Crimson Gradient Overlay ───────────
+            // ─── 2. Soft Gradient Overlay (Decreased Opacity for Clear Image) ─
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.45, 0.70, 0.90, 1.0],
+                    stops: const [0.0, 0.55, 0.80, 1.0],
                     colors: [
                       Colors.transparent,
                       Colors.transparent,
-                      const Color(0xFF3A0209).withValues(alpha: 0.65),
-                      const Color(0xFF6E0D1B).withValues(alpha: 0.95),
-                      const Color(0xFF45060E),
+                      const Color(0xFF3A0209).withValues(alpha: 0.25),
+                      const Color(0xFF45060E).withValues(alpha: 0.60),
                     ],
                   ),
                 ),

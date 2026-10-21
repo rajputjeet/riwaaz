@@ -81,7 +81,7 @@ class AuthController extends GetxController {
 
       Future<MultipartFile?> toMultipart(dynamic f, String fallbackName) async {
         if (f == null) return null;
-        if (f is MultipartFile) return f;
+        if (f is MultipartFile) return f.clone();
         if (f is File) {
           final fileName = f.path.split(RegExp(r'[\\/]')).last;
           return await MultipartFile.fromFile(f.path, filename: fileName);
@@ -102,10 +102,11 @@ class AuthController extends GetxController {
       final fSelfie = await toMultipart(liveSelfie, 'live_selfie.jpg');
       if (fSelfie != null) map['liveSelfie'] = fSelfie;
 
-      final fProfile = await toMultipart(profileImg, 'profile_img.jpg');
-      if (fProfile != null) {
-        map['profileImgId'] = fProfile;
-        map['profileImg'] = fProfile;
+      if (profileImg != null) {
+        final p1 = await toMultipart(profileImg, 'profile_img.jpg');
+        final p2 = await toMultipart(profileImg, 'profile_img.jpg');
+        if (p1 != null) map['profileImgId'] = p1;
+        if (p2 != null) map['profileImg'] = p2;
       }
 
       requestPayload = FormData.fromMap(map);
