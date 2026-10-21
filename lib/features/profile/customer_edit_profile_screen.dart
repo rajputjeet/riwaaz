@@ -456,21 +456,20 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
 
                     const SizedBox(height: 14),
 
-                    // 4. City
-                    _buildTextField(
-                      label: 'City',
-                      hintText: 'e.g. Jaipur',
-                      controller: _cityCtrl,
-                      icon: Icons.location_city_outlined,
-                      isRequired: false,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // 5. State & Pincode Row
+                    // 4. City & State Row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Expanded(
+                          child: _buildTextField(
+                            label: 'City',
+                            hintText: 'e.g. Jaipur',
+                            controller: _cityCtrl,
+                            icon: Icons.location_city_outlined,
+                            isRequired: false,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: _buildTextField(
                             label: 'State',
@@ -480,18 +479,19 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                             isRequired: false,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            label: 'Pincode',
-                            hintText: 'e.g. 302001',
-                            controller: _pincodeCtrl,
-                            icon: Icons.pin_drop_outlined,
-                            keyboardType: TextInputType.number,
-                            isRequired: true,
-                          ),
-                        ),
                       ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 5. Pincode
+                    _buildTextField(
+                      label: 'Pincode',
+                      hintText: 'e.g. 302001',
+                      controller: _pincodeCtrl,
+                      icon: Icons.pin_drop_outlined,
+                      keyboardType: TextInputType.number,
+                      isRequired: true,
                     ),
 
                     const SizedBox(height: 28),
