@@ -221,60 +221,9 @@ class _VendorVerificationScreenState extends State<VendorVerificationScreen> {
                           ? 'Signed & active'
                           : (isRejected ? 'Declined' : 'Pending activation'),
                     ),
-                    _buildDocCard(
-                      icon: Icons.camera_enhance_outlined,
-                      title: 'Studio Gear & Deliverables Audit',
-                      subtitle:
-                          'Professional photography & cinema equipment check',
-                      idNumber:
-                          isApproved ? 'GEAR-AUDIT-PASS' : 'AUDIT-PENDING',
-                      isApproved: isApproved,
-                      isRejected: isRejected,
-                      date: isApproved
-                          ? 'Audited by Widoora QA'
-                          : (isRejected ? 'Audit failed' : 'Audit in queue'),
-                    ),
                   ],
                 );
               }),
-
-            const SizedBox(height: 20),
-
-            // Benefits Box
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Partner Verification Perks:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '• Verified Gold badge displayed on search cards\n'
-                    '• Priority ranking in Chandigarh and Punjab regional filters\n'
-                    '• 100% Direct in-person client payments with zero platform commission\n'
-                    '• Instant client connection with direct Call & WhatsApp unlocked on acceptance',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.darkGrey,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
             const SizedBox(height: 24),
           ],

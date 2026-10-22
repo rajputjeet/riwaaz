@@ -8,6 +8,8 @@ import '../../utils/helper/storage_helper.dart';
 import '../vendor_registration/controllers/vendor_registration_controller.dart';
 import 'vendor_dashboard_tab.dart';
 import 'vendor_bookings_tab.dart';
+import 'vendor_packages_screen.dart';
+import 'vendor_portfolio_screen.dart';
 import 'vendor_profile_screen.dart';
 import 'vendor_notifications_screen.dart';
 import 'vendor_verification_screen.dart';
@@ -24,6 +26,8 @@ class _VendorShellState extends State<VendorShell> {
   late int _currentIndex;
   bool _showApprovalWarning = true;
   final _profileKey = GlobalKey<VendorProfileScreenState>();
+  final _packagesKey = GlobalKey<VendorPackagesScreenState>();
+  final _portfolioKey = GlobalKey<VendorPortfolioScreenState>();
   late final VendorRegistrationController _regController;
 
   @override
@@ -40,6 +44,10 @@ class _VendorShellState extends State<VendorShell> {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
     if (index == 2) {
+      _portfolioKey.currentState?.refresh(silent: true);
+    } else if (index == 3) {
+      _packagesKey.currentState?.refresh(silent: true);
+    } else if (index == 4) {
       _profileKey.currentState?.loadAll(silent: true);
     }
   }
@@ -59,29 +67,14 @@ class _VendorShellState extends State<VendorShell> {
         backgroundColor: AppColors.white,
         elevation: 0.5,
         automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.diamond_rounded,
-                  color: AppColors.white, size: 14),
-            ),
-            const SizedBox(width: 6),
-            const Text(
-              'WIDOORA VENDOR',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: AppColors.primary,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ],
+        title: const Text(
+          'WIDOORA PARTNER',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: AppColors.primary,
+            letterSpacing: 1.5,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -122,7 +115,9 @@ class _VendorShellState extends State<VendorShell> {
         children: [
           VendorDashboardTab(onNavigateTab: (idx) => _onTabTap(idx)),
           const VendorBookingsTab(key: ValueKey('vendor_bookings_tab_v2')),
-          VendorProfileScreen(key: _profileKey),
+          VendorPortfolioScreen(key: _portfolioKey, isTab: true),
+          VendorPackagesScreen(key: _packagesKey, isTab: true),
+          VendorProfileScreen(key: _profileKey, isTab: true),
         ],
       ),
       bottomNavigationBar: Column(
@@ -141,11 +136,26 @@ class _VendorShellState extends State<VendorShell> {
             elevation: 12,
             items: [
               const BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard_rounded),
+                icon: Icon(Icons.dashboard_outlined),
+                activeIcon: Icon(Icons.dashboard_rounded),
                 label: 'Dashboard',
               ),
               BottomNavigationBarItem(
                 icon: ListenableBuilder(
+                  listenable: AppBookingService.instance,
+                  builder: (context, _) {
+                    final pending = AppBookingService.instance.pendingCount;
+                    if (pending > 0) {
+                      return Badge(
+                        label: Text('$pending'),
+                        backgroundColor: const Color(0xFFD97706),
+                        child: const Icon(Icons.calendar_month_outlined),
+                      );
+                    }
+                    return const Icon(Icons.calendar_month_outlined);
+                  },
+                ),
+                activeIcon: ListenableBuilder(
                   listenable: AppBookingService.instance,
                   builder: (context, _) {
                     final pending = AppBookingService.instance.pendingCount;
@@ -162,7 +172,18 @@ class _VendorShellState extends State<VendorShell> {
                 label: 'Bookings',
               ),
               const BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded),
+                icon: Icon(Icons.photo_library_outlined),
+                activeIcon: Icon(Icons.photo_library_rounded),
+                label: 'Portfolio',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2_outlined),
+                activeIcon: Icon(Icons.inventory_2_rounded),
+                label: 'Services',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline_rounded),
+                activeIcon: Icon(Icons.person_rounded),
                 label: 'Profile',
               ),
             ],

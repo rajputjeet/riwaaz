@@ -972,47 +972,69 @@ class _ForgotPasswordAdminSheetState extends State<_ForgotPasswordAdminSheet> {
           ),
           const SizedBox(height: 10),
 
-          // Email Support Option
+          // Email Support Option (styled identically to Help Sheet)
           InkWell(
             onTap: _handleEmail,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FF),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: AppColors.grey.withValues(alpha: 0.2),
-                ),
+                    color: AppColors.grey.withValues(alpha: 0.22)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.email_outlined,
-                      size: 20, color: AppColors.primary),
-                  SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.email_outlined,
+                        size: 19, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Email Admin Support',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.black,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Email Admin Support',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.darkGrey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          _settings.displayEmail,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: AppColors.black,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded,
-                      size: 14, color: AppColors.grey),
+                  const Icon(Icons.send_rounded,
+                      size: 18, color: AppColors.primary),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Cancel
+          // Back
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
-              'Back to Login',
+              'Back',
               style: TextStyle(
                 color: AppColors.darkGrey,
                 fontSize: 13.5,

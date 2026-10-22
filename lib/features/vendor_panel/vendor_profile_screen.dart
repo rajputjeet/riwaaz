@@ -16,12 +16,11 @@ import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
+import '../../shared/widgets/app_confirmation_dialog.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
 import '../auth/login_screen.dart';
-import 'vendor_packages_screen.dart';
-import 'vendor_portfolio_screen.dart';
 import 'vendor_subscription_plan_screen.dart';
 import 'vendor_edit_profile_screen.dart';
 import 'vendor_verification_screen.dart';
@@ -29,7 +28,8 @@ import 'vendor_ads_screen.dart';
 import '../profile/change_password_screen.dart';
 
 class VendorProfileScreen extends StatefulWidget {
-  const VendorProfileScreen({super.key});
+  final bool isTab;
+  const VendorProfileScreen({super.key, this.isTab = false});
 
   @override
   State<VendorProfileScreen> createState() => VendorProfileScreenState();
@@ -76,7 +76,13 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
         final profileRes = results[0];
         final planRes = results[1];
         final statsRes = results[2];
-        if (profileRes.isSuccess == true) _profile = profileRes.data as UserModel?;
+        if (profileRes.isSuccess == true) {
+          _profile = profileRes.data as UserModel?;
+          final b = _profile?.bannerImgUrl;
+          if (b != null && b.isNotEmpty) {
+            StorageHelper().saveVendorBannerImg(b);
+          }
+        }
         if (planRes.isSuccess == true) _activePlan = planRes.data as ActivePlanModel?;
         if (statsRes.isSuccess == true) _stats = statsRes.data as DashboardStatsModel?;
         _isLoading = false;
@@ -97,6 +103,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   }
 
   Future<void> _loadAll() => loadAll();
+
+  String? get _bannerUrl =>
+      _profile?.bannerImgUrl ??
+      _profile?.vendorProfile?.bannerImgUrl ??
+      StorageHelper().getVendorBannerImg();
 
   String get _displayName {
     final biz = _profile?.vendorProfile?.businessName;
@@ -126,16 +137,6 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     return '${plan.planTitle ?? 'Active Plan'} • ${plan.daysRemaining} days left';
   }
 
-  String get _packagesSubtitle {
-    final count = _stats?.portfolioStats.totalPackages ?? 0;
-    return count == 0 ? 'No packages or services yet' : '$count item${count == 1 ? '' : 's'} active';
-  }
-
-  String get _portfolioSubtitle {
-    final count = _stats?.portfolioStats.totalPortfolioItems ?? 0;
-    return count == 0 ? 'No media uploaded yet' : '$count media item${count == 1 ? '' : 's'}';
-  }
-
   String get _verificationSubtitle {
     if (_isVerifiedVendor) return 'Documents approved ✓';
     final s = _appStatus.toLowerCase().trim();
@@ -153,42 +154,32 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
+      appBar: (widget.isTab || !Navigator.of(context).canPop())
+          ? null
+          : AppBar(
+              backgroundColor: AppColors.white,
+              elevation: 0,
+              leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded,
                     color: AppColors.primary, size: 20),
                 onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
-        title: const Text(
-          'Business Profile',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.black,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
-            onPressed: () async {
-              final updated = await Navigator.of(context).push<bool>(
-                FadeScaleRoute(
-                  page: const VendorEditProfileScreen(),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+                  onPressed: () async {
+                    final updated = await Navigator.of(context).push<bool>(
+                      FadeScaleRoute(
+                        page: const VendorEditProfileScreen(),
+                      ),
+                    );
+                    if (updated == true || mounted) {
+                      _loadAll();
+                    }
+                  },
                 ),
-              );
-              if (updated == true || mounted) {
-                _loadAll();
-              }
-            },
-          ),
-        ],
-      ),
+              ],
+            ),
       body: RefreshIndicator(
         color: AppColors.primary,
         onRefresh: _loadAll,
@@ -216,134 +207,282 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                         child: Column(
                           children: [
                             // ── Vendor Profile Header Card ──────────────────
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppColors.gold.withValues(alpha: 0.3),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Stack(
-                                    children: [
-                                      Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: AppColors.gold, width: 2),
-                                        ),
-                                        child: ClipOval(
-                                          child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
-                                                  (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
-                                              ? CachedImageView(
-                                                  imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
-                                                  fit: BoxFit.cover,
-                                                  width: 80,
-                                                  height: 80,
-                                                  isCircle: true,
-                                                  fallbackIcon: Icons.storefront_rounded,
-                                                )
-                                              : CircleAvatar(
-                                                  radius: 40,
-                                                  backgroundColor: AppColors.primary,
-                                                  child: Text(
-                                                    _displayName.isNotEmpty
-                                                        ? _displayName[0].toUpperCase()
-                                                        : 'V',
-                                                    style: const TextStyle(
-                                                      fontSize: 30,
-                                                      fontWeight: FontWeight.w800,
-                                                      color: AppColors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                        ),
+                            Builder(
+                              builder: (context) {
+                                final bannerUrl = _bannerUrl;
+                                final bool hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
+
+                                return Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: hasBanner
+                                          ? AppColors.gold.withValues(alpha: 0.5)
+                                          : AppColors.gold.withValues(alpha: 0.3),
+                                      width: hasBanner ? 1.5 : 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: hasBanner ? 0.08 : 0.04),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
                                       ),
-                                      if (_isVerifiedVendor)
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.success,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                                Icons.verified_rounded,
-                                                color: AppColors.white,
-                                                size: 16),
-                                          ),
-                                        ),
                                     ],
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _displayName,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.black,
-                                    ),
-                                  ),
-                                  if (_displayEmail.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _displayEmail,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.darkGrey,
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Stack(
+                                    alignment: Alignment.topCenter,
+                                    children: [
+                                      // Background Banner
+                                      if (hasBanner) ...[
+                                        Positioned.fill(
+                                          child: CachedImageView(
+                                            imageUrl: bannerUrl,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                          ),
+                                        ),
+                                        // Dark gradient overlay for text readability
+                                        Positioned.fill(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Colors.black.withValues(alpha: 0.35),
+                                                  Colors.black.withValues(alpha: 0.82),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+
+                                      // Edit / Change Banner button at top right
+                                      Positioned(
+                                        top: 14,
+                                        right: 14,
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final updated = await Navigator.of(context).push<bool>(
+                                              FadeScaleRoute(page: const VendorEditProfileScreen()),
+                                            );
+                                            if (updated == true || mounted) {
+                                              _loadAll();
+                                            }
+                                          },
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: hasBanner
+                                                  ? Colors.black.withValues(alpha: 0.55)
+                                                  : AppColors.background,
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: hasBanner
+                                                    ? Colors.white.withValues(alpha: 0.4)
+                                                    : AppColors.gold.withValues(alpha: 0.4),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.camera_alt_outlined,
+                                                  size: 13,
+                                                  color: hasBanner ? AppColors.white : AppColors.primary,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  hasBanner ? 'Edit Banner' : 'Add Banner',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: hasBanner ? AppColors.white : AppColors.primary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                  if (_displayMobile.isNotEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _displayMobile,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.grey,
+
+                                      // Details Card Content (Centered)
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              // Avatar
+                                              Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  Container(
+                                                    width: 80,
+                                                    height: 80,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: AppColors.gold,
+                                                        width: 2.5,
+                                                      ),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withValues(alpha: 0.15),
+                                                          blurRadius: 8,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: ClipOval(
+                                                      child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
+                                                              (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
+                                                          ? CachedImageView(
+                                                              imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
+                                                              fit: BoxFit.cover,
+                                                              width: 80,
+                                                              height: 80,
+                                                              isCircle: true,
+                                                              fallbackIcon: Icons.storefront_rounded,
+                                                            )
+                                                          : CircleAvatar(
+                                                              radius: 40,
+                                                              backgroundColor: AppColors.primary,
+                                                              child: Text(
+                                                                _displayName.isNotEmpty
+                                                                    ? _displayName[0].toUpperCase()
+                                                                    : 'V',
+                                                                style: const TextStyle(
+                                                                  fontSize: 30,
+                                                                  fontWeight: FontWeight.w800,
+                                                                  color: AppColors.white,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                    ),
+                                                  ),
+                                                  if (_isVerifiedVendor)
+                                                    Positioned(
+                                                      bottom: 0,
+                                                      right: 0,
+                                                      child: Container(
+                                                        padding: const EdgeInsets.all(4),
+                                                        decoration: const BoxDecoration(
+                                                          color: AppColors.success,
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                        child: const Icon(
+                                                            Icons.verified_rounded,
+                                                            color: AppColors.white,
+                                                            size: 16),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                _displayName,
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: hasBanner ? AppColors.white : AppColors.black,
+                                                  shadows: hasBanner
+                                                      ? const [
+                                                          Shadow(
+                                                            color: Colors.black54,
+                                                            blurRadius: 6,
+                                                            offset: Offset(0, 1),
+                                                          ),
+                                                        ]
+                                                      : null,
+                                                ),
+                                              ),
+                                              if (_displayEmail.isNotEmpty) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  _displayEmail,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: hasBanner ? FontWeight.w500 : FontWeight.w400,
+                                                    color: hasBanner
+                                                        ? AppColors.white.withValues(alpha: 0.90)
+                                                        : AppColors.darkGrey,
+                                                  ),
+                                                ),
+                                              ],
+                                              if (_displayMobile.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _displayMobile,
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: hasBanner
+                                                        ? AppColors.white.withValues(alpha: 0.80)
+                                                        : AppColors.grey,
+                                                  ),
+                                                ),
+                                              ],
+                                              const SizedBox(height: 12),
+                                              Center(
+                                                child: OutlinedButton.icon(
+                                                  onPressed: () async {
+                                                    final updated = await Navigator.of(context).push<bool>(
+                                                      FadeScaleRoute(page: const VendorEditProfileScreen()),
+                                                    );
+                                                    if (updated == true || mounted) {
+                                                      _loadAll();
+                                                    }
+                                                  },
+                                                  icon: Icon(
+                                                    Icons.edit_rounded,
+                                                    size: 14,
+                                                    color: hasBanner ? AppColors.white : AppColors.primary,
+                                                  ),
+                                                  label: Text(
+                                                    'Edit Profile',
+                                                    style: TextStyle(
+                                                      color: hasBanner ? AppColors.white : AppColors.primary,
+                                                    ),
+                                                  ),
+                                                  style: OutlinedButton.styleFrom(
+                                                    foregroundColor: hasBanner ? AppColors.white : AppColors.primary,
+                                                    backgroundColor: hasBanner
+                                                        ? Colors.black.withValues(alpha: 0.35)
+                                                        : Colors.transparent,
+                                                    side: BorderSide(
+                                                      color: hasBanner
+                                                          ? Colors.white.withValues(alpha: 0.5)
+                                                          : AppColors.primary.withValues(alpha: 0.4),
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(20),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                                    visualDensity: VisualDensity.compact,
+                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
-                                  _buildStatusBadge(_appStatus),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () async {
-                                      final updated = await Navigator.of(context).push<bool>(
-                                        FadeScaleRoute(page: const VendorEditProfileScreen()),
-                                      );
-                                      if (updated == true || mounted) {
-                                        _loadAll();
-                                      }
-                                    },
-                                    icon: const Icon(Icons.edit_rounded, size: 14),
-                                    label: const Text('Edit Profile'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.primary,
-                                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                      visualDensity: VisualDensity.compact,
-                                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                                    ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
 
                             const SizedBox(height: 18),
@@ -523,23 +662,6 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                                 FadeScaleRoute(page: const VendorAdsScreen()),
                               ),
                             ),
-                            _buildMenuItem(
-                              icon: Icons.inventory_2_outlined,
-                              title: 'My Packages & Services',
-                              subtitle: _packagesSubtitle,
-                              onTap: () => Navigator.of(context).push(
-                                FadeScaleRoute(page: const VendorPackagesScreen()),
-                              ),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.photo_library_outlined,
-                              title: 'Portfolio & Media',
-                              subtitle: _portfolioSubtitle,
-                              onTap: () => Navigator.of(context).push(
-                                FadeScaleRoute(page: const VendorPortfolioScreen()),
-                              ),
-                            ),
-
                             const SizedBox(height: 18),
                             const Align(
                               alignment: Alignment.centerLeft,
@@ -610,33 +732,6 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
 
                             const SizedBox(height: 28),
 
-                            // Change Password
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _openChangePasswordScreen(context),
-                                icon: const Icon(Icons.lock_reset_rounded,
-                                    color: AppColors.primary, size: 18),
-                                label: const Text(
-                                  'Change Password',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
                             SizedBox(
                               width: double.infinity,
                               height: 48,
@@ -700,50 +795,6 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color bg, fg;
-    IconData ic;
-    final s = status.toLowerCase().trim();
-    if (s == 'approved' || s == 'active') {
-      bg = AppColors.successLight;
-      fg = AppColors.success;
-      ic = Icons.verified_rounded;
-    } else if (s == 'under review' || s == 'under_review' || s == 'in verification' || s == 'submitted') {
-      bg = const Color(0xFFFFF3E0);
-      fg = const Color(0xFFF57C00);
-      ic = Icons.hourglass_top_rounded;
-    } else if (s == 'rejected' || s == 'declined') {
-      bg = const Color(0xFFFFEBEE);
-      fg = AppColors.error;
-      ic = Icons.cancel_rounded;
-    } else {
-      bg = const Color(0xFFF5F5F5);
-      fg = AppColors.grey;
-      ic = Icons.pending_rounded;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(ic, size: 14, color: fg),
-          const SizedBox(width: 5),
-          Text(
-            status.isEmpty ? 'Pending' : status,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: fg,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
 
   void _showPrivacyPolicySheet(BuildContext context) {
@@ -1057,147 +1108,96 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actionsOverflowButtonSpacing: 8,
-        title: Row(
-          children: const [
-            Icon(Icons.logout_rounded, color: AppColors.primary, size: 22),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text('Log Out', style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to log out of your vendor account? You can sign back in anytime.',
-          style: TextStyle(fontSize: 14, color: AppColors.darkGrey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (Get.isRegistered<AuthController>()) {
-                await Get.find<AuthController>().logout();
-              } else {
-                await StorageHelper().clearAllData();
-              }
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
+      icon: Icons.logout_rounded,
+      iconColor: AppColors.primary,
+      iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      title: 'Log Out of Vendor Hub?',
+      message:
+          'Are you sure you want to log out? You can sign back into your vendor account anytime.',
+      confirmLabel: 'Log Out',
+      cancelLabel: 'Cancel',
+      confirmColor: AppColors.primary,
+      onConfirm: () async {
+        if (Get.isRegistered<AuthController>()) {
+          await Get.find<AuthController>().logout();
+        } else {
+          await StorageHelper().clearAllData();
+        }
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const LoginScreen()),
+          (route) => false,
+        );
+      },
     );
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actionsOverflowButtonSpacing: 8,
-        title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Delete Account',
-                style: TextStyle(fontWeight: FontWeight.w800, color: Colors.red),
-              ),
-            ),
-          ],
+      icon: Icons.warning_amber_rounded,
+      iconColor: AppColors.error,
+      iconBackgroundColor: AppColors.error.withValues(alpha: 0.1),
+      isDestructive: true,
+      title: 'Delete Vendor Account?',
+      message:
+          'This action is permanent and cannot be undone. All your vendor data will be permanently erased.',
+      confirmLabel: 'Delete Permanently',
+      cancelLabel: 'Keep Account',
+      customContent: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'This action is irreversible. All your vendor data will be permanently erased:',
-              style: TextStyle(fontSize: 13, color: AppColors.black),
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                SizedBox(width: 6),
+                Text(
+                  'The following will be deleted:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('• Business profile, verified badge & reviews',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Portfolio photos, media & service packages',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Active vendor subscription plan & remaining days',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Client booking records & incoming requests',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Are you sure you want to permanently delete your vendor account?',
-              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-            ),
+            SizedBox(height: 8),
+            Text('• Business profile, verified badge & reviews',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Portfolio photos, media & service packages',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Active vendor subscription plan & remaining days',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Client booking records & incoming requests',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Keep Account',
-                style: TextStyle(color: AppColors.darkGrey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (Get.isRegistered<AuthController>()) {
-                await Get.find<AuthController>().logout();
-              } else {
-                await StorageHelper().clearAllData();
-              }
-              Utils.showSuccess('Your vendor account has been deleted successfully.');
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Delete Permanently'),
-          ),
-        ],
       ),
+      onConfirm: () async {
+        if (Get.isRegistered<AuthController>()) {
+          await Get.find<AuthController>().logout();
+        } else {
+          await StorageHelper().clearAllData();
+        }
+        Utils.showSuccess('Your vendor account has been deleted successfully.');
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const LoginScreen()),
+          (route) => false,
+        );
+      },
     );
   }
 

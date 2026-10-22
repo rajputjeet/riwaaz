@@ -53,10 +53,18 @@ class BookingRecord {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  bool get isAccepted => status == 'Confirmed' || status == 'Accepted';
-  bool get isPending => status == 'Pending';
-  bool get isCompleted => status == 'Delivered & Paid' || status == 'Completed';
-  bool get isDeclined => status == 'Declined' || status == 'Cancelled';
+  bool get isAccepted =>
+      status.toLowerCase() == 'confirmed' ||
+      status.toLowerCase() == 'accepted' ||
+      status.toLowerCase() == 'approved';
+  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isCompleted =>
+      status.toLowerCase() == 'delivered & paid' ||
+      status.toLowerCase() == 'completed';
+  bool get isDeclined =>
+      status.toLowerCase() == 'declined' ||
+      status.toLowerCase() == 'cancelled' ||
+      status.toLowerCase() == 'rejected';
 
   factory BookingRecord.fromBookingModel(BookingModel model) {
     IconData icon = Icons.celebration_rounded;
@@ -178,10 +186,20 @@ class AppBookingService extends ChangeNotifier {
   List<Map<String, dynamic>> get allBookingsAsMaps =>
       _bookings.map((b) => b.toMap()).toList();
 
-  int get pendingCount => _bookings.where((b) => b.isPending).length;
-  int get confirmedCount => _bookings.where((b) => b.isAccepted).length;
-  int get completedCount => _bookings.where((b) => b.isCompleted).length;
-  int get totalCount => _bookings.length;
+  BookingsSummary? _summary;
+  BookingsSummary? get summary => _summary;
+
+  int get allCount => _summary?.all ?? _bookings.length;
+  int get pendingCount =>
+      _summary?.pending ?? _bookings.where((b) => b.isPending).length;
+  int get upcomingCount =>
+      _summary?.upcoming ??
+      _summary?.confirmed ??
+      _bookings.where((b) => b.isAccepted).length;
+  int get completedCount =>
+      _summary?.completed ?? _bookings.where((b) => b.isCompleted).length;
+  int get confirmedCount => upcomingCount;
+  int get totalCount => allCount;
 
   int get totalRevenue {
     return _bookings
@@ -227,6 +245,7 @@ class AppBookingService extends ChangeNotifier {
       final res = await BookingApiProvider().getBookings(limit: 100);
       if (res.isSuccess == true && res.data != null) {
         final serverBookings = res.data!.bookings;
+        _summary = res.data!.summary;
         _bookings.clear();
         for (final b in serverBookings) {
           _bookings.add(BookingRecord.fromBookingModel(b));
@@ -271,32 +290,22 @@ class AppBookingService extends ChangeNotifier {
   }
 
   /// Filtered bookings for Customer Panel:
-  /// 0 = All, 1 = Office Parties, 2 = Birthdays & Parties, 3 = Weddings & Galas
+  /// 0 = All, 1 = Pending, 2 = Upcoming (Confirmed), 3 = Completed
   List<Map<String, dynamic>> customerBookingsForFilter(int filterIndex) {
     List<BookingRecord> filtered;
     switch (filterIndex) {
       case 1:
-        filtered = _bookings
-            .where((b) => !b.isCompleted && b.eventType == 'Office Party')
-            .toList();
+        filtered = _bookings.where((b) => b.isPending).toList();
         break;
       case 2:
-        filtered = _bookings
-            .where((b) =>
-                !b.isCompleted &&
-                (b.eventType == 'Birthday Party' ||
-                    b.eventType == 'Private Party'))
-            .toList();
+        filtered = _bookings.where((b) => b.isAccepted).toList();
         break;
       case 3:
-        filtered = _bookings
-            .where((b) =>
-                !b.isCompleted &&
-                (b.eventType == 'Wedding' || b.eventType == 'Anniversary'))
-            .toList();
+        filtered = _bookings.where((b) => b.isCompleted).toList();
         break;
+      case 0:
       default:
-        filtered = customerBookings;
+        filtered = _bookings;
     }
     return filtered.map((b) => b.toMap()).toList();
   }

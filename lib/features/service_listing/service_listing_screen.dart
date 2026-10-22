@@ -33,12 +33,9 @@ class ServiceListingScreen extends StatefulWidget {
 class _ServiceListingScreenState extends State<ServiceListingScreen>
     with SingleTickerProviderStateMixin {
   final int _navIndex = 1;
-  int _selectedFilter = 0;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   late AnimationController _listController;
-
-  final List<String> _filters = ['All', 'Price: Low to High', 'Top Rated'];
 
   late String _currentCategory;
   List<_VendorData> _vendors = [];
@@ -154,22 +151,12 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
           v.location.toLowerCase().contains(query);
     }).toList();
 
-    // Apply quick filters
-    if (_selectedFilter == 1) {
-      // Price: low to high
-      displayedVendors.sort((a, b) => a.startingPrice.compareTo(b.startingPrice));
-    } else if (_selectedFilter == 2) {
-      // Rating: high to low
-      displayedVendors.sort((a, b) => b.rating.compareTo(a.rating));
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
           _buildHeader(),
           _buildCategoryFilterBar(),
-          _buildFilterRow(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _fetchVendors,
@@ -519,7 +506,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
       ),
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: SizedBox(
-        height: 48,
+        height: 38,
         child: ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           scrollDirection: Axis.horizontal,
@@ -541,12 +528,12 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary.withValues(alpha: 0.08)
                         : AppColors.white,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
@@ -563,29 +550,18 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           ]
                         : null,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.grid_view_rounded,
-                        size: 20,
+                  child: Center(
+                    child: Text(
+                      'All',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w600,
                         color: isSelected
                             ? AppColors.primary
                             : const Color(0xFF555555),
                       ),
-                      const SizedBox(width: 7),
-                      Text(
-                        'All',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w600,
-                          color: isSelected
-                              ? AppColors.primary
-                              : const Color(0xFF555555),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -606,12 +582,12 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withValues(alpha: 0.08)
                       : AppColors.white,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.primary
@@ -628,37 +604,18 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                         ]
                       : null,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    cat.hasServerIcon
-                        ? CachedImageView(
-                            imageUrl: cat.iconUrl,
-                            width: 30,
-                            height: 30,
-                            fit: BoxFit.contain,
-                            fallbackIcon: cat.icon,
-                            iconColor: const Color(0xFF790D16),
-                            iconSize: 26,
-                          )
-                        : Icon(
-                            cat.icon,
-                            size: 26,
-                            color: const Color(0xFF790D16),
-                          ),
-                    const SizedBox(width: 7),
-                    Text(
-                      cat.title.split(' & ').first,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
-                        color: isSelected
-                            ? AppColors.primary
-                            : const Color(0xFF555555),
-                      ),
+                child: Center(
+                  child: Text(
+                    cat.title,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w600,
+                      color: isSelected
+                          ? AppColors.primary
+                          : const Color(0xFF555555),
                     ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -669,32 +626,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
   }
 
   Widget _buildHeader() {
-    final categories = Get.isRegistered<CategoryController>()
-        ? CategoryController.to.serviceCategories
-        : <ServiceCategoryItem>[];
-
     final isAll = _currentCategory.toLowerCase() == 'all';
-    final activeCat = isAll
-        ? const ServiceCategoryItem(
-            id: 0,
-            title: 'All Vendors',
-            icon: Icons.grid_view_rounded,
-            colorClass: 'cat-all',
-            color: AppColors.primary,
-            bgColor: Color(0xFFFBF4ED),
-            desc: 'Browse all wedding, party, and event vendors.',
-          )
-        : (categories.firstWhereOrNull(
-                (c) => c.title.toLowerCase() == _currentCategory.toLowerCase()) ??
-            ServiceCategoryItem(
-              id: 0,
-              title: _currentCategory,
-              icon: Icons.storefront_rounded,
-              colorClass: 'cat-custom',
-              color: AppColors.primary,
-              bgColor: const Color(0xFFFBF4ED),
-              desc: 'Vendors in $_currentCategory',
-            ));
 
     return Container(
       decoration: BoxDecoration(
@@ -763,54 +695,16 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
-                                  width: 1,
-                                ),
-                              ),
-                              child: activeCat.hasServerIcon
-                                  ? Center(
-                                      child: CachedImageView(
-                                        imageUrl: activeCat.iconUrl,
-                                        width: 28,
-                                        height: 28,
-                                        fit: BoxFit.contain,
-                                        fallbackIcon: activeCat.icon,
-                                        iconColor: const Color(0xFF790D16),
-                                        iconSize: 28,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.storefront_rounded,
-                                      size: 26,
-                                      color: Color(0xFF790D16),
-                                    ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                isAll ? 'All Vendors' : _currentCategory,
-                                style: GoogleFonts.cormorantGaramond(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryDark,
-                                  letterSpacing: 0.2,
-                                ),
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          isAll ? 'All Vendors' : _currentCategory,
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryDark,
+                            letterSpacing: 0.2,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -848,81 +742,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     );
   }
 
-  Widget _buildFilterRow() {
-    return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: _filters.asMap().entries.map((entry) {
-          final i = entry.key;
-          final label = entry.value;
-          final isActive = _selectedFilter == i;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: AnimatedTapWidget(
-              onTap: () => setState(() => _selectedFilter = i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: isActive ? AppColors.primaryGradient : null,
-                  color: isActive ? null : const Color(0xFFF7EFE6),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: isActive
-                        ? AppColors.primary
-                        : const Color(0xFFE5D5C6),
-                    width: 1.1,
-                  ),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.25),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (i == 0)
-                      Icon(Icons.tune_rounded,
-                          size: 12,
-                          color: isActive ? Colors.white : AppColors.primary)
-                    else if (i == 1)
-                      Icon(Icons.payments_rounded,
-                          size: 12,
-                          color: isActive ? Colors.white : const Color(0xFFD97706))
-                    else
-                      Icon(Icons.star_rounded,
-                          size: 13,
-                          color: isActive ? Colors.white : const Color(0xFFD97706)),
-                    const SizedBox(width: 4),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: isActive ? Colors.white : const Color(0xFF1A1A1A),
-                        fontSize: 11.5,
-                        fontWeight:
-                            isActive ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildVendorCard(_VendorData vendor) {
     return AnimatedTapWidget(

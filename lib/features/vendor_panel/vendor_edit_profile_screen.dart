@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
+import '../../utils/helper/cloudinary_helper.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 
@@ -36,6 +37,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
   XFile? _selectedImage;
   String? _currentProfileImgUrl;
 
+  XFile? _selectedBannerImage;
+  String? _currentBannerImgUrl;
+  String? _currentBannerPublicId;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +54,7 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
     _stateCtrl = TextEditingController(text: storage.getUserState() ?? '');
     _pincodeCtrl = TextEditingController(text: storage.getUserPincode() ?? '');
     _currentProfileImgUrl = storage.getUserProfileImg();
+    _currentBannerImgUrl = storage.getVendorBannerImg();
 
     _loadExistingProfile();
   }
@@ -75,6 +81,15 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           _currentProfileImgUrl = user.profileImgUrl;
           StorageHelper().saveUserProfileImg(user.profileImgUrl);
         }
+
+        final banner = user.bannerImgId ?? v?.bannerImgId;
+        if (banner != null && banner.url != null && banner.url!.isNotEmpty) {
+          _currentBannerImgUrl = banner.url;
+          _currentBannerPublicId = banner.publicId;
+          StorageHelper().saveVendorBannerImg(banner.url);
+        } else if (StorageHelper().getVendorBannerImg() != null) {
+          _currentBannerImgUrl = StorageHelper().getVendorBannerImg();
+        }
       }
     } catch (_) {}
     if (mounted) {
@@ -93,6 +108,124 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
     _stateCtrl.dispose();
     _pincodeCtrl.dispose();
     super.dispose();
+  }
+
+  void _showBannerSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Upload Business Banner',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Choose a cover photo or storefront banner for your details card',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.darkGrey),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          final picked = await _picker.pickImage(
+                            source: ImageSource.camera,
+                            imageQuality: 85,
+                            maxWidth: 1920,
+                            maxHeight: 1080,
+                          );
+                          if (picked != null) {
+                            setState(() => _selectedBannerImage = picked);
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          Utils.showError('Camera error: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      label: const Text(
+                        'Camera',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          final picked = await _picker.pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 85,
+                            maxWidth: 1920,
+                            maxHeight: 1080,
+                          );
+                          if (picked != null) {
+                            setState(() => _selectedBannerImage = picked);
+                          }
+                        } catch (e) {
+                          if (!mounted) return;
+                          Utils.showError('Gallery error: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
+                      label: const Text(
+                        'Gallery',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showImageSourceSheet() {
@@ -228,6 +361,32 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
       final state = _stateCtrl.text.trim();
       final pincode = _pincodeCtrl.text.trim();
 
+      Map<String, dynamic>? bannerPayload;
+      if (_selectedBannerImage != null) {
+        try {
+          final res = await CloudinaryHelper.uploadFile(
+            file: File(_selectedBannerImage!.path),
+            context: 'banners',
+            authToken: storage.getAccessToken(),
+          );
+          final url = res['url']?.toString() ?? '';
+          final publicId = res['public_id']?.toString() ?? '';
+          if (url.isNotEmpty) {
+            bannerPayload = {
+              'url': url,
+              'public_id': publicId,
+            };
+          }
+        } catch (e) {
+          debugPrint('Cloudinary banner upload error: $e');
+        }
+      } else if (_currentBannerImgUrl != null && _currentBannerImgUrl!.isNotEmpty) {
+        bannerPayload = {
+          'url': _currentBannerImgUrl!,
+          'public_id': _currentBannerPublicId ?? '',
+        };
+      }
+
       final formDataMap = <String, dynamic>{
         'fullName': name.isNotEmpty ? name : businessName,
         'name': name.isNotEmpty ? name : businessName,
@@ -242,6 +401,11 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         'city': city,
         'state': state,
         if (pincode.isNotEmpty) 'pincode': pincode,
+        if (bannerPayload != null) ...{
+          'bannerImgId': bannerPayload,
+          'bannerImgId[url]': bannerPayload['url'],
+          'bannerImgId[public_id]': bannerPayload['public_id'],
+        },
       };
 
       if (_selectedImage != null) {
@@ -252,13 +416,21 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         );
       }
 
+      if (_selectedBannerImage != null) {
+        final fileName = _selectedBannerImage!.name;
+        formDataMap['bannerImg'] = await dio.MultipartFile.fromFile(
+          _selectedBannerImage!.path,
+          filename: fileName,
+        );
+      }
+
       final formData = dio.FormData.fromMap(formDataMap);
       final res = await _userApi.editProfile(formData);
 
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      if (res.isSuccess == true) {
+      if (res.isSuccess == true || res.data != null) {
         if (businessName.isNotEmpty) {
           await storage.saveUserName(businessName);
         }
@@ -279,6 +451,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         }
         if (res.data?.profileImgUrl != null) {
           await storage.saveUserProfileImg(res.data!.profileImgUrl);
+        }
+        final newBanner = res.data?.bannerImgUrl ?? bannerPayload?['url'];
+        if (newBanner != null && newBanner.isNotEmpty) {
+          await storage.saveVendorBannerImg(newBanner);
         }
 
         if (!mounted) return;
@@ -326,78 +502,320 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile Image Picker
-                    Center(
-                      child: GestureDetector(
-                        onTap: _showImageSourceSheet,
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: AppColors.gold, width: 2.5),
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                              ),
-                              child: ClipOval(
-                                child: _selectedImage != null
-                                    ? Image.file(
-                                        File(_selectedImage!.path),
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : CachedImageView(
-                                        imageUrl: _currentProfileImgUrl ?? '',
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                        isCircle: true,
-                                        fallbackIcon: Icons.storefront_rounded,
-                                        iconColor: AppColors.gold,
-                                        iconSize: 46,
-                                        backgroundColor: AppColors.primary,
-                                      ),
-                              ),
+                    // ── Business Profile Header (Banner in Background - Identical to Profile) ──
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_businessNameCtrl, _nameCtrl, _emailCtrl]),
+                      builder: (context, _) {
+                        final bool hasBanner = _selectedBannerImage != null ||
+                            (_currentBannerImgUrl != null && _currentBannerImgUrl!.isNotEmpty);
+                        final String displayName = _businessNameCtrl.text.trim().isNotEmpty
+                            ? _businessNameCtrl.text.trim()
+                            : (_nameCtrl.text.trim().isNotEmpty
+                                ? _nameCtrl.text.trim()
+                                : (StorageHelper().getUserName() ?? 'Vendor Partner'));
+                        final String displayEmail = _emailCtrl.text.trim().isNotEmpty
+                            ? _emailCtrl.text.trim()
+                            : (StorageHelper().getUserEmail() ?? '');
+                        final String displayMobile = StorageHelper().getUserMobile() ?? '';
+
+                        return Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: hasBanner
+                                  ? AppColors.gold.withValues(alpha: 0.5)
+                                  : AppColors.gold.withValues(alpha: 0.3),
+                              width: hasBanner ? 1.5 : 1,
                             ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  color: AppColors.white,
-                                  size: 16,
-                                ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: hasBanner ? 0.08 : 0.04),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: _showImageSourceSheet,
-                        icon: const Icon(Icons.photo_camera_rounded, size: 16),
-                        label: const Text(
-                          'Change Profile Picture',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                            ],
                           ),
-                        ),
-                      ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: [
+                              // Background Banner
+                              if (hasBanner) ...[
+                                Positioned.fill(
+                                  child: GestureDetector(
+                                    onTap: _showBannerSourceSheet,
+                                    child: _selectedBannerImage != null
+                                        ? Image.file(
+                                            File(_selectedBannerImage!.path),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                          )
+                                        : CachedImageView(
+                                            imageUrl: _currentBannerImgUrl!,
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                          ),
+                                  ),
+                                ),
+                                // Dark gradient overlay for text readability
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.black.withValues(alpha: 0.35),
+                                            Colors.black.withValues(alpha: 0.82),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                Positioned.fill(
+                                  child: GestureDetector(
+                                    onTap: _showBannerSourceSheet,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            AppColors.primary.withValues(alpha: 0.07),
+                                            AppColors.gold.withValues(alpha: 0.14),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              // Edit / Change Banner button at top right
+                              Positioned(
+                                top: 14,
+                                right: 14,
+                                child: InkWell(
+                                  onTap: _showBannerSourceSheet,
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: hasBanner
+                                          ? Colors.black.withValues(alpha: 0.55)
+                                          : AppColors.background,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: hasBanner
+                                            ? Colors.white.withValues(alpha: 0.4)
+                                            : AppColors.gold.withValues(alpha: 0.4),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 13,
+                                          color: hasBanner ? AppColors.white : AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          hasBanner ? 'Edit Banner' : 'Add Banner',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: hasBanner ? AppColors.white : AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Details Card Content (Centered - Exact same sizing as profile)
+                              SizedBox(
+                                width: double.infinity,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Avatar (80x80 matching profile)
+                                      GestureDetector(
+                                        onTap: _showImageSourceSheet,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Container(
+                                              width: 80,
+                                              height: 80,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: AppColors.gold,
+                                                  width: 2.5,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.15),
+                                                    blurRadius: 8,
+                                                  ),
+                                                ],
+                                                color: AppColors.primary,
+                                              ),
+                                              child: ClipOval(
+                                                child: _selectedImage != null
+                                                    ? Image.file(
+                                                        File(_selectedImage!.path),
+                                                        width: 80,
+                                                        height: 80,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : CachedImageView(
+                                                        imageUrl: _currentProfileImgUrl ?? '',
+                                                        width: 80,
+                                                        height: 80,
+                                                        fit: BoxFit.cover,
+                                                        isCircle: true,
+                                                        fallbackIcon: Icons.storefront_rounded,
+                                                        iconColor: AppColors.gold,
+                                                        iconSize: 40,
+                                                        backgroundColor: AppColors.primary,
+                                                      ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(5),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: AppColors.white,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.camera_alt_rounded,
+                                                  color: AppColors.white,
+                                                  size: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        displayName,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                          color: hasBanner ? AppColors.white : AppColors.black,
+                                          shadows: hasBanner
+                                              ? const [
+                                                  Shadow(
+                                                    color: Colors.black54,
+                                                    blurRadius: 6,
+                                                    offset: Offset(0, 1),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                      ),
+                                      if (displayEmail.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          displayEmail,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: hasBanner ? FontWeight.w500 : FontWeight.w400,
+                                            color: hasBanner
+                                                ? AppColors.white.withValues(alpha: 0.90)
+                                                : AppColors.darkGrey,
+                                          ),
+                                        ),
+                                      ],
+                                      if (displayMobile.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          displayMobile,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: hasBanner
+                                                ? AppColors.white.withValues(alpha: 0.80)
+                                                : AppColors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 12),
+                                      Center(
+                                        child: OutlinedButton.icon(
+                                          onPressed: _showImageSourceSheet,
+                                          icon: Icon(
+                                            Icons.photo_camera_rounded,
+                                            size: 14,
+                                            color: hasBanner ? AppColors.white : AppColors.primary,
+                                          ),
+                                          label: Text(
+                                            'Change Profile Photo',
+                                            style: TextStyle(
+                                              color: hasBanner ? AppColors.white : AppColors.primary,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: hasBanner ? AppColors.white : AppColors.primary,
+                                            backgroundColor: hasBanner
+                                                ? Colors.black.withValues(alpha: 0.35)
+                                                : Colors.transparent,
+                                            side: BorderSide(
+                                              color: hasBanner
+                                                  ? Colors.white.withValues(alpha: 0.5)
+                                                  : AppColors.primary.withValues(alpha: 0.4),
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                            visualDensity: VisualDensity.compact,
+                                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // 1. Owner / Contact Person Name
                     _buildTextField(

@@ -4,35 +4,46 @@ import '../../core/constants/app_text_styles.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../shared/widgets/app_states.dart';
+import '../../shared/widgets/app_confirmation_dialog.dart';
 import '../../utils/utils.dart';
 
 class VendorPackagesScreen extends StatefulWidget {
-  const VendorPackagesScreen({super.key});
+  final bool isTab;
+  final int initialFilterIndex;
+
+  const VendorPackagesScreen({
+    super.key,
+    this.isTab = false,
+    this.initialFilterIndex = 0,
+  });
 
   @override
-  State<VendorPackagesScreen> createState() => _VendorPackagesScreenState();
+  State<VendorPackagesScreen> createState() => VendorPackagesScreenState();
 }
 
-class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
+class VendorPackagesScreenState extends State<VendorPackagesScreen> {
   final _userApi = UserApiProvider();
   final _vendorApi = VendorApiProvider();
   final List<Map<String, dynamic>> _items = [];
   bool _isLoading = true;
   bool _isNoInternet = false;
   String? _errorMessage;
-  int _selectedFilterIndex = 0; // 0 = All, 1 = Packages, 2 = Services
+  late int _selectedFilterIndex; // 0 = All, 1 = Services, 2 = Packages
 
   @override
   void initState() {
     super.initState();
+    _selectedFilterIndex = widget.initialFilterIndex;
     _fetchPackages();
   }
 
+  Future<void> refresh({bool silent = false}) => _fetchPackages(silent: silent);
+
   List<Map<String, dynamic>> get _filteredItems {
     if (_selectedFilterIndex == 1) {
-      return _items.where((i) => i['type'] == 'package').toList();
-    } else if (_selectedFilterIndex == 2) {
       return _items.where((i) => i['type'] == 'service').toList();
+    } else if (_selectedFilterIndex == 2) {
+      return _items.where((i) => i['type'] == 'package').toList();
     }
     return _items;
   }
@@ -40,12 +51,14 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
   int get _packageCount => _items.where((i) => i['type'] == 'package').length;
   int get _serviceCount => _items.where((i) => i['type'] == 'service').length;
 
-  Future<void> _fetchPackages() async {
-    setState(() {
-      _isLoading = true;
-      _isNoInternet = false;
-      _errorMessage = null;
-    });
+  Future<void> _fetchPackages({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _isNoInternet = false;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final List<Map<String, dynamic>> loaded = [];
@@ -152,7 +165,7 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
     final isEditing = itemToEdit != null;
     String selectedType = isEditing
         ? (itemToEdit['type']?.toString().toLowerCase() == 'service' ? 'service' : 'package')
-        : (_selectedFilterIndex == 2 ? 'service' : 'package');
+        : (_selectedFilterIndex == 1 ? 'service' : 'package');
 
     final titleCtrl = TextEditingController(
       text: isEditing ? (itemToEdit['title'] ?? itemToEdit['name'] ?? '') : '',
@@ -214,28 +227,14 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEditing
-                                    ? (isPackage ? 'Edit Package Plan' : 'Edit Service')
-                                    : (isPackage ? 'Create Package Plan' : 'Add Service'),
-                                style: AppTextStyles.headlineMedium.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                isPackage
-                                    ? 'Bundle deliverables, days & coverage for couples'
-                                    : 'Standalone offering or specialized add-on service',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.darkGrey,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            isEditing
+                                ? (isPackage ? 'Edit Package Plan' : 'Edit Service')
+                                : (isPackage ? 'Create Package Plan' : 'Add Service'),
+                            style: AppTextStyles.headlineMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -484,7 +483,7 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
                     // 3. Description Field
                     Text(
                       isPackage
-                          ? 'Package Deliverables & Description'
+                          ? 'Package Description & Details'
                           : 'Service Description & Details',
                       style: const TextStyle(
                         fontSize: 13,
@@ -623,95 +622,84 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
     final isPackage = item['type'] == 'package';
     final name = item['title'] ?? item['name'] ?? (isPackage ? 'Package' : 'Service');
 
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete ${isPackage ? 'Package' : 'Service'}?',
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
+      icon: Icons.delete_outline_rounded,
+      isDestructive: true,
+      title: 'Delete ${isPackage ? 'Package' : 'Service'}?',
+      message:
           'Are you sure you want to remove "$name"? Clients will no longer see this offering on your profile.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final itemId = item['id']?.toString() ?? '';
-              if (itemId.isNotEmpty) {
-                final res = await _vendorApi.deleteServicePackage(itemId);
-                if (!mounted) return;
-                if (res.isSuccess == true) {
-                  _showFeedback('Deleted successfully');
-                  _fetchPackages();
-                } else {
-                  _showFeedback(res.message ?? 'Failed to delete', isError: true);
-                }
-              } else {
-                setState(() => _items.remove(item));
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: () async {
+        final itemId = item['id']?.toString() ?? '';
+        if (itemId.isNotEmpty) {
+          final res = await _vendorApi.deleteServicePackage(itemId);
+          if (!mounted) return;
+          if (res.isSuccess == true) {
+            _showFeedback('Deleted successfully');
+            _fetchPackages();
+          } else {
+            _showFeedback(res.message ?? 'Failed to delete', isError: true);
+          }
+        } else {
+          setState(() => _items.remove(item));
+        }
+      },
     );
   }
 
   Widget _buildFilterChips() {
     final filters = [
       {'label': 'All', 'count': _items.length},
-      {'label': 'Packages', 'count': _packageCount},
       {'label': 'Services', 'count': _serviceCount},
+      {'label': 'Packages', 'count': _packageCount},
     ];
 
     return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: List.generate(filters.length, (index) {
-          final isSelected = _selectedFilterIndex == index;
-          final item = filters[index];
+      color: Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: List.generate(filters.length, (index) {
+            final isSelected = _selectedFilterIndex == index;
+            final item = filters[index];
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(
-                '${item['label']} (${item['count']})',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.white : AppColors.darkGrey,
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(
+                  '${item['label']} (${item['count']})',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight:
+                        isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected ? AppColors.white : AppColors.darkGrey,
+                  ),
                 ),
+                selected: isSelected,
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.white,
+                showCheckmark: false,
+                elevation: isSelected ? 1 : 0,
+                side: BorderSide(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.grey.withValues(alpha: 0.22),
+                  width: 1,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onSelected: (_) {
+                  setState(() => _selectedFilterIndex = index);
+                },
               ),
-              selected: isSelected,
-              selectedColor: AppColors.primary,
-              backgroundColor: AppColors.offWhite,
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.grey.withValues(alpha: 0.2),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (_) {
-                setState(() => _selectedFilterIndex = index);
-              },
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -722,31 +710,47 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primary, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'My Packages & Services',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: AppColors.black,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded,
-                color: AppColors.primary, size: 26),
-            onPressed: () => _showAddEditPackageSheet(),
-          ),
-        ],
-      ),
+      appBar: widget.isTab
+          ? null
+          : AppBar(
+              backgroundColor: AppColors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.primary, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text(
+                'My Packages & Services',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
+              ),
+              centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline_rounded,
+                      color: AppColors.primary, size: 26),
+                  onPressed: () => _showAddEditPackageSheet(),
+                ),
+              ],
+            ),
+      floatingActionButton: widget.isTab
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddEditPackageSheet(),
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add_rounded, color: AppColors.white),
+              label: const Text(
+                'Add Service / Package',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          : null,
       body: _isLoading
           ? const AppLoadingState(message: 'Loading offerings...')
           : _isNoInternet
@@ -760,20 +764,20 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
                         Expanded(
                           child: filtered.isEmpty
                               ? AppEmptyState(
-                                  icon: _selectedFilterIndex == 2
+                                  icon: _selectedFilterIndex == 1
                                       ? Icons.auto_awesome_outlined
                                       : Icons.inventory_2_outlined,
                                   title: _selectedFilterIndex == 1
-                                      ? 'No Packages Added'
+                                      ? 'No Services Added'
                                       : _selectedFilterIndex == 2
-                                          ? 'No Services Added'
-                                          : 'No Packages or Services Yet',
+                                          ? 'No Packages Added'
+                                          : 'No Services or Packages Yet',
                                   subtitle: _selectedFilterIndex == 1
-                                      ? 'Create bundled packages to offer complete event coverage to couples.'
+                                      ? 'Add standalone services like drone shoot, pre-wedding, or bridal styling.'
                                       : _selectedFilterIndex == 2
-                                          ? 'Add standalone services like drone shoot, pre-wedding, or bridal styling.'
+                                          ? 'Create bundled packages to offer complete event coverage to couples.'
                                           : 'Create pricing packages and services to attract wedding clients. They will appear on your public profile.',
-                                  actionLabel: _selectedFilterIndex == 2
+                                  actionLabel: _selectedFilterIndex == 1
                                       ? 'Add First Service'
                                       : 'Add First Package',
                                   onAction: () => _showAddEditPackageSheet(
@@ -979,29 +983,31 @@ class _VendorPackagesScreenState extends State<VendorPackagesScreen> {
                         ),
                       ],
                     ),
-      bottomNavigationBar: Container(
-        color: AppColors.white,
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: () => _showAddEditPackageSheet(),
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: const Text(
-              'Add Service or Package',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      bottomNavigationBar: widget.isTab
+          ? null
+          : Container(
+              color: AppColors.white,
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddEditPackageSheet(),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: const Text(
+                    'Add Service or Package',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import '../injector.dart';
 import '../models/user_model.dart';
 import '../network_handling.dart';
 import '../shared/data_response.dart';
+import '../../utils/helper/storage_helper.dart';
 import 'api_constant.dart';
 
 class UserApiProvider {
@@ -30,13 +31,30 @@ class UserApiProvider {
     }
   }
 
-  // PUT /api/users/edit-profile (multipart/form-data)
-  Future<DataResponse<UserModel>> editProfile(FormData formData) async {
+  // PUT /api/users/edit-profile (multipart/form-data or application/json)
+  Future<DataResponse<UserModel>> editProfile(dynamic data) async {
     try {
+      final token = StorageHelper().getAccessToken();
       final response = await _dio.put(
         ApiConstants.editProfile,
-        data: formData,
-        options: Injector.getHeaderToken(),
+        data: data,
+        options: data is FormData
+            ? Options(
+                contentType: null,
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              )
+            : Options(
+                contentType: 'application/json',
+                headers: {
+                  if (token != null && token.isNotEmpty)
+                    'Authorization': 'Bearer $token',
+                  'Accept': 'application/json',
+                },
+              ),
       );
 
       return DataResponse<UserModel>.fromJson(

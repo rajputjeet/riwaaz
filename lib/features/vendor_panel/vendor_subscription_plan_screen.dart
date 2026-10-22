@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/api_provider/subscription_api_provider.dart';
 import '../../data/models/subscription_model.dart';
+import '../../data/models/active_plan_model.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../utils/utils.dart';
 
@@ -25,6 +26,7 @@ class _VendorSubscriptionPlanScreenState
   String _selectedPaymentMethod = 'UPI';
   // ignore: unused_field
   String _activePlanServerId = '';
+  ActivePlanModel? _activePlan;
   bool _isLoadingPlans = false;
   bool _isNoInternet = false;
   String? _errorMsg;
@@ -33,6 +35,11 @@ class _VendorSubscriptionPlanScreenState
   // Map local plan key -> server _id (populated after API fetch)
   String _getServerPlanId(String localId) {
     if (_serverPlans.isEmpty) return '';
+    final direct = _serverPlans.firstWhere(
+      (p) => p.id == localId,
+      orElse: () => SubscriptionModel(),
+    );
+    if (direct.id != null && direct.id!.isNotEmpty) return direct.id!;
     const monthsMap = {'3_months': 3, '6_months': 6, '12_months': 12};
     final months = monthsMap[localId];
     if (months == null) return _serverPlans.first.id ?? '';
@@ -65,9 +72,9 @@ class _VendorSubscriptionPlanScreenState
         'Upload up to 15 Portfolio photos',
         'Standard category search ranking',
         'Real-time inquiry dashboard & SMS alerts',
-        '5% platform booking fee',
+        'One-time payment • No recurring charges',
       ],
-      'highlight': '25 Leads / Month',
+      'highlight': '25 Leads / Month • One-Time',
     },
     {
       'id': '6_months',
@@ -90,9 +97,9 @@ class _VendorSubscriptionPlanScreenState
         'Featured in "Top Recommended Vendors"',
         'Direct customer quotation generator',
         'Dedicated WhatsApp account manager',
-        'Low 2% platform booking fee',
+        'One-time payment • No recurring charges',
       ],
-      'highlight': '60 Leads / Month + Priority',
+      'highlight': '60 Leads / Month • One-Time',
     },
     {
       'id': '12_months',
@@ -112,12 +119,12 @@ class _VendorSubscriptionPlanScreenState
         'Unlimited Direct Bride & Groom Leads',
         'Guaranteed Top 3 City Banner Ranking',
         'Social Media Spotlight on Widoora Instagram',
-        '0% Commission on all client bookings',
+        'Zero platform fees & zero commission',
         'Instant Priority SMS & Push lead alerts',
         'Personalized brand promotional video',
         '24/7 Priority VIP Concierge service',
       ],
-      'highlight': 'Unlimited Leads + 0% Commission',
+      'highlight': 'Unlimited Leads • One-Time Buy',
     },
   ];
 
@@ -143,8 +150,14 @@ class _VendorSubscriptionPlanScreenState
           _serverPlans = plansResult.data!;
         }
         if (planResult.isSuccess == true && planResult.data != null) {
-          _activePlanServerId =
-              planResult.data!.subscriptionPlan?.id ?? '';
+          _activePlan = planResult.data;
+          final sPlan = planResult.data!.subscriptionPlan;
+          _activePlanServerId = sPlan?.id ?? '';
+          if (sPlan?.id != null && sPlan!.id!.isNotEmpty) {
+            _activePlanId = sPlan.id!;
+          } else if (sPlan?.durationInMonths != null) {
+            _activePlanId = '${sPlan!.durationInMonths}_months';
+          }
         }
         _isLoadingPlans = false;
         _isNoInternet = false;
@@ -247,7 +260,7 @@ class _VendorSubscriptionPlanScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isCurrent ? 'Renew Subscription' : 'Activate Subscription',
+                        isCurrent ? 'Extend Subscription' : 'Buy Subscription',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -342,6 +355,24 @@ class _VendorSubscriptionPlanScreenState
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          'Payment Type',
+                          style: TextStyle(fontSize: 12, color: AppColors.grey),
+                        ),
+                        Text(
+                          'One-Time (Non-recurring)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
                     const Divider(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -420,11 +451,13 @@ class _VendorSubscriptionPlanScreenState
 
                           if (result.isSuccess == true) {
                             setState(() {
+                              _activePlan = result.data;
                               _activePlanId = plan['id'] as String;
                               _activePlanServerId = serverPlanId;
                             });
                             nav.pop();
                             Utils.showSuccess('Plan Activated! You are now on the ${plan['name']}.');
+                            _loadServerData();
                           } else {
                             setSheetState(() => isProcessing = false);
                             Utils.showError(result.message ?? 'Payment failed. Please try again.');
@@ -626,11 +659,6 @@ class _VendorSubscriptionPlanScreenState
       );
     }
 
-    final activePlan = plansToDisplay.firstWhere(
-      (p) => p['id'] == _activePlanId,
-      orElse: () => plansToDisplay.first,
-    );
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -651,36 +679,44 @@ class _VendorSubscriptionPlanScreenState
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Current Active Membership Card
-            _buildCurrentPlanBanner(activePlan),
+      body: RefreshIndicator(
+        onRefresh: _loadServerData,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Current Active Membership Card
+              _buildCurrentPlanBanner(),
 
-            const SizedBox(height: 18),
+              const SizedBox(height: 18),
 
-            // Section Heading
-            const Text(
-              'Choose Your Plan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.black,
+              // Section Heading
+              const Text(
+                'Choose Your Plan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Select from 3 Month, 6 Month, or 12 Month partnership plans',
-              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-            ),
-            const SizedBox(height: 14),
+              const SizedBox(height: 4),
+              const Text(
+                'Select from 3 Month, 6 Month, or 12 Month partnership plans',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+              ),
+              const SizedBox(height: 14),
 
-            // Plan Cards
-            ...plansToDisplay.map((plan) {
-              final isCurrent = plan['id'] == _activePlanId;
+              // Plan Cards
+              ...plansToDisplay.map((plan) {
+                final isCurrent = (_activePlan?.isSubscriptionActive == true &&
+                        _activePlan?.isExpired != true) &&
+                    (plan['id'] == _activePlanId ||
+                        plan['serverPlanId'] == _activePlanServerId);
               final isPopular = plan['isPopular'] == true;
               final savings = plan['savings'] as String?;
               final price = plan['price'] as int;
@@ -982,8 +1018,8 @@ class _VendorSubscriptionPlanScreenState
                               ),
                               child: Text(
                                 isCurrent
-                                    ? 'Renew ${plan['name']}'
-                                    : 'Select ${plan['name']}',
+                                    ? 'Extend ${plan['name']}'
+                                    : 'Buy ${plan['name']}',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
@@ -999,37 +1035,188 @@ class _VendorSubscriptionPlanScreenState
               );
             }),
 
-            const SizedBox(height: 10),
-
-            // Plan Comparison Table Card
-            _buildComparisonCard(),
-
-            const SizedBox(height: 18),
-
-            // Plan FAQ & Assurance Card
-            _buildFaqCard(),
-
             const SizedBox(height: 24),
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
-  Widget _buildCurrentPlanBanner(Map<String, dynamic> activePlan) {
+  String _formatDate(String? isoDate) {
+    if (isoDate == null || isoDate.trim().isEmpty) return '';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return isoDate;
+    }
+  }
+
+  Widget _buildCurrentPlanBanner() {
+    final active = _activePlan;
+    final isActive = active?.isSubscriptionActive == true && active?.isExpired != true;
+    final isExpired = active?.isExpired == true;
+
+    if (!isActive && !isExpired) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.card_membership_rounded,
+                  color: AppColors.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'No Active Subscription',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Choose a plan below to activate vendor partner benefits',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.darkGrey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final planName = active?.subscriptionPlan?.title ??
+        active?.planTitle ??
+        'Active Partner';
+    final daysRemaining = active?.daysRemaining ?? 0;
+    final endDateFormatted = _formatDate(active?.subscriptionEndDate);
+
+    if (isActive) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.verified_rounded,
+                          color: AppColors.cream, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        'ACTIVE SUBSCRIPTION',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.cream,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$daysRemaining Day${daysRemaining == 1 ? '' : 's'} Left',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  planName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.stars_rounded, color: AppColors.gold, size: 20),
+              ],
+            ),
+            if (endDateFormatted.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Expires on $endDateFormatted',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.cream,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // Expired
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        color: const Color(0xFFFEF2F2),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1040,339 +1227,51 @@ class _VendorSubscriptionPlanScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.verified_rounded,
-                        color: AppColors.cream, size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      'ACTIVE SUBSCRIPTION',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.cream,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.3),
+                  color: AppColors.error.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  '84 Days Left',
+                  'EXPIRED',
                   style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.error,
+                    letterSpacing: 0.5,
                   ),
+                ),
+              ),
+              const Text(
+                '0 Days Left',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.error,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                '${activePlan['name']}',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.white,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.stars_rounded, color: AppColors.gold, size: 20),
-            ],
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Active Partner • Renews on Dec 18, 2026',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.cream,
-              fontWeight: FontWeight.w500,
+          Text(
+            planName,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.black,
             ),
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                _StatMini(label: 'Monthly Leads', value: '60 Leads'),
-                _StatMini(label: 'Platform Fee', value: '2% Only'),
-                _StatMini(label: 'Search Rank', value: 'Priority'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComparisonCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.compare_arrows_rounded,
-                  color: AppColors.primary, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Plans Comparison',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _buildComparisonRow(
-            'Validity',
-            '3 Months',
-            '6 Months ⭐',
-            '12 Months 💎',
-            isHeader: true,
-          ),
-          _buildComparisonRow(
-            'Price (Total)',
-            '₹2,999',
-            '₹4,999',
-            '₹8,999',
-          ),
-          _buildComparisonRow(
-            'Monthly Rate',
-            '₹1,000/mo',
-            '₹833/mo',
-            '₹749/mo',
-          ),
-          _buildComparisonRow(
-            'Client Leads / Mo',
-            '25 Leads',
-            '60 Leads',
-            'Unlimited',
-          ),
-          _buildComparisonRow(
-            'Search Visibility',
-            'Standard',
-            'Priority',
-            'Top 3 Guaranteed',
-          ),
-          _buildComparisonRow(
-            'Platform Fee',
-            '5%',
-            '2%',
-            '0% Commission',
-          ),
-          _buildComparisonRow(
-            'Account Manager',
-            'In-App',
-            'Dedicated WA',
-            '24/7 VIP Concierge',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComparisonRow(
-    String feature,
-    String col3,
-    String col6,
-    String col12, {
-    bool isHeader = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              feature,
-              style: TextStyle(
+          if (endDateFormatted.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Expired on $endDateFormatted',
+              style: const TextStyle(
                 fontSize: 12,
-                fontWeight: isHeader ? FontWeight.w800 : FontWeight.w600,
-                color: AppColors.black,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              col3,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
                 color: AppColors.darkGrey,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              col6,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Text(
-              col12,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF790D16),
-              ),
-            ),
-          ),
+          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildFaqCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Row(
-            children: [
-              Icon(Icons.help_outline_rounded,
-                  color: AppColors.primary, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Subscription FAQs',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10),
-          _FaqItem(
-            question: 'Can I switch from 3 Months to 6 or 12 Months anytime?',
-            answer:
-                'Yes! You can upgrade your plan anytime. Any remaining days on your current active plan are automatically added to your new duration.',
-          ),
-          Divider(height: 16),
-          _FaqItem(
-            question: 'How do client leads reach my studio?',
-            answer:
-                'Verified inquiries are delivered instantly to your vendor dashboard, SMS, and WhatsApp number when couples look for vendors in your city.',
-          ),
-          Divider(height: 16),
-          _FaqItem(
-            question: 'What is the 0% commission guarantee on 12 Months?',
-            answer:
-                'On our 12 Months Annual plan, Widoora takes zero commission on your client contracts and booking fees.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatMini extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatMini({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            color: AppColors.cream,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.white70,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FaqItem extends StatelessWidget {
-  final String question;
-  final String answer;
-
-  const _FaqItem({required this.question, required this.answer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          question,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.black,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          answer,
-          style: const TextStyle(
-            fontSize: 11.5,
-            color: AppColors.darkGrey,
-            height: 1.35,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -518,7 +518,15 @@ class VendorApiProvider {
     }
   }
 
-  // ─── Account ───────────────────────────────────────────────────────────────
+  // ─── Account & Profile ───────────────────────────────────────────────────
+
+  // PUT /api/users/edit-profile
+  Future<DataResponse<UserModel>> updateProfile(dynamic data) =>
+      UserApiProvider().editProfile(data);
+
+  // PUT /api/users/edit-profile (alias)
+  Future<DataResponse<UserModel>> updateVendorProfile(dynamic data) =>
+      UserApiProvider().editProfile(data);
 
   // PUT /api/users/change-password
   Future<DataResponse<dynamic>> changePassword({

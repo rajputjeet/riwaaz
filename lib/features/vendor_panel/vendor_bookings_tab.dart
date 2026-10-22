@@ -13,7 +13,7 @@ class VendorBookingsTab extends StatefulWidget {
 }
 
 class _VendorBookingsTabState extends State<VendorBookingsTab> {
-  // 0 = Pending, 1 = Upcoming(Confirmed), 2 = Completed, 3 = All
+  // 0 = All, 1 = Pending, 2 = Upcoming(Confirmed), 3 = Completed
   int _selectedFilter = 0;
   final _vendorApi = VendorApiProvider();
 
@@ -72,13 +72,13 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
 
   List<BookingModel> get _displayedBookings {
     switch (_selectedFilter) {
-      case 0:
-        return _allBookings.where((b) => b.isPending).toList();
       case 1:
-        return _allBookings.where((b) => b.isConfirmed).toList();
+        return _allBookings.where((b) => b.isPending).toList();
       case 2:
-        return _allBookings.where((b) => b.isCompleted).toList();
+        return _allBookings.where((b) => b.isConfirmed).toList();
       case 3:
+        return _allBookings.where((b) => b.isCompleted).toList();
+      case 0:
       default:
         return _allBookings;
     }
@@ -147,82 +147,128 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
         children: [
           // Filter Tabs
           Container(
-            color: AppColors.white,
+            color: Colors.transparent,
             padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               child: Row(
                 children: [
                   ChoiceChip(
+                    label: Text('All ($_allCount)'),
+                    selected: _selectedFilter == 0,
+                    onSelected: (_) => setState(() => _selectedFilter = 0),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 0 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 0
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 0
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 0 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
                     avatar: _pendingCount > 0
                         ? Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFD97706),
+                            decoration: BoxDecoration(
+                              color: _selectedFilter == 1
+                                  ? AppColors.white
+                                  : const Color(0xFFD97706),
                               shape: BoxShape.circle,
                             ),
                           )
                         : null,
                     label: Text('Pending ($_pendingCount)'),
-                    selected: _selectedFilter == 0,
-                    onSelected: (_) => setState(() => _selectedFilter = 0),
-                    selectedColor: const Color(0xFFD97706),
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 0
-                          ? AppColors.white
-                          : const Color(0xFF92400E),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+                    selected: _selectedFilter == 1,
+                    onSelected: (_) => setState(() => _selectedFilter = 1),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 1 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 1
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
                     ),
-                    backgroundColor: const Color(0xFFFEF3C7),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 1
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 1 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: Text('Upcoming ($_upcomingCount)'),
-                    selected: _selectedFilter == 1,
-                    onSelected: (_) => setState(() => _selectedFilter = 1),
+                    selected: _selectedFilter == 2,
+                    onSelected: (_) => setState(() => _selectedFilter = 2),
                     selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 1
-                          ? AppColors.white
-                          : AppColors.black,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 2 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 2
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
                     ),
-                    backgroundColor: AppColors.offWhite,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 2
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 2 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: Text('Completed ($_completedCount)'),
-                    selected: _selectedFilter == 2,
-                    onSelected: (_) => setState(() => _selectedFilter = 2),
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 2
-                          ? AppColors.white
-                          : AppColors.black,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    backgroundColor: AppColors.offWhite,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text('All ($_allCount)'),
                     selected: _selectedFilter == 3,
                     onSelected: (_) => setState(() => _selectedFilter = 3),
                     selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 3 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 3
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     labelStyle: TextStyle(
                       color: _selectedFilter == 3
                           ? AppColors.white
-                          : AppColors.black,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 3 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
                     ),
-                    backgroundColor: AppColors.offWhite,
+                    backgroundColor: AppColors.white,
                   ),
                 ],
               ),
@@ -278,7 +324,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    _selectedFilter == 0
+                                    _selectedFilter == 1
                                         ? Icons.mark_email_read_rounded
                                         : Icons.event_busy_rounded,
                                     size: 56,
@@ -287,9 +333,13 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    _selectedFilter == 0
+                                    _selectedFilter == 1
                                         ? 'No Pending Requests'
-                                        : 'No Bookings in this Tab',
+                                        : _selectedFilter == 2
+                                            ? 'No Upcoming Bookings'
+                                            : _selectedFilter == 3
+                                                ? 'No Completed Bookings'
+                                                : 'No Bookings Found',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
@@ -298,7 +348,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    _selectedFilter == 0
+                                    _selectedFilter == 1
                                         ? 'New customer booking requests will appear here instantly for your review.'
                                         : 'Check other tabs to view upcoming and completed bookings.',
                                     textAlign: TextAlign.center,

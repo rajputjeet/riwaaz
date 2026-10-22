@@ -15,6 +15,7 @@ class StorageHelper {
   static const String _userMobile       = "userMobile";
   static const String _userName         = "userName";
   static const String _userProfileImg   = "userProfileImg";
+  static const String _vendorBannerImg  = "vendorBannerImg";
   static const String _applicationId    = "applicationId";
   static const String _applicationStatus= "applicationStatus";
   static const String _userModel        = "userModel";
@@ -117,6 +118,13 @@ class StorageHelper {
       _savePref(_userProfileImg, (img != null && img.trim().isNotEmpty) ? img.trim() : null);
   String? getUserProfileImg() {
     final img = _prefsInstance?.getString(_userProfileImg);
+    return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
+  }
+
+  Future<void> saveVendorBannerImg(String? img) async =>
+      _savePref(_vendorBannerImg, (img != null && img.trim().isNotEmpty) ? img.trim() : null);
+  String? getVendorBannerImg() {
+    final img = _prefsInstance?.getString(_vendorBannerImg);
     return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
   }
 

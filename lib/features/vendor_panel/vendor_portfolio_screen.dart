@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
+import '../../shared/widgets/app_confirmation_dialog.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/portfolio_video_player.dart';
@@ -25,13 +26,14 @@ class _PortfolioMediaItem {
 }
 
 class VendorPortfolioScreen extends StatefulWidget {
-  const VendorPortfolioScreen({super.key});
+  final bool isTab;
+  const VendorPortfolioScreen({super.key, this.isTab = false});
 
   @override
-  State<VendorPortfolioScreen> createState() => _VendorPortfolioScreenState();
+  State<VendorPortfolioScreen> createState() => VendorPortfolioScreenState();
 }
 
-class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
+class VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
   int _selectedTab = 0; // 0 = All, 1 = Photos, 2 = Videos
   final _userApi = UserApiProvider();
   final _vendorApi = VendorApiProvider();
@@ -48,12 +50,16 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
     _fetchPortfolio();
   }
 
-  Future<void> _fetchPortfolio() async {
-    setState(() {
-      _isLoading = true;
-      _isNoInternet = false;
-      _errorMessage = null;
-    });
+  Future<void> refresh({bool silent = false}) => _fetchPortfolio(silent: silent);
+
+  Future<void> _fetchPortfolio({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _isNoInternet = false;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final res = await _userApi.getProfile();
@@ -61,33 +67,77 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
       if (res.isSuccess == true && res.data != null) {
         final rawPortfolio = res.data!.vendorProfile?.portfolio;
         final List<Map<String, dynamic>> loaded = [];
+        final Set<String> seenKeys = <String>{};
+
         if (rawPortfolio != null) {
           for (final item in rawPortfolio) {
             if (item is Map) {
               final rawType = (item['type'] ?? 'image').toString().toLowerCase();
-              final imgUrl = item['imageUrl']?.toString() ?? item['url']?.toString() ?? '';
+              final imgUrl = (item['imageUrl']?.toString() ?? item['url']?.toString() ?? '').trim();
               final isVideo = rawType.contains('video') || CachedImageView.isVideoUrl(imgUrl);
+              final itemId = (item['_id'] ?? item['id'])?.toString() ?? '';
+              final pubId = (item['public_id'] ?? item['publicId'])?.toString() ?? '';
               String thumb = (item['thumbnail'] ??
                       item['thumbnailUrl'] ??
                       item['poster'] ??
                       item['cover'] ??
                       '')
-                  .toString();
+                  .toString()
+                  .trim();
               if (CachedImageView.isVideoUrl(thumb)) {
                 thumb = '';
               }
+
+              // Normalization to deduplicate any previously duplicated uploads
+              String cleanUrlKey(String url) {
+                if (url.isEmpty) return '';
+                try {
+                  final uri = Uri.parse(url);
+                  return uri.path.replaceAll(RegExp(r'/v\d+/'), '/');
+                } catch (_) {
+                  return url;
+                }
+              }
+
+              final urlKey = cleanUrlKey(imgUrl);
+              final dedupeKey = urlKey.isNotEmpty
+                  ? urlKey
+                  : (pubId.isNotEmpty ? pubId : itemId);
+
+              if (dedupeKey.isNotEmpty && seenKeys.contains(dedupeKey)) {
+                continue;
+              }
+              if (dedupeKey.isNotEmpty) {
+                seenKeys.add(dedupeKey);
+              }
+
+              if (isVideo && thumb.isNotEmpty) {
+                final thumbKey = 'thumb_${cleanUrlKey(thumb)}';
+                if (seenKeys.contains(thumbKey)) {
+                  continue;
+                }
+                seenKeys.add(thumbKey);
+              }
+
               loaded.add({
-                'id': (item['_id'] ?? item['id'])?.toString() ?? '',
+                'id': itemId,
                 'imageUrl': imgUrl,
                 'thumbnailUrl': thumb,
                 'title': item['title']?.toString() ?? '',
                 'type': isVideo ? 'video' : 'image',
               });
             } else if (item is String) {
-              final isVideo = CachedImageView.isVideoUrl(item);
+              final url = item.trim();
+              if (url.isNotEmpty && seenKeys.contains(url)) {
+                continue;
+              }
+              if (url.isNotEmpty) {
+                seenKeys.add(url);
+              }
+              final isVideo = CachedImageView.isVideoUrl(url);
               loaded.add({
                 'id': '',
-                'imageUrl': item,
+                'imageUrl': url,
                 'thumbnailUrl': '',
                 'title': '',
                 'type': isVideo ? 'video' : 'image',
@@ -144,48 +194,29 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
     final id = item['id']?.toString() ?? '';
     final isVideo = item['type'] == 'video';
 
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) {
-        final dialogNav = Navigator.of(ctx);
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Delete Portfolio Item?',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          content: Text('Are you sure you want to delete this ${isVideo ? 'video' : 'photo'}?'),
-          actions: [
-            TextButton(
-              onPressed: () => dialogNav.pop(),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                dialogNav.pop();
-                if (id.isNotEmpty) {
-                  Utils.showInfo('Deleting item...');
-                  final res = await _vendorApi.deletePortfolioItem(id);
-                  if (!mounted) return;
-                  if (res.isSuccess == true) {
-                    Utils.showSuccess('Portfolio item deleted successfully');
-                    _fetchPortfolio();
-                  } else {
-                    Utils.showError(res.message ?? 'Failed to delete item');
-                  }
-                } else {
-                  setState(() => _portfolioItems.remove(item));
-                }
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
+      icon: Icons.delete_outline_rounded,
+      isDestructive: true,
+      title: 'Delete Portfolio Item?',
+      message:
+          'Are you sure you want to delete this ${isVideo ? 'video' : 'photo'}? It will be permanently removed from your portfolio.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: () async {
+        if (id.isNotEmpty) {
+          Utils.showInfo('Deleting item...');
+          final res = await _vendorApi.deletePortfolioItem(id);
+          if (!mounted) return;
+          if (res.isSuccess == true) {
+            Utils.showSuccess('Portfolio item deleted successfully');
+            _fetchPortfolio();
+          } else {
+            Utils.showError(res.message ?? 'Failed to delete item');
+          }
+        } else {
+          setState(() => _portfolioItems.remove(item));
+        }
       },
     );
   }
@@ -201,11 +232,19 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -346,8 +385,10 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            backgroundColor: AppColors.primarySoft,
                           ),
                           onPressed: () async {
                             Navigator.pop(ctx);
@@ -377,7 +418,10 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                             }
                           },
                           icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                          label: Text(thumbUrl.isNotEmpty ? 'Change Video Thumbnail' : 'Add Video Thumbnail'),
+                          label: Text(
+                            thumbUrl.isNotEmpty ? 'Change Video Thumbnail' : 'Add Video Thumbnail',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -387,15 +431,20 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.error,
-                          side: const BorderSide(color: AppColors.error),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          backgroundColor: AppColors.error.withValues(alpha: 0.04),
                         ),
                         onPressed: () {
                           Navigator.pop(ctx);
                           _confirmDelete(item);
                         },
                         icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                        label: const Text('Delete from Portfolio'),
+                        label: const Text(
+                          'Delete from Portfolio',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ],
@@ -1305,7 +1354,7 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                                       formData.fields.add(const MapEntry('type', 'image'));
                                     }
 
-                                    // Add single or multiple photos/videos to FormData under 'photos'
+                                    // Add single or multiple photos/videos to FormData under 'photos' exactly once
                                     for (final item in selectedFiles) {
                                       formData.files.add(
                                         MapEntry(
@@ -1317,31 +1366,10 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                                         ),
                                       );
 
-                                      if (selectedFiles.length == 1) {
-                                        formData.files.add(
-                                          MapEntry(
-                                            'file',
-                                            await dio.MultipartFile.fromFile(
-                                              item.path,
-                                              filename: item.fileName,
-                                            ),
-                                          ),
-                                        );
-                                      }
-
                                       if (item.type == 'video' && item.thumbnailPath != null && item.thumbnailPath!.isNotEmpty) {
                                         formData.files.add(
                                           MapEntry(
                                             'thumbnail',
-                                            await dio.MultipartFile.fromFile(
-                                              item.thumbnailPath!,
-                                              filename: 'thumb_${item.fileName}.jpg',
-                                            ),
-                                          ),
-                                        );
-                                        formData.files.add(
-                                          MapEntry(
-                                            'thumbnails',
                                             await dio.MultipartFile.fromFile(
                                               item.thumbnailPath!,
                                               filename: 'thumb_${item.fileName}.jpg',
@@ -1422,31 +1450,33 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primary, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Portfolio & Gallery',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: AppColors.black,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_photo_alternate_rounded,
-                color: AppColors.primary, size: 24),
-            onPressed: () => _showUploadMediaSheet(context),
-          ),
-        ],
-      ),
+      appBar: widget.isTab
+          ? null
+          : AppBar(
+              backgroundColor: AppColors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.primary, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text(
+                'Portfolio & Gallery',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.black,
+                ),
+              ),
+              centerTitle: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add_photo_alternate_rounded,
+                      color: AppColors.primary, size: 24),
+                  onPressed: () => _showUploadMediaSheet(context),
+                ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showUploadMediaSheet(context),
         backgroundColor: AppColors.primary,
@@ -1469,49 +1499,86 @@ class _VendorPortfolioScreenState extends State<VendorPortfolioScreen> {
                       children: [
                         // Segmented Filter Tabs
                         Container(
-                          color: AppColors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          child: Row(
-                            children: [
-                              ChoiceChip(
-                                label: Text('All (${_portfolioItems.length})'),
-                                selected: _selectedTab == 0,
-                                onSelected: (val) => setState(() => _selectedTab = 0),
-                                selectedColor: AppColors.primary,
-                                labelStyle: TextStyle(
-                                  color: _selectedTab == 0 ? AppColors.white : AppColors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                          color: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: [
+                                ChoiceChip(
+                                  label: Text('All (${_portfolioItems.length})'),
+                                  selected: _selectedTab == 0,
+                                  onSelected: (val) => setState(() => _selectedTab = 0),
+                                  selectedColor: AppColors.primary,
+                                  labelStyle: TextStyle(
+                                    color: _selectedTab == 0 ? AppColors.white : AppColors.darkGrey,
+                                    fontWeight: _selectedTab == 0 ? FontWeight.w700 : FontWeight.w600,
+                                    fontSize: 12.5,
+                                  ),
+                                  backgroundColor: AppColors.white,
+                                  showCheckmark: false,
+                                  elevation: _selectedTab == 0 ? 1 : 0,
+                                  side: BorderSide(
+                                    color: _selectedTab == 0
+                                        ? AppColors.primary
+                                        : AppColors.grey.withValues(alpha: 0.22),
+                                    width: 1,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                                backgroundColor: AppColors.offWhite,
-                              ),
-                              const SizedBox(width: 8),
-                              ChoiceChip(
-                                label: Text('Photos ($photoCount)'),
-                                selected: _selectedTab == 1,
-                                onSelected: (val) => setState(() => _selectedTab = 1),
-                                selectedColor: AppColors.primary,
-                                labelStyle: TextStyle(
-                                  color: _selectedTab == 1 ? AppColors.white : AppColors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                                const SizedBox(width: 8),
+                                ChoiceChip(
+                                  label: Text('Photos ($photoCount)'),
+                                  selected: _selectedTab == 1,
+                                  onSelected: (val) => setState(() => _selectedTab = 1),
+                                  selectedColor: AppColors.primary,
+                                  labelStyle: TextStyle(
+                                    color: _selectedTab == 1 ? AppColors.white : AppColors.darkGrey,
+                                    fontWeight: _selectedTab == 1 ? FontWeight.w700 : FontWeight.w600,
+                                    fontSize: 12.5,
+                                  ),
+                                  backgroundColor: AppColors.white,
+                                  showCheckmark: false,
+                                  elevation: _selectedTab == 1 ? 1 : 0,
+                                  side: BorderSide(
+                                    color: _selectedTab == 1
+                                        ? AppColors.primary
+                                        : AppColors.grey.withValues(alpha: 0.22),
+                                    width: 1,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                                backgroundColor: AppColors.offWhite,
-                              ),
-                              const SizedBox(width: 8),
-                              ChoiceChip(
-                                label: Text('Videos ($videoCount)'),
-                                selected: _selectedTab == 2,
-                                onSelected: (val) => setState(() => _selectedTab = 2),
-                                selectedColor: AppColors.primary,
-                                labelStyle: TextStyle(
-                                  color: _selectedTab == 2 ? AppColors.white : AppColors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                                const SizedBox(width: 8),
+                                ChoiceChip(
+                                  label: Text('Videos ($videoCount)'),
+                                  selected: _selectedTab == 2,
+                                  onSelected: (val) => setState(() => _selectedTab = 2),
+                                  selectedColor: AppColors.primary,
+                                  labelStyle: TextStyle(
+                                    color: _selectedTab == 2 ? AppColors.white : AppColors.darkGrey,
+                                    fontWeight: _selectedTab == 2 ? FontWeight.w700 : FontWeight.w600,
+                                    fontSize: 12.5,
+                                  ),
+                                  backgroundColor: AppColors.white,
+                                  showCheckmark: false,
+                                  elevation: _selectedTab == 2 ? 1 : 0,
+                                  side: BorderSide(
+                                    color: _selectedTab == 2
+                                        ? AppColors.primary
+                                        : AppColors.grey.withValues(alpha: 0.22),
+                                    width: 1,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                                backgroundColor: AppColors.offWhite,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
 

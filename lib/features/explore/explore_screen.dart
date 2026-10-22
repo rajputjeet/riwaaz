@@ -17,7 +17,6 @@ import '../../data/models/user_model.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/service_categories_bar.dart';
 import '../../shared/widgets/app_search_bar.dart';
-import '../../utils/helper/storage_helper.dart';
 
 /// Standalone Explore screen wrapper that launches MainShell at tab index 1
 class ExploreScreen extends StatelessWidget {
@@ -124,12 +123,12 @@ class _ExploreBodyState extends State<ExploreBody> {
                       delay: const Duration(milliseconds: 250),
                       child: _buildFeaturedSection(),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     FadeInWidget(
                       delay: const Duration(milliseconds: 300),
-                      child: _buildPlatformStatsBar(),
+                      child: _buildNeedMoreServicesSection(),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -1146,69 +1145,64 @@ class _ExploreBodyState extends State<ExploreBody> {
     );
   }
 
-  /// Platform highlights counter stats bar powered by verified backend settings
-  Widget _buildPlatformStatsBar() {
-    final s = StorageHelper().getSettings();
-    final items = [
-      (s.locationsCount ?? '50+', s.locationsLabel ?? 'Locations', Icons.location_city_rounded),
-      (s.eventVendorsCount ?? '100+', s.eventVendorsLabel ?? 'Event Vendors', Icons.storefront_rounded),
-      (s.eventServicesCount ?? '50+', s.eventServicesLabel ?? 'Event Services', Icons.celebration_rounded),
-    ];
-
+  /// 'Need more services for your event' banner section
+  Widget _buildNeedMoreServicesSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: AppColors.offWhite,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.28),
-            width: 1,
+            color: AppColors.grey.withValues(alpha: 0.2),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Need more services for your event? ✨',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Book DJs, Caterers, Decorators, Luxury Cars & More',
+              style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    FadeScaleRoute(
+                      page: const ServiceListingScreen(
+                        category: 'Photographers & Videographers',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.explore_rounded, size: 16),
+                label: const Text('Explore All Vendors'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-        child: Row(
-          children: items.map((item) {
-            return Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(item.$3, size: 20, color: AppColors.primary),
-                  const SizedBox(height: 5),
-                  Text(
-                    item.$1,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.$2,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.darkGrey,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
         ),
       ),
     );
   }
 }
+

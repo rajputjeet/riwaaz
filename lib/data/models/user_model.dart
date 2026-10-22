@@ -1,3 +1,28 @@
+class ImageModel {
+  String? url;
+  String? publicId;
+
+  ImageModel({this.url, this.publicId});
+
+  factory ImageModel.fromJson(dynamic json) {
+    if (json == null) return ImageModel();
+    if (json is Map) {
+      return ImageModel(
+        url: json['url']?.toString(),
+        publicId: (json['public_id'] ?? json['publicId'])?.toString(),
+      );
+    } else if (json is String && json.trim().isNotEmpty) {
+      return ImageModel(url: json.trim());
+    }
+    return ImageModel();
+  }
+
+  Map<String, dynamic> toJson() => {
+    if (url != null) 'url': url,
+    if (publicId != null) 'public_id': publicId,
+  };
+}
+
 class VendorProfileModel {
   String? applicationId;
   String? applicationStatus;
@@ -17,6 +42,10 @@ class VendorProfileModel {
   List<dynamic>? packages;
   List<dynamic>? portfolio;
   List<dynamic>? services;
+
+  // Banner image object: { url: String, public_id: String }
+  ImageModel? bannerImgId;
+  String? get bannerImgUrl => bannerImgId?.url;
 
   // Subscription expiry fields (from GET /api/users/profile)
   bool? isExpiringSoon;
@@ -64,6 +93,7 @@ class VendorProfileModel {
     this.packages,
     this.portfolio,
     this.services,
+    this.bannerImgId,
     this.isExpiringSoon,
     this.daysLeft,
     this.daysRemaining,
@@ -121,6 +151,13 @@ class VendorProfileModel {
       packages: json['packages'] is List ? (json['packages'] as List) : null,
       portfolio: json['portfolio'] is List ? (json['portfolio'] as List) : null,
       services: json['services'] is List ? (json['services'] as List) : null,
+      bannerImgId: json['bannerImgId'] != null
+          ? ImageModel.fromJson(json['bannerImgId'])
+          : (json['bannerImg'] != null
+              ? ImageModel.fromJson(json['bannerImg'])
+              : (json['banner'] != null
+                  ? ImageModel.fromJson(json['banner'])
+                  : null)),
       isExpiringSoon: json['isExpiringSoon'] as bool?,
       daysLeft: json['daysLeft'] is int
           ? json['daysLeft']
@@ -179,6 +216,7 @@ class VendorProfileModel {
       if (packages != null) 'packages': packages,
       if (portfolio != null) 'portfolio': portfolio,
       if (services != null) 'services': services,
+      if (bannerImgId != null) 'bannerImgId': bannerImgId!.toJson(),
       if (isExpiringSoon != null) 'isExpiringSoon': isExpiringSoon,
       if (daysLeft != null) 'daysLeft': daysLeft,
       if (daysRemaining != null) 'daysRemaining': daysRemaining,
@@ -207,6 +245,8 @@ class UserModel {
   String? mobile;
   String? password;
   String? profileImgUrl;
+  ImageModel? bannerImgId;
+  String? get bannerImgUrl => bannerImgId?.url ?? vendorProfile?.bannerImgUrl;
   int? roleId; // 2 = Customer, 3 = Vendor Partner
   bool? isVerified;
   int? otp;
@@ -242,6 +282,7 @@ class UserModel {
     this.mobile,
     this.password,
     this.profileImgUrl,
+    this.bannerImgId,
     this.roleId,
     this.isVerified,
     this.otp,
@@ -289,6 +330,8 @@ class UserModel {
         json['businessAddress']?.toString() ??
         vpMap?['businessAddress']?.toString();
 
+    final bannerVal = json['bannerImgId'] ?? json['bannerImg'] ?? vpMap?['bannerImgId'] ?? vpMap?['bannerImg'] ?? vpMap?['banner'];
+
     return UserModel(
       id: (json['_id'] ?? json['userId'] ?? json['id'])?.toString(),
       fullName: json['fullName']?.toString() ?? vpMap?['ownerName']?.toString() ?? vpMap?['businessName']?.toString(),
@@ -301,6 +344,7 @@ class UserModel {
             : (json['profileImg']?.toString() ?? json['avatar']?.toString());
         return (url != null && url.trim().isNotEmpty) ? url.trim() : null;
       }(),
+      bannerImgId: bannerVal != null ? ImageModel.fromJson(bannerVal) : null,
       roleId: json['roleId'] is int
           ? json['roleId']
           : int.tryParse(json['roleId']?.toString() ?? ''),
@@ -354,6 +398,7 @@ class UserModel {
       if (isFeatured != null) 'isFeatured': isFeatured,
       if (adPriority != null) 'adPriority': adPriority,
       if (adBadge != null) 'adBadge': adBadge,
+      if (bannerImgId != null) 'bannerImgId': bannerImgId!.toJson(),
       if (vendorProfile != null) 'vendorProfile': vendorProfile!.toJson(),
     };
   }

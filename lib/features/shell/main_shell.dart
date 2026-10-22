@@ -26,6 +26,7 @@ import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
+import '../../shared/widgets/app_confirmation_dialog.dart';
 
 /// The main navigation shell — holds all customer tabs in an [IndexedStack]
 class MainShell extends StatefulWidget {
@@ -878,10 +879,10 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
     if (mounted) setState(() {});
   }
 
-  int get _totalCount => AppBookingService.instance.customerBookingsCount;
-  int get _officeCount => AppBookingService.instance.officeCount;
-  int get _partyCount => AppBookingService.instance.partyCount;
-  int get _weddingCount => AppBookingService.instance.weddingCount;
+  int get _allCount => AppBookingService.instance.allCount;
+  int get _pendingCount => AppBookingService.instance.pendingCount;
+  int get _upcomingCount => AppBookingService.instance.upcomingCount;
+  int get _completedCount => AppBookingService.instance.completedCount;
 
   List<Map<String, dynamic>> get _filteredBookings =>
       AppBookingService.instance.customerBookingsForFilter(_selectedFilter);
@@ -1248,220 +1249,131 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
 
-            // Summary KPI Strip
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryDark.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
+            // Filter Tabs (Same as in vendor showing)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'EVENT BUDGET & BOOKINGS',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$_totalCount Vendors Hired 🎉',
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Total Booked',
-                              style: TextStyle(color: AppColors.cream, fontSize: 10),
-                            ),
-                            const SizedBox(height: 2),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                AppBookingService.instance.customerTotalBudgetFormatted,
-                                style: const TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 28,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        color: AppColors.white.withValues(alpha: 0.3),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Payment Mode',
-                              style: TextStyle(color: AppColors.cream, fontSize: 10),
-                            ),
-                            SizedBox(height: 2),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Pay In-Person',
-                                style: TextStyle(
-                                  color: AppColors.goldLight,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 28,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        color: AppColors.white.withValues(alpha: 0.3),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'App Advance',
-                              style: TextStyle(color: AppColors.cream, fontSize: 10),
-                            ),
-                            SizedBox(height: 2),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                '₹0 (Direct)',
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                  ChoiceChip(
+                    label: Text('All ($_allCount)'),
+                    selected: _selectedFilter == 0,
+                    onSelected: (_) => setState(() => _selectedFilter = 0),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 0 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 0
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
                     ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.handshake_rounded, color: AppColors.goldLight, size: 14),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Direct in-person settlement • Zero app payments or commissions',
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 0
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 0 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    avatar: _pendingCount > 0
+                        ? Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _selectedFilter == 1
+                                  ? AppColors.white
+                                  : const Color(0xFFD97706),
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        : null,
+                    label: Text('Pending ($_pendingCount)'),
+                    selected: _selectedFilter == 1,
+                    onSelected: (_) => setState(() => _selectedFilter = 1),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 1 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 1
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 1
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 1 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text('Upcoming ($_upcomingCount)'),
+                    selected: _selectedFilter == 2,
+                    onSelected: (_) => setState(() => _selectedFilter = 2),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 2 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 2
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 2
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 2 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text('Completed ($_completedCount)'),
+                    selected: _selectedFilter == 3,
+                    onSelected: (_) => setState(() => _selectedFilter = 3),
+                    selectedColor: AppColors.primary,
+                    showCheckmark: false,
+                    elevation: _selectedFilter == 3 ? 1 : 0,
+                    side: BorderSide(
+                      color: _selectedFilter == 3
+                          ? AppColors.primary
+                          : AppColors.grey.withValues(alpha: 0.22),
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    labelStyle: TextStyle(
+                      color: _selectedFilter == 3
+                          ? AppColors.white
+                          : AppColors.darkGrey,
+                      fontWeight: _selectedFilter == 3 ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    backgroundColor: AppColors.white,
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // Filter Chips
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: Text('All ($_totalCount)'),
-                  selected: _selectedFilter == 0,
-                  selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: _selectedFilter == 0 ? AppColors.white : AppColors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                  onSelected: (_) => setState(() => _selectedFilter = 0),
-                ),
-                ChoiceChip(
-                  label: Text('Office Parties ($_officeCount)'),
-                  selected: _selectedFilter == 1,
-                  selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: _selectedFilter == 1 ? AppColors.white : AppColors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                  onSelected: (_) => setState(() => _selectedFilter = 1),
-                ),
-                ChoiceChip(
-                  label: Text('Birthdays & Parties ($_partyCount)'),
-                  selected: _selectedFilter == 2,
-                  selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: _selectedFilter == 2 ? AppColors.white : AppColors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                  onSelected: (_) => setState(() => _selectedFilter = 2),
-                ),
-                ChoiceChip(
-                  label: Text('Weddings & Galas ($_weddingCount)'),
-                  selected: _selectedFilter == 3,
-                  selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: _selectedFilter == 3 ? AppColors.white : AppColors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 11,
-                  ),
-                  onSelected: (_) => setState(() => _selectedFilter = 3),
-                ),
-              ],
             ),
 
             const SizedBox(height: 14),
@@ -1510,20 +1422,25 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      "You haven't booked any vendors in this category yet.",
+                    Text(
+                      _selectedFilter == 0
+                          ? "You haven't booked any vendors yet."
+                          : "No ${_selectedFilter == 1 ? 'pending' : _selectedFilter == 2 ? 'upcoming' : 'completed'} bookings found.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                      style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
                           FadeScaleRoute(
-                            page: const ServiceListingScreen(category: 'Photography'),
+                            page: const ServiceListingScreen(
+                              category: 'Photographers & Videographers',
+                            ),
                           ),
                         );
                       },
+                      icon: const Icon(Icons.explore_rounded, size: 16),
+                      label: const Text('Explore All Vendors'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.white,
@@ -1531,7 +1448,6 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text('Explore Vendors'),
                     ),
                   ],
                 ),
@@ -1540,7 +1456,12 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
               ...bookings.map((v) {
                 final String vendorName = (v['name'] as String?) ?? 'Vendor';
                 final String status = (v['status'] as String?) ?? 'Confirmed';
-                final bool isAccepted = status == 'Confirmed' || status == 'Accepted';
+                final bool isPending = status.toLowerCase() == 'pending';
+                final bool isAccepted = status.toLowerCase() == 'confirmed' ||
+                    status.toLowerCase() == 'accepted' ||
+                    status.toLowerCase() == 'approved';
+                final bool isCompleted = status.toLowerCase() == 'completed' ||
+                    status.toLowerCase() == 'delivered & paid';
                 final String category = (v['category'] as String?) ?? '';
                 final String package = (v['package'] as String?) ?? '';
                 final String total = (v['total'] as String?) ?? '';
@@ -1626,9 +1547,13 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isAccepted
-                                    ? AppColors.successLight
-                                    : const Color(0xFFFEF3C7),
+                                color: isPending
+                                    ? const Color(0xFFFEF3C7)
+                                    : isAccepted
+                                        ? AppColors.successLight
+                                        : isCompleted
+                                            ? AppColors.offWhite
+                                            : const Color(0xFFFEE2E2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -1636,9 +1561,13 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: isAccepted
-                                      ? AppColors.success
-                                      : const Color(0xFFD97706),
+                                  color: isPending
+                                      ? const Color(0xFFD97706)
+                                      : isAccepted
+                                          ? AppColors.success
+                                          : isCompleted
+                                              ? AppColors.darkGrey
+                                              : Colors.red,
                                 ),
                               ),
                             ),
@@ -1778,6 +1707,41 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                   ),
                                 ),
                               ),
+                            ] else if (isCompleted) ...[
+                              Expanded(
+                                flex: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.offWhite,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: AppColors.grey.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_outline_rounded,
+                                          size: 12, color: AppColors.success),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Event completed & settled in-person',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.darkGrey,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ] else
                               Expanded(
                                 flex: 10,
@@ -1791,9 +1755,9 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                       color: const Color(0xFFD97706).withValues(alpha: 0.3),
                                     ),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    children: const [
+                                    children: [
                                       Icon(Icons.lock_clock_rounded,
                                           size: 12, color: Color(0xFFD97706)),
                                       SizedBox(width: 4),
@@ -1821,65 +1785,74 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                 );
               }),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
 
             // Browse more services card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.offWhite,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.grey.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Need more services for your event? ✨',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Book DJs, Caterers, Decorators, Luxury Cars & More',
-                    style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 42,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          FadeScaleRoute(
-                            page: const ServiceListingScreen(category: 'Makeup Artist'),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.explore_rounded, size: 16),
-                      label: const Text('Explore All Vendors'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            FadeInWidget(
+              delay: const Duration(milliseconds: 300),
+              child: _buildNeedMoreServicesSection(),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 28),
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildNeedMoreServicesSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.offWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.grey.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Need more services for your event? ✨',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.black,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Book DJs, Caterers, Decorators, Luxury Cars & More',
+            style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  FadeScaleRoute(
+                    page: const ServiceListingScreen(
+                      category: 'Photographers & Videographers',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.explore_rounded, size: 16),
+              label: const Text('Explore All Vendors'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2505,147 +2478,96 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actionsOverflowButtonSpacing: 8,
-        title: Row(
-          children: const [
-            Icon(Icons.logout_rounded, color: AppColors.primary, size: 22),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text('Log Out', style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to log out of Widoora? You can sign back in anytime.',
-          style: TextStyle(fontSize: 14, color: AppColors.darkGrey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.darkGrey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (Get.isRegistered<AuthController>()) {
-                await Get.find<AuthController>().logout();
-              } else {
-                await StorageHelper().clearAllData();
-              }
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
+      icon: Icons.logout_rounded,
+      iconColor: AppColors.primary,
+      iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      title: 'Log Out of Widoora?',
+      message:
+          'Are you sure you want to log out? You can sign back in anytime to continue planning your wedding.',
+      confirmLabel: 'Log Out',
+      cancelLabel: 'Cancel',
+      confirmColor: AppColors.primary,
+      onConfirm: () async {
+        if (Get.isRegistered<AuthController>()) {
+          await Get.find<AuthController>().logout();
+        } else {
+          await StorageHelper().clearAllData();
+        }
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const LoginScreen()),
+          (route) => false,
+        );
+      },
     );
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
+    AppConfirmationDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actionsOverflowButtonSpacing: 8,
-        title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Delete Account',
-                style: TextStyle(fontWeight: FontWeight.w800, color: Colors.red),
-              ),
-            ),
-          ],
+      icon: Icons.warning_amber_rounded,
+      iconColor: AppColors.error,
+      iconBackgroundColor: AppColors.error.withValues(alpha: 0.1),
+      isDestructive: true,
+      title: 'Delete Account Permanently?',
+      message:
+          'This action is irreversible. All your wedding planning data will be permanently erased.',
+      confirmLabel: 'Delete Permanently',
+      cancelLabel: 'Keep Account',
+      customContent: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'This action is irreversible. All your data will be permanently erased:',
-              style: TextStyle(fontSize: 13, color: AppColors.black),
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                SizedBox(width: 6),
+                Text(
+                  'The following will be deleted:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('• Profile & event celebration details',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Wedding checklist & task progress',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Wedding budget tracker & cost estimates',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  SizedBox(height: 4),
-                  Text('• Saved vendor shortlists & bookings',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Are you sure you want to permanently delete your account?',
-              style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-            ),
+            SizedBox(height: 8),
+            Text('• Profile & event celebration details',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Wedding checklist & task progress',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Wedding budget tracker & cost estimates',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Saved vendor shortlists & bookings',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Keep Account',
-                style: TextStyle(color: AppColors.darkGrey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (Get.isRegistered<AuthController>()) {
-                await Get.find<AuthController>().logout();
-              } else {
-                await StorageHelper().clearAllData();
-              }
-              Utils.showSuccess('Your account has been deleted successfully.');
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                FadeScaleRoute(page: const LoginScreen()),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: AppColors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Delete Permanently'),
-          ),
-        ],
       ),
+      onConfirm: () async {
+        if (Get.isRegistered<AuthController>()) {
+          await Get.find<AuthController>().logout();
+        } else {
+          await StorageHelper().clearAllData();
+        }
+        Utils.showSuccess('Your account has been deleted successfully.');
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const LoginScreen()),
+          (route) => false,
+        );
+      },
     );
   }
 
@@ -2803,7 +2725,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               const SizedBox(height: 22),
 
               const Text(
-                'EVENT PLANNING TOOLS',
+                'PROFILE MANAGEMENT',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,

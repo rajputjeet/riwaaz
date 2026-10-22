@@ -723,16 +723,20 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
       (
         Icons.person_outline_rounded,
         'My Profile',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorProfileScreen()),
-            )
+        () => onNavigateTab != null
+            ? onNavigateTab!(4)
+            : Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorProfileScreen()),
+              )
       ),
       (
         Icons.inventory_2_outlined,
-        'Packages',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorPackagesScreen()),
-            )
+        'Services',
+        () => onNavigateTab != null
+            ? onNavigateTab!(3)
+            : Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorPackagesScreen()),
+              )
       ),
       (
         Icons.calendar_month_outlined,
@@ -761,9 +765,11 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
       (
         Icons.photo_library_outlined,
         'Portfolio',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorPortfolioScreen()),
-            )
+        () => onNavigateTab != null
+            ? onNavigateTab!(2)
+            : Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorPortfolioScreen()),
+              )
       ),
       (
         Icons.star_outline_rounded,
