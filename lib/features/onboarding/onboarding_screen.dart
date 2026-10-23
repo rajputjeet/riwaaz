@@ -15,18 +15,18 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _floatingController;
 
-  int _step = 0; // 0: Vendors, 1: Dream Wedding
+  int _step = 0; // 0: Phone mockup with golden laurels, 1: Dream Wedding Mandap
   bool _isMovingForward = true;
 
-  // Theme constants matching Figma mockup
-  static const Color _bgCream = Color(0xFFFBF7F2);
-  static const Color _maroonPrimary = Color(0xFF701325);
+  // Theme constants matching Figma design
+  static const Color _bgCream = Color(0xFFFFF8F1);
+  static const Color _maroonPrimary = Color(0xFF790D16);
   static const Color _textColorTitle = Color(0xFF701325);
   static const Color _textColorBody = Color(0xFF4A4A4A);
-  static const Color _dotInactiveBeige = Color(0xFFDECBC1);
+  static const Color _dotInactiveBeige = Color(0xFFE8DCD4);
 
   @override
   void initState() {
@@ -36,10 +36,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       statusBarIconBrightness: Brightness.dark,
     ));
 
-    // Floating breathing animation for badges in Vendors Screen
     _floatingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 2600),
     )..repeat(reverse: true);
   }
 
@@ -101,31 +100,38 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           },
           child: Stack(
             children: [
-              // ─── 1. Fixed Botanical Leaf Flourishes (Persistent) ─────────
-              const Positioned.fill(
-                child: CustomPaint(
-                  painter: _BotanicalFlourishPainter(),
+              // ─── 1. Botanical Leaf Branch at Top-Left (Matches Design) ───
+              Positioned(
+                top: 0,
+                left: 0,
+                child: IgnorePointer(
+                  child: Image.asset(
+                    AppImages.onboardingLeafTopLeft,
+                    width: 76,
+                    height: 124,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
 
-              // ─── 2. Single Unified Layout ────────────────────────────────
+              // ─── 2. Main Content Layout ──────────────────────────────────
               SafeArea(
                 child: Column(
                   children: [
-                    // Top Bar with Skip (Persistent)
+                    // Top Bar with Skip Button
                     _buildTopBar(),
 
-                    // Animated Text Header (Title & Subtitle change with animation)
+                    // Animated Text Header (Title & Subtitle)
                     _buildAnimatedHeader(),
 
                     const SizedBox(height: 12),
 
-                    // Animated Center Visual (Image/Mockup changes with animation)
+                    // Animated Center Visual (Phone Mockup with Laurel Leaves <-> Mandap Stage)
                     Expanded(
                       child: _buildAnimatedVisual(),
                     ),
 
-                    // Bottom Controls (Dots & Next Button - Persistent)
+                    // Bottom Controls (Dot Indicators & Next Button)
                     _buildBottomControls(),
                   ],
                 ),
@@ -170,7 +176,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   : 'Plan Your\nDream Wedding',
               textAlign: TextAlign.center,
               style: GoogleFonts.cormorantGaramond(
-                fontSize: 33,
+                fontSize: 34,
                 fontWeight: FontWeight.w700,
                 color: _textColorTitle,
                 height: 1.15,
@@ -181,13 +187,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Text(
               _step == 0
                   ? 'From photographers to caterers, find the\nbest vendors for your special day.'
-                  : 'Save time, compare options, read reviews\nand book with ease.',
+                  : 'Save time, compare options,\nread reviews and book with ease.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 13.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: _textColorBody,
-                height: 1.38,
+                height: 1.42,
               ),
             ),
           ],
@@ -197,7 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ANIMATED CENTER VISUAL (Mockup/Cards <-> Mandap Stage)
+  // ANIMATED CENTER VISUAL (Step 0: Phone Mockup / Step 1: Mandap Stage)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildAnimatedVisual() {
     return AnimatedSwitcher(
@@ -218,164 +224,124 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         );
       },
       child: _step == 0
-          ? _buildVendorsVisual(key: const ValueKey<int>(0))
-          : _buildDreamWeddingVisual(key: const ValueKey<int>(1)),
+          ? _buildPhoneMockupVisual(key: const ValueKey<int>(0))
+          : _buildMandapVisual(key: const ValueKey<int>(1)),
     );
   }
 
-  // Visual for Step 0: Phone Mockup flanked by 6 Floating Badges
-  Widget _buildVendorsVisual({required Key key}) {
-    return Padding(
+  // Step 0: Stack layout — phone mockup fills center, badge cards at left/right edges
+  Widget _buildPhoneMockupVisual({required Key key}) {
+    return LayoutBuilder(
       key: key,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final availH = constraints.maxHeight;
-          final phoneW = (constraints.maxWidth * 0.48).clamp(165.0, 225.0);
-          final sideW = ((constraints.maxWidth - phoneW) / 2).clamp(68.0, 95.0);
+      builder: (context, constraints) {
+        final availH = constraints.maxHeight;
+        // Badge column width: matches the badge card size + padding
+        const badgeColW = 76.0;
 
-          return AnimatedBuilder(
-            animation: _floatingController,
-            builder: (context, child) {
-              final t = _floatingController.value;
-              final f0 = math.sin(t * math.pi) * 3.5;
-              final f1 = math.sin(t * math.pi + 1.2) * 3.5;
-              final f2 = math.sin(t * math.pi + 2.4) * 3.5;
+        return AnimatedBuilder(
+          animation: _floatingController,
+          builder: (context, _) {
+            final t = _floatingController.value;
+            final f0 = math.sin(t * math.pi) * 5.0;
+            final f1 = math.sin(t * math.pi + 1.1) * 5.0;
+            final f2 = math.sin(t * math.pi + 2.2) * 5.0;
+            final phoneFloat = math.sin(t * math.pi) * 3.5;
 
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Left column: 3 Cards
-                  SizedBox(
-                    width: sideW,
-                    height: availH * 0.88,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Transform.translate(
-                          offset: Offset(0, f0),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgePhotographers,
-                            label: 'Photographers',
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: Offset(0, -f1),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgeMakeup,
-                            label: 'Makeup Artists',
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: Offset(0, f2),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgeDecorators,
-                            label: 'Decorators',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Center: 3D Tilted Phone Mockup (Enlarged)
-                  SizedBox(
-                    width: phoneW,
-                    height: availH,
-                    child: Center(
-                      child: Transform.scale(
-                        scale: 1.15,
-                        child: Image.asset(
-                          AppImages.onboardingPhoneMockup,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Right column: 3 Cards
-                  SizedBox(
-                    width: sideW,
-                    height: availH * 0.88,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Transform.translate(
-                          offset: Offset(0, -f0),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgeCaterers,
-                            label: 'Caterers',
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: Offset(0, f1),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgeVenues,
-                            label: 'Wedding Venues',
-                          ),
-                        ),
-                        Transform.translate(
-                          offset: Offset(0, -f2),
-                          child: _buildCategoryCard(
-                            imagePath: AppImages.onboardingBadgeMore,
-                            label: '& More',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  // Visual for Step 1: Feathered Mandap Stage Image
-  Widget _buildDreamWeddingVisual({required Key key}) {
-    return Center(
-      key: key,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Image.asset(
-                AppImages.onboardingMandapStage,
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        _bgCream.withValues(alpha: 0.25),
-                        Colors.transparent,
-                        Colors.transparent,
-                        _bgCream.withValues(alpha: 0.40),
-                      ],
-                      stops: const [0.0, 0.12, 0.88, 1.0],
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // ── Phone mockup fills center (height reaches slightly above/below icons) ──
+                Positioned.fill(
+                  left: 48,
+                  right: 48,
+                  child: Transform.translate(
+                    offset: Offset(0, phoneFloat),
+                    child: Image.asset(
+                      AppImages.onboardingPhoneMockup,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
+
+                // ── Left badge column ──
+                Positioned(
+                  left: 6,
+                  top: availH * 0.08,
+                  bottom: availH * 0.08,
+                  width: badgeColW,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Transform.translate(
+                        offset: Offset(0, f0),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgePhotographers,
+                          label: 'Photographers',
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(0, -f1),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgeMakeup,
+                          label: 'Makeup Artists',
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(0, f2),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgeDecorators,
+                          label: 'Decorators',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Right badge column ──
+                Positioned(
+                  right: 6,
+                  top: availH * 0.08,
+                  bottom: availH * 0.08,
+                  width: badgeColW,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Transform.translate(
+                        offset: Offset(0, -f0),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgeCaterers,
+                          label: 'Caterers',
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(0, f1),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgeVenues,
+                          label: 'Venues',
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: Offset(0, -f2),
+                        child: _buildBadgeCard(
+                          imagePath: AppImages.onboardingBadgeMore,
+                          label: '& More',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildCategoryCard({
+  Widget _buildBadgeCard({
     required String imagePath,
     required String label,
   }) {
@@ -383,46 +349,61 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF701325).withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
-            ),
+        SizedBox(
+          width: 64,
+          height: 60,
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.contain,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         Text(
           label,
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 11.5,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF333333),
-            height: 1.15,
+            color: const Color(0xFF2A2A2A),
+            height: 1.2,
           ),
         ),
       ],
     );
   }
 
+  // Step 1: Dream Wedding Mandap Stage — transparent PNG seamlessly blends into cream background
+  Widget _buildMandapVisual({required Key key}) {
+    return Container(
+      key: key,
+      color: _bgCream,
+      child: AnimatedBuilder(
+        animation: _floatingController,
+        builder: (context, child) {
+          final floatY = math.sin(_floatingController.value * math.pi) * 4.0;
+          return Transform.translate(
+            offset: Offset(0, floatY),
+            child: child,
+          );
+        },
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Image.asset(
+              AppImages.onboardingMandapStage,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
-  // COMMON CONTROLS: TOP BAR & BOTTOM NEXT BUTTON WITH 2 SYNCHRONIZED DOTS
+  // TOP BAR (Skip Button)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildTopBar() {
     return Padding(
@@ -442,7 +423,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF4A4A4A),
+                    color: _textColorBody,
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -454,13 +435,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BOTTOM CONTROLS (Current Animated Dot Indicators + Next Button)
+  // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildBottomControls() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Synchronized 2-Dots Indicator with smooth animation
+          // 2-dot indicator (2 onboarding screens)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(2, (index) {
@@ -473,8 +457,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 320),
                     curve: Curves.easeOutCubic,
-                    width: isActive ? 18.0 : 7.0,
-                    height: 7.0,
+                    width: isActive ? 20.0 : 8.0,
+                    height: 8.0,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
                       color: isActive ? _maroonPrimary : _dotInactiveBeige,
@@ -487,7 +471,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
           const SizedBox(height: 22),
 
-          // Primary Pill Button: Next ->
+          // Primary Maroon Pill Button: Next ->
           SizedBox(
             width: double.infinity,
             height: 54,
@@ -496,7 +480,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: _maroonPrimary,
                 foregroundColor: AppColors.white,
-                elevation: 3,
+                elevation: 2,
                 shadowColor: _maroonPrimary.withValues(alpha: 0.35),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(27),
@@ -506,7 +490,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Next',
+                    _step == 0 ? 'Next' : 'Get Started',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16.5,
                       fontWeight: FontWeight.w600,
@@ -528,86 +512,4 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ),
     );
   }
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// BOTANICAL LEAF FLOURISH PAINTER (Top-Left & Bottom-Right Branches)
-// ═════════════════════════════════════════════════════════════════════════════
-class _BotanicalFlourishPainter extends CustomPainter {
-  const _BotanicalFlourishPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final leafPaint = Paint()
-      ..color = const Color(0xFFE5DACD)
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    final stemPaint = Paint()
-      ..color = const Color(0xFFE5DACD)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..isAntiAlias = true;
-
-    // ── Top-Left Botanical Branch ──────────────────────────────────────────
-    canvas.save();
-    canvas.translate(14, 40);
-
-    // Stem
-    final stem1 = Path()
-      ..moveTo(0, 0)
-      ..cubicTo(20, 40, 35, 90, 50, 140);
-    canvas.drawPath(stem1, stemPaint);
-
-    // Leaves along the stem
-    _drawLeaf(canvas, leafPaint, 8, 22, -0.6, 20, 11);
-    _drawLeaf(canvas, leafPaint, 18, 48, 0.7, 22, 12);
-    _drawLeaf(canvas, leafPaint, 25, 78, -0.5, 23, 12);
-    _drawLeaf(canvas, leafPaint, 36, 108, 0.65, 21, 11);
-    _drawLeaf(canvas, leafPaint, 48, 138, 0.4, 20, 10);
-    canvas.restore();
-
-    // ── Bottom-Right Botanical Branch ──────────────────────────────────────
-    canvas.save();
-    canvas.translate(size.width - 24, size.height - 110);
-    canvas.rotate(math.pi * 0.95);
-
-    final stem2 = Path()
-      ..moveTo(0, 0)
-      ..cubicTo(18, 35, 30, 75, 45, 115);
-    canvas.drawPath(stem2, stemPaint);
-
-    _drawLeaf(canvas, leafPaint, 6, 18, -0.6, 18, 10);
-    _drawLeaf(canvas, leafPaint, 16, 42, 0.7, 20, 11);
-    _drawLeaf(canvas, leafPaint, 23, 68, -0.5, 21, 11);
-    _drawLeaf(canvas, leafPaint, 32, 92, 0.65, 19, 10);
-    _drawLeaf(canvas, leafPaint, 43, 115, 0.4, 18, 9);
-    canvas.restore();
-  }
-
-  void _drawLeaf(
-    Canvas canvas,
-    Paint paint,
-    double x,
-    double y,
-    double angle,
-    double length,
-    double width,
-  ) {
-    canvas.save();
-    canvas.translate(x, y);
-    canvas.rotate(angle);
-
-    final path = Path();
-    path.moveTo(0, 0);
-    path.quadraticBezierTo(width * 0.7, length * 0.4, 0, length);
-    path.quadraticBezierTo(-width * 0.7, length * 0.4, 0, 0);
-    path.close();
-
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
