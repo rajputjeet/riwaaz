@@ -235,8 +235,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       key: key,
       builder: (context, constraints) {
         final availH = constraints.maxHeight;
-        // Badge column width: matches the badge card size + padding
-        const badgeColW = 76.0;
+        // Badge column width: increased to accommodate larger prominent badge cards
+        const badgeColW = 86.0;
 
         return AnimatedBuilder(
           animation: _floatingController,
@@ -252,8 +252,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               children: [
                 // ── Phone mockup fills center (height reaches slightly above/below icons) ──
                 Positioned.fill(
-                  left: 48,
-                  right: 48,
+                  left: 40,
+                  right: 40,
                   child: Transform.translate(
                     offset: Offset(0, phoneFloat),
                     child: Image.asset(
@@ -266,9 +266,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
                 // ── Left badge column ──
                 Positioned(
-                  left: 6,
-                  top: availH * 0.08,
-                  bottom: availH * 0.08,
+                  left: 4,
+                  top: availH * 0.07,
+                  bottom: availH * 0.07,
                   width: badgeColW,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -301,9 +301,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
                 // ── Right badge column ──
                 Positioned(
-                  right: 6,
-                  top: availH * 0.08,
-                  bottom: availH * 0.08,
+                  right: 4,
+                  top: availH * 0.07,
+                  bottom: availH * 0.07,
                   width: badgeColW,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -350,8 +350,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: 64,
-          height: 60,
+          width: 78,
+          height: 72,
           child: Image.asset(
             imagePath,
             fit: BoxFit.contain,
@@ -364,7 +364,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
+            fontSize: 11.5,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF2A2A2A),
             height: 1.2,

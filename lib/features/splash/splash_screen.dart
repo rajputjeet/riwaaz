@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
     ));
 
     // Logo entrance
@@ -177,203 +177,191 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFFFFFDF8),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _navigateToDestination, // Allow tapping to proceed immediately
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // ─── 1. Full-Bleed Couple Walking Image (Centered & Clear)
-            Image.asset(
-              AppImages.onboardingWalkCouple,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              errorBuilder: (context, error, stackTrace) => Image.asset(
-                AppImages.weddingHero,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-              ),
-            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final h = constraints.maxHeight;
+            final w = constraints.maxWidth;
+            // Prominent logo size matching Figma reference (increased size)
+            final logoSize = (w * 0.49).clamp(185.0, 215.0);
+            // Photo begins right below tagline so full image is visible
+            final photoTop = h * 0.36;
 
-            // ─── 2. Soft Gradient Overlay (Decreased Opacity for Clear Image) ─
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.55, 0.80, 1.0],
-                    colors: [
-                      Colors.transparent,
-                      Colors.transparent,
-                      const Color(0xFF3A0209).withValues(alpha: 0.25),
-                      const Color(0xFF45060E).withValues(alpha: 0.60),
-                    ],
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. Warm Cream Base Background
+                Container(
+                  color: const Color(0xFFFFFDF8),
+                ),
+
+                // 2. Full Couple Walking Photo (Clear & Unobstructed, no heavy overlay)
+                Positioned(
+                  top: photoTop,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Image.asset(
+                    AppImages.onboardingWalkCouple,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    errorBuilder: (context, error, stackTrace) => Image.asset(
+                      AppImages.weddingHero,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // ─── 3. Top Section: Golden Circle Emblem & Cursive Tagline ───────
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Golden Circle Emblem with breathing halo
-                      AnimatedBuilder(
-                        animation: Listenable.merge([_logoController, _pulseController]),
-                        builder: (context, child) {
-                          return FadeTransition(
-                            opacity: _logoOpacity,
-                            child: ScaleTransition(
-                              scale: _logoScale,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Outer breathing golden halo
-                                  Transform.scale(
+                // 3. Soft Top Feather (Sky smoothly fades into cream top)
+                Positioned(
+                  top: photoTop,
+                  left: 0,
+                  right: 0,
+                  height: 60,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFFFFFDF8),
+                          Color(0x00FFFDF8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 4. Rich Maroon Bottom Gradient Overlay (Matches Figma reference)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: h * 0.40,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: const [0.0, 0.42, 0.76, 1.0],
+                        colors: [
+                          Colors.transparent,
+                          const Color(0xFF45040E).withValues(alpha: 0.35),
+                          const Color(0xFF4E0511).withValues(alpha: 0.85),
+                          const Color(0xFF38020A).withValues(alpha: 0.98),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 5. Top Section: Large Golden Circle Logo & Cursive Tagline
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 18),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Top Brand Logo — completely transparent (no yellow halo/glow)
+                          AnimatedBuilder(
+                            animation: Listenable.merge([_logoController, _pulseController]),
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _logoOpacity,
+                                child: ScaleTransition(
+                                  scale: _logoScale,
+                                  child: Transform.scale(
                                     scale: _pulseScale.value,
-                                    child: Container(
-                                      width: 148,
-                                      height: 148,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _goldAccent.withValues(alpha: 0.14),
-                                        border: Border.all(
-                                          color: _goldAccent.withValues(alpha: 0.35),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Brand Emblem
-                                  Container(
-                                    width: 140,
-                                    height: 140,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      border: Border.all(
-                                        color: const Color(0xFFC99738),
-                                        width: 3.5,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.20),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                        BoxShadow(
-                                          color: _goldAccent.withValues(alpha: 0.35),
-                                          blurRadius: 20,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    padding: const EdgeInsets.all(12),
-                                    child: ClipOval(
+                                    child: SizedBox(
+                                      width: logoSize,
+                                      height: logoSize,
                                       child: Image.asset(
                                         AppImages.widooraLogo,
                                         fit: BoxFit.contain,
                                       ),
                                     ),
                                   ),
-                                ],
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Cursive Tagline: Plan • Discover • Celebrate
+                          FadeTransition(
+                            opacity: _logoOpacity,
+                            child: Text(
+                              'Plan  •  Discover  •  Celebrate',
+                              style: GoogleFonts.alexBrush(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF2C0B12),
+                                letterSpacing: 0.8,
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 18),
-
-                      // Cursive Tagline: Plan • Discover • Celebrate
-                      FadeTransition(
-                        opacity: _logoOpacity,
-                        child: Text(
-                          'Plan  •  Discover  •  Celebrate',
-                          style: GoogleFonts.alexBrush(
-                            fontSize: 27,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF280B10),
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ─── 4. Bottom Section: Heading, Subheading & Loading Bar ─────────
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 38),
-                  child: FadeTransition(
-                    opacity: _textOpacity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Your Dream Wedding',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            letterSpacing: 0.3,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Starts Here...',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withValues(alpha: 0.95),
-                            letterSpacing: 0.2,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // ─── Sleek Luxury Golden Loading Bar (Replacing Dots) ──
-                        _buildLoadingBar(),
-                      ],
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+
+                // 6. Bottom Section: Heading, Subheading & Loading Bar
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                      child: FadeTransition(
+                        opacity: _textOpacity,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Your Dream Wedding',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Starts Here...',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withValues(alpha: 0.95),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+
+                            // Sleek Luxury Golden Loading Bar (Retained per request)
+                            _buildLoadingBar(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
-
   // Luxury Gold Loading Progress Bar
   Widget _buildLoadingBar() {
     return Container(
