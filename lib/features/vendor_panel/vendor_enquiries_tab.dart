@@ -59,7 +59,7 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
         });
       } else {
         setState(() {
-          _errorMsg = res.message ?? 'Could not load enquiries from server.';
+          _errorMsg = res.message ?? 'Could not load enquiries. Please try again.';
           _isLoading = false;
         });
       }
@@ -83,15 +83,17 @@ class _VendorEnquiriesTabState extends State<VendorEnquiriesTab> {
     final res = await _vendorApi.updateBookingStatus(
       bookingId: id,
       accept: accept,
-      notes: accept ? 'Accepted by vendor' : 'Declined by vendor',
+      notes: accept
+          ? 'Booking confirmed by vendor'
+          : 'Booking rejected by vendor',
     );
 
     if (!mounted) return;
     if (res.isSuccess == true) {
       if (accept) {
-        Utils.showSuccess('Enquiry accepted for ${b.customerName ?? 'Client'}!');
+        Utils.showSuccess('Booking confirmed for ${b.customerName ?? 'Client'}!');
       } else {
-        Utils.showInfo('Enquiry declined.');
+        Utils.showInfo('Booking rejected.');
       }
       _loadEnquiries();
     } else {

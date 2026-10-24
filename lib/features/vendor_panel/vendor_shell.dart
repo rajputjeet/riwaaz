@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../vendor_registration/controllers/vendor_registration_controller.dart';
@@ -34,6 +35,7 @@ class _VendorShellState extends State<VendorShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    NotificationService.instance.refresh();
     _regController = Get.isRegistered<VendorRegistrationController>()
         ? Get.find<VendorRegistrationController>()
         : Get.put(VendorRegistrationController());
@@ -79,33 +81,55 @@ class _VendorShellState extends State<VendorShell> {
         centerTitle: true,
         actions: [
           // Notifications bell with red badge
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none_rounded,
-                    color: AppColors.black, size: 22),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    FadeScaleRoute(
-                      page: const VendorNotificationsScreen(),
+          AnimatedBuilder(
+            animation: NotificationService.instance,
+            builder: (context, _) {
+              final unread = NotificationService.instance.unreadCount;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: AppColors.black,
+                      size: 22,
                     ),
-                  );
-                },
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        FadeScaleRoute(
+                          page: const VendorNotificationsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ),
-            ],
+                  if (unread > 0)
+                    Positioned(
+                      top: 6,
+                      right: 5,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

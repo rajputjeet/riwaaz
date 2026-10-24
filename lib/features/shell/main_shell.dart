@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
@@ -10,11 +11,10 @@ import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
 import '../auth/login_screen.dart';
 import '../wedding_details/wedding_details_screen.dart';
-import '../service_listing/service_listing_screen.dart';
 import '../../core/services/booking_service.dart';
 import '../profile/customer_edit_profile_screen.dart';
 import '../profile/change_password_screen.dart';
-import '../notifications/customer_notifications_screen.dart';
+import '../profile/saved_vendors_screen.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../data/api_provider/cms_api_provider.dart';
 import '../../data/api_provider/faq_api_provider.dart';
@@ -61,12 +61,14 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: AppColors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: AppColors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -178,10 +180,7 @@ class _MainShellState extends State<MainShell> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.primaryGradient,
-                      border: Border.all(
-                        color: AppColors.white,
-                        width: 3.5,
-                      ),
+                      border: Border.all(color: AppColors.white, width: 3.5),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.primary.withValues(alpha: 0.38),
@@ -272,8 +271,18 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
 
   String _getMonthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return (month >= 1 && month <= 12) ? months[month - 1] : '';
   }
@@ -281,7 +290,8 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
   @override
   Widget build(BuildContext context) {
     final savedDateStr = StorageHelper().getWeddingDate();
-    final weddingDate = (savedDateStr != null && DateTime.tryParse(savedDateStr) != null)
+    final weddingDate =
+        (savedDateStr != null && DateTime.tryParse(savedDateStr) != null)
         ? DateTime.parse(savedDateStr)
         : null;
     final now = DateTime.now();
@@ -291,7 +301,9 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
     final mins = (diff != null && !diff.isNegative) ? (diff.inMinutes % 60) : 0;
 
     final savedLoc = StorageHelper().getWeddingLocation();
-    final location = (savedLoc != null && savedLoc.isNotEmpty) ? savedLoc : 'Chandigarh';
+    final location = (savedLoc != null && savedLoc.isNotEmpty)
+        ? savedLoc
+        : 'Chandigarh';
     final dateDisplay = weddingDate != null
         ? '${weddingDate.day} ${_getMonthName(weddingDate.month)} ${weddingDate.year}'
         : 'Set Wedding Date';
@@ -323,17 +335,23 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                     const SizedBox(height: 4),
                     Text(
                       '$userName • $dateDisplay • $location',
-                      style: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.darkGrey,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_note_rounded,
-                      color: AppColors.primary, size: 28),
+                  icon: const Icon(
+                    Icons.edit_note_rounded,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
                   onPressed: () async {
-                    await Navigator.of(context).push(
-                      FadeScaleRoute(page: const WeddingDetailsScreen()),
-                    );
+                    await Navigator.of(
+                      context,
+                    ).push(FadeScaleRoute(page: const WeddingDetailsScreen()));
                     if (mounted) setState(() {});
                   },
                 ),
@@ -344,9 +362,9 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
             // Countdown Card
             GestureDetector(
               onTap: () async {
-                await Navigator.of(context).push(
-                  FadeScaleRoute(page: const WeddingDetailsScreen()),
-                );
+                await Navigator.of(
+                  context,
+                ).push(FadeScaleRoute(page: const WeddingDetailsScreen()));
                 if (mounted) setState(() {});
               },
               child: Container(
@@ -390,7 +408,11 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.calendar_month_rounded, color: AppColors.white, size: 20),
+                            Icon(
+                              Icons.calendar_month_rounded,
+                              color: AppColors.white,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Tap to set wedding date',
@@ -438,7 +460,8 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
               AppEmptyState(
                 icon: Icons.event_note_rounded,
                 title: 'No Events Scheduled',
-                subtitle: 'Add your Sangeet, Mehendi, Haldi, or Reception ceremonies to plan your schedule.',
+                subtitle:
+                    'Add your Sangeet, Mehendi, Haldi, or Reception ceremonies to plan your schedule.',
                 actionLabel: 'Add Function',
                 onAction: () => _showAddEventSheet(context),
               )
@@ -567,7 +590,9 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                       'title': newTitle,
                       'date': dateCtrl.text.trim(),
                       'time': timeCtrl.text.trim(),
-                      'location': venueCtrl.text.trim().isEmpty ? 'Chandigarh' : venueCtrl.text.trim(),
+                      'location': venueCtrl.text.trim().isEmpty
+                          ? 'Chandigarh'
+                          : venueCtrl.text.trim(),
                     };
                     setState(() {
                       _events.add(newEvent);
@@ -702,12 +727,17 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
               decoration: BoxDecoration(
                 color: AppColors.offWhite,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
+                border: Border.all(
+                  color: AppColors.grey.withValues(alpha: 0.15),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on_rounded,
-                      size: 18, color: AppColors.primary),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -732,11 +762,20 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                         Navigator.pop(ctx);
                         onDelete();
                       },
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
-                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -828,9 +867,10 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                   Text(
                     '$date • $time',
                     style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600),
+                      fontSize: 11,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     location,
@@ -839,8 +879,11 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                size: 14, color: AppColors.grey),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: AppColors.grey,
+            ),
           ],
         ),
       ),
@@ -859,6 +902,7 @@ class _CustomerBookingsTab extends StatefulWidget {
 
 class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
   int _selectedFilter = 0;
+  String? _cancellingBookingId;
 
   @override
   void initState() {
@@ -883,250 +927,198 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
   int get _pendingCount => AppBookingService.instance.pendingCount;
   int get _upcomingCount => AppBookingService.instance.upcomingCount;
   int get _completedCount => AppBookingService.instance.completedCount;
+  int get _cancelledCount => AppBookingService.instance.cancelledCount;
 
   List<Map<String, dynamic>> get _filteredBookings =>
       AppBookingService.instance.customerBookingsForFilter(_selectedFilter);
 
+  String _formatCustomerEventDate(String value) {
+    final datePart = value.split('T').first.trim();
+    final parsed = DateTime.tryParse(datePart);
+    if (parsed == null) return datePart;
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${parsed.day} ${months[parsed.month - 1]} ${parsed.year}';
+  }
+
+  Future<void> _callVendor(String? phone) async {
+    final digits = (phone ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      Utils.showError('Vendor phone number is not available.');
+      return;
+    }
+
+    final dialNumber = (phone?.trim().startsWith('+') ?? false)
+        ? '+$digits'
+        : digits;
+    try {
+      final opened = await launchUrl(
+        Uri(scheme: 'tel', path: dialNumber),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) Utils.showError('Unable to open the phone dialer.');
+    } catch (_) {
+      Utils.showError('Unable to open the phone dialer.');
+    }
+  }
+
+  Future<void> _openVendorWhatsApp(String? phone) async {
+    var digits = (phone ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('00')) digits = digits.substring(2);
+    if (digits.length == 10) digits = '91$digits';
+    if (digits.length == 11 && digits.startsWith('0')) {
+      digits = '91${digits.substring(1)}';
+    }
+    if (digits.isEmpty) {
+      Utils.showError('Vendor phone number is not available.');
+      return;
+    }
+
+    try {
+      final appUri = Uri(
+        scheme: 'whatsapp',
+        host: 'send',
+        queryParameters: {'phone': digits},
+      );
+      if (await launchUrl(appUri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+
+    try {
+      final webUri = Uri.https('wa.me', '/$digits');
+      if (await launchUrl(webUri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {}
+    Utils.showError('Unable to open WhatsApp.');
+  }
+
+  Future<void> _cancelConfirmedBooking(Map<String, dynamic> booking) async {
+    final bookingId =
+        ((booking['id'] as String?) ??
+                (booking['bookingId'] as String?) ??
+                '')
+            .trim();
+    if (bookingId.isEmpty || _cancellingBookingId != null) return;
+
+    final shouldCancel = await AppConfirmationDialog.show(
+      context: context,
+      icon: Icons.event_busy_outlined,
+      title: 'Cancel booking?',
+      message: 'You can cancel at least 72 hours before the event.',
+      confirmLabel: 'Cancel booking',
+      cancelLabel: 'Keep booking',
+      isDestructive: true,
+    );
+    if (shouldCancel != true || !mounted) return;
+
+    setState(() => _cancellingBookingId = bookingId);
+    final response = await AppBookingService.instance.cancelCustomerBooking(
+      bookingId: bookingId,
+      reason: 'Cancelled by customer',
+    );
+    if (!mounted) return;
+    setState(() => _cancellingBookingId = null);
+
+    if (response.isSuccess == true) {
+      Utils.showSuccess('Booking cancelled successfully.');
+      await AppBookingService.instance.fetchCustomerBookings(silent: true);
+    } else {
+      Utils.showError(response.message ?? 'Unable to cancel this booking.');
+    }
+  }
+
   void _showBookingDetailsSheet(BuildContext context, Map<String, dynamic> b) {
-    final name = (b['name'] as String?) ?? 'Vendor';
-    final category = (b['category'] as String?) ?? '';
-    final status = (b['status'] as String?) ?? 'Confirmed';
+    final name = (b['name'] as String?) ?? '';
+    final vendorEmail = (b['vendorEmail'] as String?)?.trim() ?? '';
+    final vendorPhone =
+        ((b['vendorPhone'] as String?) ?? (b['phone'] as String?) ?? '')
+            .trim();
+    final status = (b['status'] as String?) ?? 'Pending';
     final package = (b['package'] as String?) ?? '';
     final date = (b['date'] as String?) ?? '';
     final time = (b['time'] as String?) ?? '';
     final venue = (b['venue'] as String?) ?? '';
-    final inclusions = ((b['inclusions'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .toList();
-    final total = (b['total'] as String?) ?? '';
-    final phone = (b['phone'] as String?) ?? '';
-    final isAccepted = status == 'Confirmed' || status == 'Accepted';
+    final rawTotal = (b['total'] as String?)?.trim() ?? '';
+    final total = rawTotal.isEmpty || rawTotal == '—' ? 'N/A' : rawTotal;
+    final bookingId =
+        ((b['bookingId'] as String?) ?? (b['id'] as String?) ?? '').trim();
+    final statusColor = bookingStatusColor(status);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        padding: const EdgeInsets.all(22),
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.grey.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Text(
-                        category,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.goldDark,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      builder: (ctx) => SafeArea(
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+          ),
+          padding: const EdgeInsets.all(22),
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: isAccepted
-                        ? AppColors.successLight
-                        : const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isAccepted
-                          ? AppColors.success
-                          : const Color(0xFFD97706),
-                    ),
+                    color: AppColors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
-            ),
-            const Divider(height: 24),
-            const Text(
-              'Package & Event Information',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.offWhite,
-                borderRadius: BorderRadius.circular(14),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  Text(
-                    package,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('📅 Event Date: $date • $time',
-                      style: const TextStyle(fontSize: 12, color: AppColors.black)),
-                  const SizedBox(height: 4),
-                  Text('📍 Location: $venue',
-                      style: const TextStyle(fontSize: 12, color: AppColors.darkGrey)),
-                  const SizedBox(height: 4),
-                  Text(
-                    isAccepted
-                        ? '📞 Contact: $phone (Call & WhatsApp)'
-                        : '🔒 Contact: Hidden until vendor accepts booking',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isAccepted ? FontWeight.w700 : FontWeight.w500,
-                      color: isAccepted ? AppColors.black : AppColors.darkGrey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Deliverables Included',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: inclusions.map((item) {
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check_circle_rounded,
-                          size: 14, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        item,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.black,
-                        ),
+                  const Expanded(
+                    child: Text(
+                      'Booking Details',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
                       ),
-                    ],
+                    ),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Pricing & In-Person Settlement',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.offWhite,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total Agreed Package:'),
-                      Text(total,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Payment Mode:'),
-                      Text('Pay In Person (Offline)',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.black)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('App Charges / Fees:'),
-                      Text('₹0 (Direct Settlement)',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.success)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.successLight,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppColors.success.withValues(alpha: 0.3),
-                      ),
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
-                      children: const [
-                        Icon(Icons.handshake_rounded,
-                            color: AppColors.success, size: 16),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Pay the vendor directly in person on the event day or upon agreement. Widoora does not charge fees or collect payments from users.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF166534),
-                              fontWeight: FontWeight.w500,
-                              height: 1.3,
-                            ),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          bookingStatusIcon(status),
+                          size: 14,
+                          color: statusColor,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
                           ),
                         ),
                       ],
@@ -1134,83 +1126,94 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                   ),
                 ],
               ),
-            ),
-            const Spacer(),
-            if (isAccepted)
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Utils.showInfo('Calling $name ($phone)...');
-                      },
-                      icon: const Icon(Icons.phone_rounded, size: 16),
-                      label: const Text('Call'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+              const Divider(height: 24),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _bookingDetailRow(
+                        'Booking ID',
+                        bookingId.isEmpty ? 'N/A' : bookingId,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        Utils.showSuccess('Opening WhatsApp with $name ($phone)...');
-                      },
-                      icon: const Icon(Icons.phone_android_rounded, size: 16),
-                      label: const Text('WhatsApp'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: AppColors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      _bookingDetailRow(
+                        'Vendor',
+                        name.trim().isEmpty ? 'N/A' : name.trim(),
                       ),
-                    ),
-                  ),
-                ],
-              )
-            else
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7).withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFD97706).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.lock_clock_rounded,
-                        color: Color(0xFFD97706), size: 20),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Booking awaiting acceptance. Direct Call & WhatsApp contact details will unlock automatically once confirmed.',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF92400E),
-                          fontWeight: FontWeight.w600,
-                          height: 1.35,
-                        ),
+                      _bookingDetailRow(
+                        'Email',
+                        vendorEmail.isEmpty ? 'N/A' : vendorEmail,
                       ),
-                    ),
-                  ],
+                      _bookingDetailRow(
+                        'Phone',
+                        vendorPhone.isEmpty ? 'N/A' : vendorPhone,
+                      ),
+                      _bookingDetailRow(
+                        'Service / Package',
+                        package.trim().isEmpty ? 'N/A' : package.trim(),
+                      ),
+                      _bookingDetailRow(
+                        'Event date',
+                        date.trim().isEmpty ? 'N/A' : date,
+                      ),
+                      _bookingDetailRow(
+                        'Event time',
+                        time.trim().isEmpty ? 'N/A' : time,
+                      ),
+                      _bookingDetailRow(
+                        'Event location',
+                        venue.trim().isEmpty ? 'N/A' : venue,
+                      ),
+                      _bookingDetailRow('Price', total, emphasize: true),
+                    ],
+                  ),
                 ),
               ),
-          ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _bookingDetailRow(
+    String label,
+    String value, {
+    bool emphasize = false,
+  }) {
+    if (value.trim().isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: emphasize ? 15 : 13,
+                fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+                color: emphasize ? AppColors.primary : AppColors.black,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1230,629 +1233,695 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Header
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'My Bookings',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Track booked vendors & in-person arrangements',
-                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Filter Tabs (Same as in vendor showing)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
+              // Header
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ChoiceChip(
-                    label: Text('All ($_allCount)'),
-                    selected: _selectedFilter == 0,
-                    onSelected: (_) => setState(() => _selectedFilter = 0),
-                    selectedColor: AppColors.primary,
-                    showCheckmark: false,
-                    elevation: _selectedFilter == 0 ? 1 : 0,
-                    side: BorderSide(
-                      color: _selectedFilter == 0
-                          ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.22),
-                      width: 1,
+                  Text(
+                    'My Bookings',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.black,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 0
-                          ? AppColors.white
-                          : AppColors.darkGrey,
-                      fontWeight: _selectedFilter == 0 ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
-                    backgroundColor: AppColors.white,
                   ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    avatar: _pendingCount > 0
-                        ? Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _selectedFilter == 1
-                                  ? AppColors.white
-                                  : const Color(0xFFD97706),
-                              shape: BoxShape.circle,
-                            ),
-                          )
-                        : null,
-                    label: Text('Pending ($_pendingCount)'),
-                    selected: _selectedFilter == 1,
-                    onSelected: (_) => setState(() => _selectedFilter = 1),
-                    selectedColor: AppColors.primary,
-                    showCheckmark: false,
-                    elevation: _selectedFilter == 1 ? 1 : 0,
-                    side: BorderSide(
-                      color: _selectedFilter == 1
-                          ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.22),
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 1
-                          ? AppColors.white
-                          : AppColors.darkGrey,
-                      fontWeight: _selectedFilter == 1 ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
-                    backgroundColor: AppColors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text('Upcoming ($_upcomingCount)'),
-                    selected: _selectedFilter == 2,
-                    onSelected: (_) => setState(() => _selectedFilter = 2),
-                    selectedColor: AppColors.primary,
-                    showCheckmark: false,
-                    elevation: _selectedFilter == 2 ? 1 : 0,
-                    side: BorderSide(
-                      color: _selectedFilter == 2
-                          ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.22),
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 2
-                          ? AppColors.white
-                          : AppColors.darkGrey,
-                      fontWeight: _selectedFilter == 2 ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
-                    backgroundColor: AppColors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text('Completed ($_completedCount)'),
-                    selected: _selectedFilter == 3,
-                    onSelected: (_) => setState(() => _selectedFilter = 3),
-                    selectedColor: AppColors.primary,
-                    showCheckmark: false,
-                    elevation: _selectedFilter == 3 ? 1 : 0,
-                    side: BorderSide(
-                      color: _selectedFilter == 3
-                          ? AppColors.primary
-                          : AppColors.grey.withValues(alpha: 0.22),
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    labelStyle: TextStyle(
-                      color: _selectedFilter == 3
-                          ? AppColors.white
-                          : AppColors.darkGrey,
-                      fontWeight: _selectedFilter == 3 ? FontWeight.w700 : FontWeight.w600,
-                      fontSize: 12.5,
-                    ),
-                    backgroundColor: AppColors.white,
+                  SizedBox(height: 2),
+                  Text(
+                    'View your booked services and packages',
+                    style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
 
-            const SizedBox(height: 14),
-
-            // Booked Vendors Cards or Empty State
-            if (isLoading && bookings.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(40),
-                alignment: Alignment.center,
-                child: const Column(
+              // Filter Tabs (Same as in vendor showing)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
                   children: [
-                    CircularProgressIndicator(color: AppColors.primary),
-                    SizedBox(height: 12),
-                    Text(
-                      'Loading your bookings...',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.darkGrey,
-                        fontWeight: FontWeight.w600,
+                    ChoiceChip(
+                      label: Text('All ($_allCount)'),
+                      selected: _selectedFilter == 0,
+                      onSelected: (_) => setState(() => _selectedFilter = 0),
+                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      elevation: _selectedFilter == 0 ? 1 : 0,
+                      side: BorderSide(
+                        color: _selectedFilter == 0
+                            ? AppColors.primary
+                            : AppColors.grey.withValues(alpha: 0.22),
+                        width: 1,
                       ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedFilter == 0
+                            ? AppColors.white
+                            : AppColors.darkGrey,
+                        fontWeight: _selectedFilter == 0
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                      backgroundColor: AppColors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      avatar: _pendingCount > 0
+                          ? Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _selectedFilter == 1
+                                    ? AppColors.white
+                                    : const Color(0xFFD97706),
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                          : null,
+                      label: Text('Pending ($_pendingCount)'),
+                      selected: _selectedFilter == 1,
+                      onSelected: (_) => setState(() => _selectedFilter = 1),
+                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      elevation: _selectedFilter == 1 ? 1 : 0,
+                      side: BorderSide(
+                        color: _selectedFilter == 1
+                            ? AppColors.primary
+                            : AppColors.grey.withValues(alpha: 0.22),
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedFilter == 1
+                            ? AppColors.white
+                            : AppColors.darkGrey,
+                        fontWeight: _selectedFilter == 1
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                      backgroundColor: AppColors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text('Upcoming ($_upcomingCount)'),
+                      selected: _selectedFilter == 2,
+                      onSelected: (_) => setState(() => _selectedFilter = 2),
+                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      elevation: _selectedFilter == 2 ? 1 : 0,
+                      side: BorderSide(
+                        color: _selectedFilter == 2
+                            ? AppColors.primary
+                            : AppColors.grey.withValues(alpha: 0.22),
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedFilter == 2
+                            ? AppColors.white
+                            : AppColors.darkGrey,
+                        fontWeight: _selectedFilter == 2
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                      backgroundColor: AppColors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text('Completed ($_completedCount)'),
+                      selected: _selectedFilter == 3,
+                      onSelected: (_) => setState(() => _selectedFilter = 3),
+                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      elevation: _selectedFilter == 3 ? 1 : 0,
+                      side: BorderSide(
+                        color: _selectedFilter == 3
+                            ? AppColors.primary
+                            : AppColors.grey.withValues(alpha: 0.22),
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedFilter == 3
+                            ? AppColors.white
+                            : AppColors.darkGrey,
+                        fontWeight: _selectedFilter == 3
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                      backgroundColor: AppColors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: Text('Cancelled ($_cancelledCount)'),
+                      selected: _selectedFilter == 4,
+                      onSelected: (_) => setState(() => _selectedFilter = 4),
+                      selectedColor: AppColors.primary,
+                      showCheckmark: false,
+                      elevation: _selectedFilter == 4 ? 1 : 0,
+                      side: BorderSide(
+                        color: _selectedFilter == 4
+                            ? AppColors.primary
+                            : AppColors.grey.withValues(alpha: 0.22),
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      labelStyle: TextStyle(
+                        color: _selectedFilter == 4
+                            ? AppColors.white
+                            : AppColors.darkGrey,
+                        fontWeight: _selectedFilter == 4
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontSize: 12.5,
+                      ),
+                      backgroundColor: AppColors.white,
                     ),
                   ],
                 ),
-              )
-            else if (bookings.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                margin: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.event_busy_rounded,
-                        size: 56, color: AppColors.grey),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'No Bookings Found',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.black,
+              ),
+
+              const SizedBox(height: 14),
+
+              // Booked Vendors Cards or Empty State
+              if (isLoading && bookings.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(40),
+                  alignment: Alignment.center,
+                  child: const Column(
+                    children: [
+                      CircularProgressIndicator(color: AppColors.primary),
+                      SizedBox(height: 12),
+                      Text(
+                        'Loading your bookings...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.darkGrey,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                    ],
+                  ),
+                )
+              else if (bookings.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  margin: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.grey.withValues(alpha: 0.2),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _selectedFilter == 0
-                          ? "You haven't booked any vendors yet."
-                          : "No ${_selectedFilter == 1 ? 'pending' : _selectedFilter == 2 ? 'upcoming' : 'completed'} bookings found.",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          FadeScaleRoute(
-                            page: const ServiceListingScreen(
-                              category: 'Photographers & Videographers',
-                            ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.event_busy_rounded,
+                        size: 56,
+                        color: AppColors.grey,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No Bookings Found',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _selectedFilter == 0
+                            ? "You haven't booked any vendors yet."
+                            : "No ${_selectedFilter == 1
+                                  ? 'pending'
+                                  : _selectedFilter == 2
+                                  ? 'upcoming'
+                                  : _selectedFilter == 3
+                                  ? 'completed'
+                                  : 'cancelled'} bookings found.",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.darkGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...bookings.map((v) {
+                  final String status = (v['status'] as String?) ?? 'Confirmed';
+                  final bool isAccepted =
+                      status.toLowerCase() == 'confirmed' ||
+                      status.toLowerCase() == 'accepted' ||
+                      status.toLowerCase() == 'approved';
+                  final statusColor = bookingStatusColor(status);
+                  final String package = (v['package'] as String?) ?? '';
+                  final String vendorName =
+                      (v['name'] as String?) ??
+                      (v['vendorName'] as String?) ??
+                      'Vendor';
+                  final String? vendorProfileImg =
+                      (v['vendorProfileImg'] as String?)?.trim();
+                  final String total = (v['total'] as String?) ?? '';
+                  final String rawEventDate =
+                      (v['date'] as String?)?.trim() ?? '';
+                  final String eventDate = rawEventDate.isEmpty
+                      ? 'Event Day'
+                      : _formatCustomerEventDate(rawEventDate);
+                  final String eventTime =
+                      (v['time'] as String?)?.trim() ?? '';
+                  final String displayBookingId =
+                      ((v['bookingId'] as String?) ??
+                              (v['id'] as String?) ??
+                              '')
+                          .trim();
+                  final String bookingId =
+                      ((v['id'] as String?) ??
+                              (v['bookingId'] as String?) ??
+                              '')
+                          .trim();
+                  final String vendorPhone =
+                      (v['vendorPhone'] as String?) ??
+                      (v['phone'] as String?) ??
+                      '';
+
+                  return Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.22),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: statusColor.withValues(alpha: 0.06),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.explore_rounded, size: 16),
-                      label: const Text('Explore All Vendors'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ...bookings.map((v) {
-                final String vendorName = (v['name'] as String?) ?? 'Vendor';
-                final String status = (v['status'] as String?) ?? 'Confirmed';
-                final bool isPending = status.toLowerCase() == 'pending';
-                final bool isAccepted = status.toLowerCase() == 'confirmed' ||
-                    status.toLowerCase() == 'accepted' ||
-                    status.toLowerCase() == 'approved';
-                final bool isCompleted = status.toLowerCase() == 'completed' ||
-                    status.toLowerCase() == 'delivered & paid';
-                final String category = (v['category'] as String?) ?? '';
-                final String package = (v['package'] as String?) ?? '';
-                final String total = (v['total'] as String?) ?? '';
-                final String phone = (v['phone'] as String?) ?? '';
-                final String? eventName = v['eventName'] as String?;
-                final Color eventColor = (v['eventColor'] as Color?) ?? AppColors.primary;
-                final IconData eventIcon = (v['eventIcon'] as IconData?) ?? Icons.celebration_rounded;
-
-                return GestureDetector(
-                  onTap: () => _showBookingDetailsSheet(context, v),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.3),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (eventName != null) ...[  
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                      decoration: BoxDecoration(
-                                        color: eventColor.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    CachedImageView(
+                                      imageUrl: vendorProfileImg,
+                                      width: 46,
+                                      height: 46,
+                                      isCircle: true,
+                                      backgroundColor: AppColors.primary
+                                          .withValues(alpha: 0.08),
+                                      fallbackIcon: Icons.storefront_rounded,
+                                      iconColor: AppColors.primary,
+                                      iconSize: 22,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Icon(
-                                            eventIcon,
-                                            size: 11,
-                                            color: eventColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              eventName,
+                                          if (displayBookingId.isNotEmpty)
+                                            Text(
+                                              displayBookingId,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                 fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: eventColor,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.grey,
                                               ),
+                                            ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            vendorName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.black,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
                                   ],
-                                  Text(
-                                    vendorName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.black,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: statusColor.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      bookingStatusIcon(status),
+                                      size: 14,
+                                      color: statusColor,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isPending
-                                    ? const Color(0xFFFEF3C7)
-                                    : isAccepted
-                                        ? AppColors.successLight
-                                        : isCompleted
-                                            ? AppColors.offWhite
-                                            : const Color(0xFFFEE2E2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                status,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: isPending
-                                      ? const Color(0xFFD97706)
-                                      : isAccepted
-                                          ? AppColors.success
-                                          : isCompleted
-                                              ? AppColors.darkGrey
-                                              : Colors.red,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          category,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.goldDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          package,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // In-Person settlement notice badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9F6F0),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.handshake_rounded,
-                                  size: 14, color: AppColors.primary),
-                              const SizedBox(width: 6),
-                              const Expanded(
-                                child: Text(
-                                  'Pay In Person',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                total,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.black,
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(height: 1),
-                        const SizedBox(height: 10),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: TextButton.icon(
-                                onPressed: () => _showBookingDetailsSheet(context, v),
-                                icon: const Icon(Icons.description_outlined, size: 14),
-                                label: const Text(
-                                  'Details',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 10,
                             ),
-                            const SizedBox(width: 6),
-                            if (isAccepted) ...[
-                              Expanded(
-                                flex: 4,
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    Utils.showInfo('Calling $phone...');
-                                  },
-                                  icon: const Icon(Icons.phone_rounded, size: 12),
-                                  label: const Text('Call', style: TextStyle(fontSize: 11)),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.primary,
-                                    side: const BorderSide(color: AppColors.primary),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.045),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 16,
+                                  color: AppColors.goldDark,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    package.isEmpty ? 'Service / Package' : package,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.darkGrey,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 6),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Divider(
+                            height: 1,
+                            color: statusColor.withValues(alpha: 0.12),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                eventDate,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (eventTime.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule_rounded,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    eventTime,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.darkGrey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 16,
+                                color: AppColors.grey,
                               ),
                               const SizedBox(width: 6),
                               Expanded(
-                                flex: 6,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Utils.showSuccess('Opening WhatsApp with $vendorName ($phone)...');
-                                  },
-                                  icon: const Icon(Icons.phone_android_rounded, size: 12),
-                                  label: const Text(
-                                    'WhatsApp',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF25D366),
-                                    foregroundColor: AppColors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 6),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                child: Text(
+                                  (v['venue'] as String?)?.trim().isNotEmpty ==
+                                          true
+                                      ? (v['venue'] as String).trim()
+                                      : 'N/A',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.darkGrey,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            ] else if (isCompleted) ...[
-                              Expanded(
-                                flex: 10,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.offWhite,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: AppColors.grey.withValues(alpha: 0.3),
-                                    ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Text(
+                                  'Booking total',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.darkGrey,
                                   ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.check_circle_outline_rounded,
-                                          size: 12, color: AppColors.success),
-                                      SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          'Event completed & settled in-person',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.darkGrey,
-                                          ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  total.isEmpty ? 'N/A' : total,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isAccepted) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 46,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _callVendor(vendorPhone),
+                                      icon: const Icon(
+                                        Icons.call_rounded,
+                                        size: 14,
+                                      ),
+                                      label: const Text('Call Vendor'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.primary,
+                                        side: const BorderSide(
+                                          color: AppColors.primary,
+                                          width: 1,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ] else
-                              Expanded(
-                                flex: 10,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7).withValues(alpha: 0.6),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: const Color(0xFFD97706).withValues(alpha: 0.3),
                                     ),
                                   ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.lock_clock_rounded,
-                                          size: 12, color: Color(0xFFD97706)),
-                                      SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          'Call & WhatsApp unlock upon acceptance',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFFB45309),
-                                          ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 46,
+                                    child: ElevatedButton(
+                                      onPressed: () =>
+                                          _openVendorWhatsApp(vendorPhone),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF25D366),
+                                        foregroundColor: AppColors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                         ),
                                       ),
-                                    ],
+                                      child: const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.phone_android_rounded,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              'WhatsApp',
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 42,
+                              child: OutlinedButton.icon(
+                                onPressed: () =>
+                                    _showBookingDetailsSheet(context, v),
+                                icon: const Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('View booking details'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: BorderSide(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 42,
+                              child: OutlinedButton.icon(
+                                onPressed: _cancellingBookingId == null
+                                    ? () => _cancelConfirmedBooking(v)
+                                    : null,
+                                icon: _cancellingBookingId == bookingId
+                                    ? const SizedBox(
+                                        width: 15,
+                                        height: 15,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.cancel_outlined,
+                                        size: 16,
+                                      ),
+                                label: Text(
+                                  _cancellingBookingId == bookingId
+                                      ? 'Cancelling…'
+                                      : 'Cancel booking',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFE11D48),
+                                  side: const BorderSide(
+                                    color: Color(0xFFE11D48),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                        ],
+                      ),
+                    );
+                }),
 
-            const SizedBox(height: 14),
-
-            // Browse more services card
-            FadeInWidget(
-              delay: const Duration(milliseconds: 300),
-              child: _buildNeedMoreServicesSection(),
-            ),
-
-            const SizedBox(height: 28),
-          ],
+              const SizedBox(height: 28),
+            ],
+          ),
         ),
-      ),
-      ),
-    );
-  }
-
-  Widget _buildNeedMoreServicesSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.offWhite,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.grey.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Need more services for your event? ✨',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: AppColors.black,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Book DJs, Caterers, Decorators, Luxury Cars & More',
-            style: TextStyle(fontSize: 11, color: AppColors.darkGrey),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  FadeScaleRoute(
-                    page: const ServiceListingScreen(
-                      category: 'Photographers & Videographers',
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.explore_rounded, size: 16),
-              label: const Text('Explore All Vendors'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1911,13 +1980,16 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       }
     } catch (e) {
       if (!mounted) return;
-      final isNet = e.toString().toLowerCase().contains('socket') ||
+      final isNet =
+          e.toString().toLowerCase().contains('socket') ||
           e.toString().toLowerCase().contains('connection') ||
           e.toString().toLowerCase().contains('network');
       setState(() {
         if (_profile == null) {
           _isNoInternet = isNet;
-          _errorMsg = isNet ? null : 'Failed to connect to server. Please try again.';
+          _errorMsg = isNet
+              ? null
+              : 'Something went wrong. Please try again.';
         }
         _isLoading = false;
       });
@@ -1927,17 +1999,20 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
   String get _displayName {
     final stored = StorageHelper().getUserName();
     if (stored?.trim().isNotEmpty == true) return stored!.trim();
-    if (_profile?.fullName?.trim().isNotEmpty == true) return _profile!.fullName!.trim();
+    if (_profile?.fullName?.trim().isNotEmpty == true)
+      return _profile!.fullName!.trim();
     return 'Customer';
   }
 
   String get _displayContact {
     final email = StorageHelper().getUserEmail();
     if (email?.trim().isNotEmpty == true) return email!.trim();
-    if (_profile?.email?.trim().isNotEmpty == true) return _profile!.email!.trim();
+    if (_profile?.email?.trim().isNotEmpty == true)
+      return _profile!.email!.trim();
     final mobile = StorageHelper().getUserMobile();
     if (mobile?.trim().isNotEmpty == true) return mobile!.trim();
-    if (_profile?.mobile?.trim().isNotEmpty == true) return _profile!.mobile!.trim();
+    if (_profile?.mobile?.trim().isNotEmpty == true)
+      return _profile!.mobile!.trim();
     return 'Event Organizer';
   }
 
@@ -1980,7 +2055,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2042,7 +2120,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2096,7 +2177,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               children: [
                 Row(
                   children: const [
-                    Icon(Icons.help_rounded, color: AppColors.primary, size: 24),
+                    Icon(
+                      Icons.help_rounded,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                     SizedBox(width: 10),
                     Text(
                       'FAQs',
@@ -2110,7 +2195,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2135,7 +2223,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   final response = snapshot.data;
                   if (response == null || response.isSuccess != true) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load FAQs from server.',
+                      message:
+                          response?.message ??
+                          'Could not load FAQs. Please try again.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -2144,7 +2234,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     return const AppEmptyState(
                       icon: Icons.help_outline_rounded,
                       title: 'No FAQs Available',
-                      subtitle: 'Frequently asked questions will appear here shortly.',
+                      subtitle:
+                          'Frequently asked questions will appear here shortly.',
                     );
                   }
                   return ListView.builder(
@@ -2199,8 +2290,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.privacy_tip_rounded,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.privacy_tip_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -2218,7 +2312,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2232,7 +2329,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 future: _cmsApi.getCmsData('privacy'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Privacy Policy...');
+                    return const AppLoadingState(
+                      message: 'Loading Privacy Policy...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -2244,7 +2343,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Privacy Policy.',
+                      message:
+                          response?.message ?? 'Could not load Privacy Policy.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -2252,7 +2352,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     return const AppEmptyState(
                       icon: Icons.privacy_tip_outlined,
                       title: 'Privacy Policy Pending',
-                      subtitle: 'The privacy terms will appear here once published by admin.',
+                      subtitle:
+                          'The privacy terms will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -2297,8 +2398,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.gavel_rounded,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.gavel_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -2316,7 +2420,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2330,7 +2437,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 future: _cmsApi.getCmsData('terms'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Terms of Service...');
+                    return const AppLoadingState(
+                      message: 'Loading Terms of Service...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -2342,7 +2451,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Terms of Service.',
+                      message:
+                          response?.message ??
+                          'Could not load Terms of Service.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -2350,7 +2461,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     return const AppEmptyState(
                       icon: Icons.gavel_rounded,
                       title: 'Terms of Service Pending',
-                      subtitle: 'The terms and conditions will appear here once published by admin.',
+                      subtitle:
+                          'The terms and conditions will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -2395,8 +2507,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.assignment_return_outlined,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.assignment_return_outlined,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -2414,7 +2529,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -2428,7 +2546,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 future: _cmsApi.getCmsData('refund'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Cancellation Policy...');
+                    return const AppLoadingState(
+                      message: 'Loading Cancellation Policy...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -2440,7 +2560,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Cancellation Policy.',
+                      message:
+                          response?.message ??
+                          'Could not load Cancellation Policy.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -2448,7 +2570,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     return const AppEmptyState(
                       icon: Icons.assignment_return_outlined,
                       title: 'Cancellation Policy Pending',
-                      subtitle: 'The cancellation policy will appear here once published by admin.',
+                      subtitle:
+                          'The cancellation policy will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -2470,11 +2593,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
   }
 
   void _openChangePasswordScreen(BuildContext context) {
-    Navigator.of(context).push(
-      FadeScaleRoute(
-        page: const ChangePasswordScreen(isVendor: false),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(FadeScaleRoute(page: const ChangePasswordScreen(isVendor: false)));
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -2483,9 +2604,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       icon: Icons.logout_rounded,
       iconColor: AppColors.primary,
       iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      title: 'Log Out of Widoora?',
-      message:
-          'Are you sure you want to log out? You can sign back in anytime to continue planning your wedding.',
+      title: 'Log Out?',
+      message: 'You can sign back in anytime to continue using Widoora.',
       confirmLabel: 'Log Out',
       cancelLabel: 'Cancel',
       confirmColor: AppColors.primary,
@@ -2528,7 +2648,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
           children: const [
             Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: AppColors.error,
+                ),
                 SizedBox(width: 6),
                 Text(
                   'The following will be deleted:',
@@ -2541,17 +2665,41 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               ],
             ),
             SizedBox(height: 8),
-            Text('• Profile & event celebration details',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            Text(
+              '• Profile & event celebration details',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.darkGrey,
+                height: 1.35,
+              ),
+            ),
             SizedBox(height: 4),
-            Text('• Wedding checklist & task progress',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            Text(
+              '• Wedding checklist & task progress',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.darkGrey,
+                height: 1.35,
+              ),
+            ),
             SizedBox(height: 4),
-            Text('• Wedding budget tracker & cost estimates',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            Text(
+              '• Wedding budget tracker & cost estimates',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.darkGrey,
+                height: 1.35,
+              ),
+            ),
             SizedBox(height: 4),
-            Text('• Saved vendor shortlists & bookings',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            Text(
+              '• Saved vendor shortlists & bookings',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.darkGrey,
+                height: 1.35,
+              ),
+            ),
           ],
         ),
       ),
@@ -2626,32 +2774,44 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   children: [
                     Stack(
                       children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.gold, width: 2),
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.gold, width: 2),
+                          ),
+                          child: ClipOval(
+                            child:
+                                ((_profile?.profileImgUrl != null &&
+                                        _profile!.profileImgUrl!.isNotEmpty) ||
+                                    (StorageHelper().getUserProfileImg() !=
+                                            null &&
+                                        StorageHelper()
+                                            .getUserProfileImg()!
+                                            .isNotEmpty))
+                                ? CachedImageView(
+                                    imageUrl:
+                                        StorageHelper().getUserProfileImg() ??
+                                        _profile?.profileImgUrl ??
+                                        '',
+                                    fit: BoxFit.cover,
+                                    width: 72,
+                                    height: 72,
+                                    isCircle: true,
+                                    fallbackIcon: Icons.favorite_rounded,
+                                  )
+                                : const CircleAvatar(
+                                    radius: 36,
+                                    backgroundColor: AppColors.primary,
+                                    child: Icon(
+                                      Icons.favorite_rounded,
+                                      color: AppColors.gold,
+                                      size: 36,
+                                    ),
+                                  ),
+                          ),
                         ),
-                        child: ClipOval(
-                          child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
-                                  (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
-                              ? CachedImageView(
-                                  imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
-                                  fit: BoxFit.cover,
-                                  width: 72,
-                                  height: 72,
-                                  isCircle: true,
-                                  fallbackIcon: Icons.favorite_rounded,
-                                )
-                              : const CircleAvatar(
-                                  radius: 36,
-                                  backgroundColor: AppColors.primary,
-                                  child: Icon(Icons.favorite_rounded,
-                                      color: AppColors.gold, size: 36),
-                                ),
-                        ),
-                      ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -2742,9 +2902,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 subtitle: 'Update names, celebration date, city & guest count',
                 onTap: () async {
                   final updated = await Navigator.of(context).push<bool>(
-                    FadeScaleRoute(
-                      page: const CustomerEditProfileScreen(),
-                    ),
+                    FadeScaleRoute(page: const CustomerEditProfileScreen()),
                   );
                   if (updated == true || mounted) {
                     loadProfile();
@@ -2753,16 +2911,13 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               ),
               _buildActionItem(
                 context: context,
-                icon: Icons.notifications_active_outlined,
-                title: 'Notifications & Alerts',
-                subtitle: 'Booking confirmations, milestones & reminders',
-                onTap: () => Navigator.of(context).push(
-                  FadeScaleRoute(
-                    page: const CustomerNotificationsScreen(),
-                  ),
-                ),
+                icon: Icons.favorite_border_rounded,
+                title: 'Saved Vendors',
+                subtitle: 'View vendors you have saved',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(FadeScaleRoute(page: const SavedVendorsScreen())),
               ),
-            
               const SizedBox(height: 18),
 
               const Text(
@@ -2841,8 +2996,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () => _showLogoutDialog(context),
-                  icon: const Icon(Icons.logout_rounded,
-                      color: AppColors.primary, size: 18),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
                   label: const Text(
                     'Logout',
                     style: TextStyle(
@@ -2852,7 +3010,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    side: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.2,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2865,8 +3026,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               Center(
                 child: TextButton.icon(
                   onPressed: () => _showDeleteAccountDialog(context),
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: Colors.red, size: 16),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                    size: 16,
+                  ),
                   label: const Text(
                     'Delete Account',
                     style: TextStyle(
@@ -2876,8 +3040,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                 ),
               ),
@@ -2912,9 +3078,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.grey.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
       ),
       child: ListTile(
         onTap: onTap,
@@ -2939,8 +3103,11 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
           subtitle,
           style: const TextStyle(fontSize: 11, color: AppColors.grey),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded,
-            size: 14, color: AppColors.grey),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 14,
+          color: AppColors.grey,
+        ),
       ),
     );
   }
@@ -2960,9 +3127,7 @@ class _FaqTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.offWhite,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.grey.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

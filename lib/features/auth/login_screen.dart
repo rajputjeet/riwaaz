@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     Utils.showSuccess(
       isVendorRole
-          ? 'Welcome back, ${user.fullName ?? 'Partner'}! Widoora Partner Portal.'
+          ? 'Welcome to Widoora Partner, ${user.fullName ?? 'Partner'}!'
           : 'Welcome back, ${user.fullName ?? 'User'}!',
       title: 'Welcome Back',
     );

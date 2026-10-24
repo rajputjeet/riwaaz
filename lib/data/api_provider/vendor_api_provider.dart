@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../injector.dart';
 import '../models/active_plan_model.dart';
+import '../models/vendor_coupon_model.dart';
 import '../models/booking_model.dart';
 import '../models/dashboard_stats_model.dart';
 import '../models/vendor_application_model.dart';
@@ -8,7 +9,6 @@ import '../models/user_model.dart';
 import '../network_handling.dart';
 import '../shared/data_response.dart';
 import '../../utils/helper/storage_helper.dart';
-import 'ad_api_provider.dart';
 import 'api_constant.dart';
 import 'user_api_provider.dart';
 
@@ -18,6 +18,15 @@ class VendorApiProvider {
 
   VendorApiProvider() {
     _dio = Injector().getDio();
+  }
+
+  Map<String, dynamic> _nonEmptyQueryParams(Map<String, dynamic> params) {
+    return Map<String, dynamic>.fromEntries(
+      params.entries.where((entry) {
+        final value = entry.value;
+        return value != null && (value is! String || value.isNotEmpty);
+      }),
+    );
   }
 
   // ─── Application ───────────────────────────────────────────────────────────
@@ -57,13 +66,16 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<VendorApplicationModel>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
 
   // GET /api/users/vendor/application/status
-  Future<DataResponse<VendorApplicationModel>> getVendorApplicationStatus() async {
+  Future<DataResponse<VendorApplicationModel>>
+  getVendorApplicationStatus() async {
     try {
       final response = await _dio.get(
         ApiConstants.vendorApplicationStatus,
@@ -86,7 +98,9 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<VendorApplicationModel>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
@@ -108,7 +122,9 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<ActivePlanModel>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
@@ -118,6 +134,7 @@ class VendorApiProvider {
     required String subscriptionPlanId,
     String paymentMethod = 'UPI',
     String? transactionId,
+    String? couponCode,
   }) async {
     try {
       final response = await _dio.post(
@@ -125,6 +142,8 @@ class VendorApiProvider {
         data: {
           'subscriptionPlanId': subscriptionPlanId,
           'paymentMethod': paymentMethod,
+          if (couponCode != null && couponCode.trim().isNotEmpty)
+            'couponCode': couponCode.trim().toUpperCase(),
           if (transactionId != null && transactionId.isNotEmpty)
             'transactionId': transactionId,
         },
@@ -138,7 +157,100 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<ActivePlanModel>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // GET /api/vendor/coupons (optional search query; authenticated for limits)
+  Future<DataResponse<List<VendorCouponModel>>> getVendorCoupons({
+    String? search,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.vendorCoupons,
+        queryParameters: {
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
+        },
+        options: Injector.getHeaderToken(),
+      );
+      final body = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{'success': true, 'data': response.data};
+
+      return DataResponse<List<VendorCouponModel>>.fromJson(
+        body,
+        (raw) {
+          final list = raw is List
+              ? raw
+              : (raw is Map && raw['coupons'] is List
+                  ? raw['coupons'] as List
+                  : const <dynamic>[]);
+          return list
+              .whereType<Map>()
+              .map((item) => VendorCouponModel.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList();
+        },
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<List<VendorCouponModel>>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+        data: [],
+      );
+    }
+  }
+
+  // POST /api/vendor/coupon/apply
+  Future<DataResponse<ApplyCouponResultModel>> applyVendorCoupon({
+    required String couponCode,
+    required String subscriptionPlanId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.vendorCouponApply,
+        data: {
+          'couponCode': couponCode.trim().toUpperCase(),
+          'subscriptionPlanId': subscriptionPlanId,
+        },
+        options: Injector.getHeaderToken(),
+      );
+      final body = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+
+      return DataResponse<ApplyCouponResultModel>.fromJson(
+        body,
+        (raw) {
+          if (raw is! Map) {
+            throw const FormatException('Invalid coupon response.');
+          }
+          return ApplyCouponResultModel.fromJson({
+            ...Map<String, dynamic>.from(raw),
+            'couponCode': raw['couponCode']?.toString().trim().isNotEmpty == true
+                ? raw['couponCode']
+                : couponCode.trim().toUpperCase(),
+          });
+        },
+      );
+    } on FormatException {
+      return DataResponse<ApplyCouponResultModel>(
+        isSuccess: false,
+        message: 'Could not verify the coupon price. Please try again.',
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<ApplyCouponResultModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
@@ -163,7 +275,8 @@ class VendorApiProvider {
         ),
       );
       return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
+        response.data as Map<String, dynamic>,
+        (json) => json,
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -191,7 +304,8 @@ class VendorApiProvider {
         ),
       );
       return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
+        response.data as Map<String, dynamic>,
+        (json) => json,
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -207,7 +321,8 @@ class VendorApiProvider {
         options: Injector.getHeaderToken(),
       );
       return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
+        response.data as Map<String, dynamic>,
+        (json) => json,
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -281,13 +396,14 @@ class VendorApiProvider {
       final resMap = response.data is Map<String, dynamic>
           ? (response.data as Map<String, dynamic>)
           : (response.data is Map
-              ? Map<String, dynamic>.from(response.data as Map)
-              : <String, dynamic>{});
+                ? Map<String, dynamic>.from(response.data as Map)
+                : <String, dynamic>{});
 
       final bool isHttpOk =
           (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
       final statusVal = resMap['status'];
-      final bool isSuccess = resMap['success'] == true ||
+      final bool isSuccess =
+          resMap['success'] == true ||
           resMap['isSuccess'] == true ||
           statusVal == true ||
           statusVal == 200 ||
@@ -340,13 +456,14 @@ class VendorApiProvider {
       final resMap = response.data is Map<String, dynamic>
           ? (response.data as Map<String, dynamic>)
           : (response.data is Map
-              ? Map<String, dynamic>.from(response.data as Map)
-              : <String, dynamic>{});
+                ? Map<String, dynamic>.from(response.data as Map)
+                : <String, dynamic>{});
 
       final bool isHttpOk =
           (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
       final statusVal = resMap['status'];
-      final bool isSuccess = resMap['success'] == true ||
+      final bool isSuccess =
+          resMap['success'] == true ||
           resMap['isSuccess'] == true ||
           statusVal == true ||
           statusVal == 200 ||
@@ -385,13 +502,14 @@ class VendorApiProvider {
       final resMap = response.data is Map<String, dynamic>
           ? (response.data as Map<String, dynamic>)
           : (response.data is Map
-              ? Map<String, dynamic>.from(response.data as Map)
-              : <String, dynamic>{});
+                ? Map<String, dynamic>.from(response.data as Map)
+                : <String, dynamic>{});
 
       final bool isHttpOk =
           (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
       final statusVal = resMap['status'];
-      final bool isSuccess = resMap['success'] == true ||
+      final bool isSuccess =
+          resMap['success'] == true ||
           resMap['isSuccess'] == true ||
           statusVal == true ||
           statusVal == 200 ||
@@ -419,8 +537,7 @@ class VendorApiProvider {
   Future<DataResponse<dynamic>> editPackage(
     String packageId,
     Map<String, dynamic> data,
-  ) =>
-      editServicePackage(packageId, data);
+  ) => editServicePackage(packageId, data);
 
   Future<DataResponse<dynamic>> deletePackage(String packageId) =>
       deleteServicePackage(packageId);
@@ -431,8 +548,7 @@ class VendorApiProvider {
   Future<DataResponse<dynamic>> editService(
     String serviceId,
     FormData formData,
-  ) =>
-      editServicePackage(serviceId, formData);
+  ) => editServicePackage(serviceId, formData);
 
   Future<DataResponse<dynamic>> deleteService(String serviceId) =>
       deleteServicePackage(serviceId);
@@ -467,12 +583,41 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<BookingsListResponse>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
 
-  // PUT /api/users/vendor/booking/status/:bookingId
+  // GET /api/booking/:id
+  Future<DataResponse<BookingModel>> getBookingDetail(String bookingId) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.bookingDetail(bookingId),
+        options: Injector.getHeaderToken(),
+      );
+      return DataResponse<BookingModel>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) {
+          final payload = Map<String, dynamic>.from(json as Map);
+          final booking = payload['booking'] ?? payload['data'];
+          return BookingModel.fromJson(
+            booking is Map ? Map<String, dynamic>.from(booking) : payload,
+          );
+        },
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<BookingModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // PUT /api/booking/status/:bookingId
   Future<DataResponse<dynamic>> updateBookingStatus({
     required String bookingId,
     required bool accept,
@@ -482,13 +627,15 @@ class VendorApiProvider {
       final response = await _dio.put(
         ApiConstants.vendorUpdateBookingStatus(bookingId),
         data: {
-          'status': accept ? 'Confirmed' : 'Cancelled',
-          'notes': notes ?? (accept ? 'Accepted by vendor' : 'Declined by vendor'),
+          'status': accept ? 'Confirmed' : 'Rejected',
+          'notes': notes ??
+              (accept ? 'Booking confirmed by vendor' : 'Booking rejected by vendor'),
         },
         options: Injector.getHeaderToken(),
       );
       return DataResponse<dynamic>.fromJson(
-        response.data as Map<String, dynamic>, (json) => json,
+        response.data as Map<String, dynamic>,
+        (json) => json,
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
@@ -513,7 +660,9 @@ class VendorApiProvider {
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<DashboardStatsModel>(
-        isSuccess: false, message: msg, error: msg,
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }
@@ -532,71 +681,56 @@ class VendorApiProvider {
   Future<DataResponse<dynamic>> changePassword({
     required String oldPassword,
     required String newPassword,
-  }) =>
-      UserApiProvider().changePassword(
-        oldPassword: oldPassword,
-        newPassword: newPassword,
-      );
+  }) => UserApiProvider().changePassword(
+    oldPassword: oldPassword,
+    newPassword: newPassword,
+  );
 
   // ─── Public Vendors Discovery ───────────────────────────────────────────────
 
-  /// Fetches vendors list.
-  /// First queries the public general vendor listing endpoint (/api/vendors),
-  /// and automatically falls back to active featured vendors (/api/ad/active-vendors)
-  /// if the general endpoint is not deployed yet on the backend server.
+  /// Fetches public vendors from /api/vendor/list with optional discovery filters.
   Future<DataResponse<List<UserModel>>> getVendorsList({
     String? categoryId,
+    String? city,
     String? search,
+    String? sortBy,
+    int? page,
+    int? limit,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        if (categoryId != null && categoryId.isNotEmpty)
-          'categoryId': categoryId,
-        if (search != null && search.isNotEmpty) 'search': search,
-      };
+      final queryParams = _nonEmptyQueryParams({
+        'categoryId': categoryId,
+        'city': city,
+        'search': search,
+        'sortBy': sortBy,
+        'page': page,
+        'limit': limit,
+      });
 
-      // 1. Try public normal vendor listing endpoint
-      try {
-        final response = await _dio.get(
-          ApiConstants.vendorList,
-          queryParameters: queryParams.isNotEmpty ? queryParams : null,
-        );
+      final response = await _dio.get(
+        ApiConstants.vendorList,
+        queryParameters: queryParams,
+      );
+      final responseMap = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
 
-        if (response.statusCode == 200 && response.data != null) {
-          final resMap = response.data is Map<String, dynamic>
-              ? response.data as Map<String, dynamic>
-              : <String, dynamic>{};
-          final result = DataResponse<List<UserModel>>.fromJson(
-            resMap,
-            (data) {
-              List<dynamic> rawList = [];
-              if (data is List) {
-                rawList = data;
-              } else if (data is Map<String, dynamic>) {
-                if (data['list'] is List) {
-                  rawList = data['list'] as List;
-                } else if (data['vendors'] is List) {
-                  rawList = data['vendors'] as List;
-                }
-              }
-              return rawList
-                  .whereType<Map<String, dynamic>>()
-                  .map((e) => UserModel.fromJson(e))
-                  .toList();
-            },
-          );
-          if (result.isSuccess == true &&
-              result.data != null &&
-              result.data!.isNotEmpty) {
-            return result;
+      return DataResponse<List<UserModel>>.fromJson(responseMap, (data) {
+        List<dynamic> rawList = [];
+        if (data is List) {
+          rawList = data;
+        } else if (data is Map<String, dynamic>) {
+          if (data['vendors'] is List) {
+            rawList = data['vendors'] as List;
+          } else if (data['list'] is List) {
+            rawList = data['list'] as List;
           }
         }
-      } catch (_) {
-        // Fall back to active-vendors if /api/vendors returned 404 or error
-      }
-
-      // 2. Fall back to active sponsored vendors API
-      return AdApiProvider().getActiveSponsoredVendors(categoryId: categoryId);
+        return rawList
+            .whereType<Map<String, dynamic>>()
+            .map((vendor) => UserModel.fromJson(vendor))
+            .toList();
+      });
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<List<UserModel>>(
@@ -604,6 +738,27 @@ class VendorApiProvider {
         message: msg,
         error: msg,
         data: [],
+      );
+    }
+  }
+
+  /// Fetches a vendor's full public profile from /api/vendor/detail/:id.
+  Future<DataResponse<UserModel>> getVendorDetail(String vendorId) async {
+    try {
+      final response = await _dio.get(ApiConstants.vendorDetail(vendorId));
+      final responseMap = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+      return DataResponse<UserModel>.fromJson(
+        responseMap,
+        (data) => UserModel.fromJson(Map<String, dynamic>.from(data as Map)),
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<UserModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
       );
     }
   }

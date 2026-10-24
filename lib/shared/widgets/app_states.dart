@@ -268,7 +268,7 @@ class AppNoInternetState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Couldn't connect to Widoora servers.\nPlease check your connection and try again.",
+              "Couldn't connect right now.\nPlease check your connection and try again.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,

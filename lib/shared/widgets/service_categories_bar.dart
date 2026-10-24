@@ -19,6 +19,7 @@ class ServiceIconWrap extends StatelessWidget {
   final double iconSize;
   final double borderRadius;
   final bool isSelected;
+  final Widget? loadingPlaceholder;
 
   const ServiceIconWrap({
     super.key,
@@ -27,6 +28,7 @@ class ServiceIconWrap extends StatelessWidget {
     this.iconSize = 78,
     this.borderRadius = 20,
     this.isSelected = false,
+    this.loadingPlaceholder,
   });
 
   @override
@@ -65,6 +67,7 @@ class ServiceIconWrap extends StatelessWidget {
                 width: iconSize,
                 height: iconSize,
                 fit: BoxFit.contain,
+                placeholder: loadingPlaceholder,
                 fallbackIcon: item.icon,
                 iconColor: isSelected ? AppColors.primary : item.color,
                 iconSize: iconSize,

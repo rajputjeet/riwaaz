@@ -1,14 +1,62 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../utils/helper/storage_helper.dart';
 import '../../data/api_provider/booking_api_provider.dart';
 import '../../data/models/booking_model.dart';
+import '../../data/shared/data_response.dart';
+
+Color bookingStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'approved':
+    case 'confirmed':
+    case 'accepted':
+      return const Color(0xFF059669);
+    case 'pending':
+      return const Color(0xFFD97706);
+    case 'completed':
+    case 'delivered & paid':
+      return const Color(0xFF0284C7);
+    case 'rejected':
+    case 'cancelled':
+    case 'canceled':
+    case 'declined':
+      return const Color(0xFFE11D48);
+    case 'expired':
+    default:
+      return const Color(0xFF64748B);
+  }
+}
+
+IconData bookingStatusIcon(String status) {
+  switch (status.toLowerCase()) {
+    case 'approved':
+    case 'confirmed':
+    case 'accepted':
+      return Icons.check_circle_outline;
+    case 'pending':
+      return Icons.access_time;
+    case 'completed':
+    case 'delivered & paid':
+      return Icons.task_alt;
+    case 'rejected':
+    case 'cancelled':
+    case 'canceled':
+    case 'declined':
+      return Icons.cancel_outlined;
+    case 'expired':
+      return Icons.hourglass_disabled;
+    default:
+      return Icons.info_outline;
+  }
+}
 
 /// Single unified booking record shared between Customer and Vendor panels.
 class BookingRecord {
   final String id;
+  final String? bookingId;
   final String vendorName;
+  final String vendorProfileImg;
+  final String vendorEmail;
   final String clientName;
   final String vendorPhone;
   final String clientPhone;
@@ -31,7 +79,10 @@ class BookingRecord {
 
   BookingRecord({
     required this.id,
+    this.bookingId,
     required this.vendorName,
+    this.vendorProfileImg = '',
+    this.vendorEmail = '',
     required this.clientName,
     required this.vendorPhone,
     required this.clientPhone,
@@ -61,16 +112,28 @@ class BookingRecord {
   bool get isCompleted =>
       status.toLowerCase() == 'delivered & paid' ||
       status.toLowerCase() == 'completed';
+  bool get isExpired => status.toLowerCase() == 'expired';
   bool get isDeclined =>
       status.toLowerCase() == 'declined' ||
       status.toLowerCase() == 'cancelled' ||
+      status.toLowerCase() == 'canceled' ||
       status.toLowerCase() == 'rejected';
 
-  factory BookingRecord.fromBookingModel(BookingModel model) {
+  factory BookingRecord.fromBookingModel(
+    BookingModel model, {
+    String? vendorNameFallback,
+    String? vendorProfileImgFallback,
+    String? vendorEmailFallback,
+    String? categoryFallback,
+    int? priceFallback,
+    String? venueFallback,
+    String? serviceNameFallback,
+    List<String> inclusionsFallback = const [],
+  }) {
     IconData icon = Icons.celebration_rounded;
     Color color = const Color(0xFF790D16);
 
-    final eventType = model.eventType ?? 'Wedding';
+    final eventType = model.eventType ?? 'Event';
     if (eventType.toLowerCase().contains('office') ||
         eventType.toLowerCase().contains('corporate')) {
       icon = Icons.business_center_rounded;
@@ -84,45 +147,54 @@ class BookingRecord {
       color = const Color(0xFF0D9488);
     }
 
-    final priceInt = (model.totalAmount ?? 0).toInt();
-    final formattedPrice = '₹ ${AppBookingService.formatIndianCurrency(priceInt)}';
+    final priceInt = (model.totalAmount ?? priceFallback ?? 0).toInt();
+    final formattedPrice = priceInt > 0
+        ? '₹ ${AppBookingService.formatIndianCurrency(priceInt)}'
+        : '—';
+    final serviceName = model.serviceName?.trim().isNotEmpty == true
+        ? model.serviceName!.trim()
+        : serviceNameFallback?.trim() ?? '';
+    final packageName = serviceName
+        .replaceFirst(RegExp(r'\s*\(₹[\d, ]+\)\s*$'), '')
+        .trim();
 
     return BookingRecord(
-      id: model.id ?? model.bookingId ?? 'BK_${DateTime.now().millisecondsSinceEpoch}',
-      vendorName: (model.serviceName != null && model.serviceName!.isNotEmpty)
-          ? model.serviceName!
-          : 'Verified Vendor Partner',
+      id:
+          model.id ??
+          model.bookingId ??
+          'BK_${DateTime.now().millisecondsSinceEpoch}',
+      bookingId: model.bookingId,
+      vendorName: model.vendorName ?? vendorNameFallback ?? 'Vendor',
+      vendorProfileImg: model.vendorProfileImg ?? vendorProfileImgFallback ?? '',
+      vendorEmail: model.vendorEmail ?? vendorEmailFallback ?? '',
       clientName: (model.customerName != null && model.customerName!.isNotEmpty)
           ? model.customerName!
           : 'Customer',
-      vendorPhone: '+91 98154 36396',
+      vendorPhone: model.vendorPhone ?? '',
       clientPhone: model.customerPhone ?? '',
-      category: (model.serviceName != null && model.serviceName!.isNotEmpty)
-          ? model.serviceName!
-          : 'Event Service',
-      package: (model.serviceName != null && model.serviceName!.isNotEmpty)
-          ? '${model.serviceName} ($formattedPrice)'
-          : 'Service Package ($formattedPrice)',
+      category: model.categoryName ?? categoryFallback ?? eventType,
+      package: packageName.isNotEmpty ? packageName : 'Service Package',
       total: formattedPrice,
       price: priceInt,
       date: model.eventDate != null && model.eventDate!.contains('T')
           ? model.eventDate!.split('T')[0]
           : (model.eventDate ?? 'Event Day'),
       time: model.eventTime ?? 'Full Day',
-      venue: (model.venueLocation != null && model.venueLocation!.isNotEmpty)
-          ? model.venueLocation!
-          : (model.city ?? 'Venue Location'),
-      eventName: '$eventType Celebration',
+      venue: (model.eventLocation?.trim().isNotEmpty ?? false)
+          ? model.eventLocation!.trim()
+          : (model.venueLocation?.trim().isNotEmpty ?? false)
+          ? model.venueLocation!.trim()
+          : (venueFallback?.trim().isNotEmpty ?? false)
+          ? venueFallback!.trim()
+          : 'N/A',
+      eventName: eventType == 'Event' ? eventType : '$eventType Celebration',
       eventType: eventType,
       eventIcon: icon,
       eventColor: color,
       status: model.status,
       paymentMode: model.paymentStatus ?? 'Pay In Person (Direct)',
       balance: 'Settle on Event Day',
-      inclusions: const [
-        'Full Event Coordination Included',
-        'Direct In-Person Settlement',
-      ],
+      inclusions: inclusionsFallback,
       createdAt: DateTime.tryParse(model.createdAt ?? '') ?? DateTime.now(),
     );
   }
@@ -131,10 +203,13 @@ class BookingRecord {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'bookingId': bookingId,
       'name': vendorName,
+      'vendorProfileImg': vendorProfileImg,
       'client': clientName,
       'clientName': clientName,
       'vendorName': vendorName,
+      'vendorEmail': vendorEmail,
       'phone': vendorPhone,
       'clientPhone': clientPhone,
       'vendorPhone': vendorPhone,
@@ -189,15 +264,11 @@ class AppBookingService extends ChangeNotifier {
   BookingsSummary? _summary;
   BookingsSummary? get summary => _summary;
 
-  int get allCount => _summary?.all ?? _bookings.length;
-  int get pendingCount =>
-      _summary?.pending ?? _bookings.where((b) => b.isPending).length;
-  int get upcomingCount =>
-      _summary?.upcoming ??
-      _summary?.confirmed ??
-      _bookings.where((b) => b.isAccepted).length;
-  int get completedCount =>
-      _summary?.completed ?? _bookings.where((b) => b.isCompleted).length;
+  int get allCount => _bookings.length;
+  int get pendingCount => _bookings.where((b) => b.isPending).length;
+  int get upcomingCount => _bookings.where((b) => b.isAccepted).length;
+  int get completedCount => _bookings.where((b) => b.isCompleted).length;
+  int get cancelledCount => _bookings.where((b) => b.isDeclined).length;
   int get confirmedCount => upcomingCount;
   int get totalCount => allCount;
 
@@ -219,15 +290,19 @@ class AppBookingService extends ChangeNotifier {
       .length;
 
   int get partyCount => _bookings
-      .where((b) =>
-          !b.isCompleted &&
-          (b.eventType == 'Birthday Party' || b.eventType == 'Private Party'))
+      .where(
+        (b) =>
+            !b.isCompleted &&
+            (b.eventType == 'Birthday Party' || b.eventType == 'Private Party'),
+      )
       .length;
 
   int get weddingCount => _bookings
-      .where((b) =>
-          !b.isCompleted &&
-          (b.eventType == 'Wedding' || b.eventType == 'Anniversary'))
+      .where(
+        (b) =>
+            !b.isCompleted &&
+            (b.eventType == 'Wedding' || b.eventType == 'Anniversary'),
+      )
       .length;
 
   bool _isLoading = false;
@@ -245,10 +320,26 @@ class AppBookingService extends ChangeNotifier {
       final res = await BookingApiProvider().getBookings(limit: 100);
       if (res.isSuccess == true && res.data != null) {
         final serverBookings = res.data!.bookings;
+        final previousById = {
+          for (final booking in _bookings) booking.id: booking,
+        };
         _summary = res.data!.summary;
         _bookings.clear();
         for (final b in serverBookings) {
-          _bookings.add(BookingRecord.fromBookingModel(b));
+          final previous = previousById[b.id ?? b.bookingId];
+          _bookings.add(
+            BookingRecord.fromBookingModel(
+              b,
+              vendorNameFallback: previous?.vendorName,
+              vendorProfileImgFallback: previous?.vendorProfileImg,
+              vendorEmailFallback: previous?.vendorEmail,
+              categoryFallback: previous?.category,
+              priceFallback: previous?.price,
+              venueFallback: previous?.venue,
+              serviceNameFallback: previous?.package,
+              inclusionsFallback: previous?.inclusions ?? const [],
+            ),
+          );
         }
         _isLoading = false;
         notifyListeners();
@@ -290,7 +381,7 @@ class AppBookingService extends ChangeNotifier {
   }
 
   /// Filtered bookings for Customer Panel:
-  /// 0 = All, 1 = Pending, 2 = Upcoming (Confirmed), 3 = Completed
+  /// 0 = All, 1 = Pending, 2 = Upcoming, 3 = Completed, 4 = Cancelled
   List<Map<String, dynamic>> customerBookingsForFilter(int filterIndex) {
     List<BookingRecord> filtered;
     switch (filterIndex) {
@@ -302,6 +393,9 @@ class AppBookingService extends ChangeNotifier {
         break;
       case 3:
         filtered = _bookings.where((b) => b.isCompleted).toList();
+        break;
+      case 4:
+        filtered = _bookings.where((b) => b.isDeclined).toList();
         break;
       case 0:
       default:
@@ -331,90 +425,63 @@ class AppBookingService extends ChangeNotifier {
   }
 
   /// Customer books a vendor package -> creates a booking in 'Pending' state
-  BookingRecord createBooking({
+  Future<DataResponse<BookingModel>> createBooking({
+    required String vendorId,
     required String vendorName,
+    String? vendorEmail,
     required String category,
-    required String package,
-    required String total,
+    required String serviceName,
+    required String eventDate,
+    required String eventTime,
+    required String eventLocation,
     required int price,
-    String? clientName,
-    String? clientPhone,
-    String? vendorPhone,
-    String? date,
-    String? time,
-    String? venue,
-    String? eventName,
-    String? eventType,
-    IconData? eventIcon,
-    Color? eventColor,
-    List<String>? inclusions,
-    String? notes,
-    String? city,
-  }) {
-    final record = BookingRecord(
-      id: 'BK_${DateTime.now().millisecondsSinceEpoch}',
-      vendorName: vendorName,
-      clientName: clientName ??
-          (StorageHelper().getUserName()?.trim().isNotEmpty == true
-              ? StorageHelper().getUserName()!.trim()
-              : 'Customer'),
-      vendorPhone: vendorPhone ?? '',
-      clientPhone: clientPhone ??
-          (StorageHelper().getUserMobile()?.trim().isNotEmpty == true
-              ? StorageHelper().getUserMobile()!.trim()
-              : ''),
-      category: category,
-      package: package,
-      total: total,
-      price: price,
-      date: date ?? 'To be scheduled',
-      time: time ?? 'Event Day',
-      venue: venue ?? 'Venue to be finalized',
-      eventName: eventName ?? 'Wedding Celebration',
-      eventType: eventType ?? 'Wedding',
-      eventIcon: eventIcon ?? Icons.celebration_rounded,
-      eventColor: eventColor ?? const Color(0xFF790D16),
-      status: 'Pending',
-      paymentMode: 'Pay In Person (Direct)',
-      balance: 'Settle on Event Day',
-      inclusions: inclusions ??
-          const [
-            'Full Event Coordination Included',
-            'Dedicated Professional Team',
-            'Direct In-Person Settlement',
-          ],
-    );
-
-    // Insert at front so new bookings appear prominently
-    _bookings.insert(0, record);
-    notifyListeners();
-
-    // Call API in background
-    BookingApiProvider()
-        .createBooking(
-      serviceName: package.isNotEmpty ? package : vendorName,
-      eventType: eventType ?? 'Wedding',
-      eventDate: date,
-      eventTime: time,
-      venueLocation: venue,
-      city: city ?? 'Chandigarh',
+    List<String> inclusions = const [],
+  }) async {
+    final response = await BookingApiProvider().createBooking(
+      vendorId: vendorId,
+      serviceName: serviceName,
+      eventDate: eventDate,
+      eventTime: eventTime,
+      eventLocation: eventLocation,
       totalAmount: price,
-      customerName: clientName,
-      customerPhone: clientPhone,
-      notes: notes,
-    )
-        .then((res) {
-      if (res.isSuccess == true && res.data != null) {
-        final serverBooking = res.data!;
-        final idx = _bookings.indexOf(record);
-        if (idx != -1) {
-          _bookings[idx] = BookingRecord.fromBookingModel(serverBooking);
-          notifyListeners();
-        }
-      }
-    }).catchError((_) {});
+    );
+    if (response.isSuccess == true && response.data != null) {
+      final record = BookingRecord.fromBookingModel(
+        response.data!,
+        vendorNameFallback: vendorName,
+        vendorEmailFallback: vendorEmail,
+        categoryFallback: category,
+        priceFallback: price,
+        venueFallback: eventLocation,
+        serviceNameFallback: serviceName,
+        inclusionsFallback: inclusions,
+      );
+      _bookings.insert(0, record);
+      _summary = null;
+      notifyListeners();
+    }
+    return response;
+  }
 
-    return record;
+  Future<DataResponse<BookingModel>> cancelCustomerBooking({
+    required String bookingId,
+    String? reason,
+  }) async {
+    final response = await BookingApiProvider().cancelBooking(
+      bookingId: bookingId,
+      reason: reason,
+    );
+    if (response.isSuccess == true) {
+      final index = _bookings.indexWhere(
+        (booking) =>
+            booking.id == bookingId || booking.bookingId == bookingId,
+      );
+      if (index >= 0) {
+        _bookings[index].status = response.data?.status ?? 'Cancelled';
+      }
+      notifyListeners();
+    }
+    return response;
   }
 
   /// Vendor accepts a booking -> changes status to 'Confirmed', unlocking contact info

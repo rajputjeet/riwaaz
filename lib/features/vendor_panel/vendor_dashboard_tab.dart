@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/booking_model.dart';
 import '../../data/models/dashboard_stats_model.dart';
 import '../../data/models/active_plan_model.dart';
 import 'vendor_packages_screen.dart';
@@ -27,6 +28,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
   final _vendorApi = VendorApiProvider();
 
   DashboardStatsModel? _stats;
+  List<BookingModel> _recentBookings = [];
   ActivePlanModel? _activePlan;
   bool _isLoading = true;
   bool _isNoInternet = false;
@@ -52,10 +54,12 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
       _errorMsg = null;
     });
     try {
+      final bookingsFuture = _vendorApi.getBookings(limit: 100);
       final results = await Future.wait([
         _vendorApi.getDashboardStats(),
         _vendorApi.getActivePlan(),
       ]);
+      final bookingsResult = await bookingsFuture;
       if (!mounted) return;
       setState(() {
         final statsResult = results[0];
@@ -65,6 +69,9 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
         }
         if (planResult.isSuccess == true && planResult.data != null) {
           _activePlan = planResult.data as ActivePlanModel;
+        }
+        if (bookingsResult.isSuccess == true && bookingsResult.data != null) {
+          _recentBookings = bookingsResult.data!.bookings;
         }
         _isLoading = false;
         _isNoInternet = false;
@@ -226,31 +233,39 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                 const SizedBox(height: 14),
               ],
 
-              // 4 Metric KPI Cards in a row
+              // Booking counts are arranged in a compact, readable 2x2 grid.
               Row(
                 children: [
                   _buildStatCard(
+                    title: 'All',
+                    value: '$totalCount',
+                    icon: Icons.calendar_month_rounded,
+                    accentColor: AppColors.goldDark,
+                  ),
+                  const SizedBox(width: 10),
+                  _buildStatCard(
                     title: 'Pending',
                     value: '$pendingCount',
+                    icon: Icons.schedule_rounded,
                     accentColor: const Color(0xFFD97706),
                   ),
-                  const SizedBox(width: 8),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
                   _buildStatCard(
                     title: 'Upcoming',
                     value: '$confirmedCount',
+                    icon: Icons.event_available_rounded,
                     accentColor: AppColors.primary,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   _buildStatCard(
                     title: 'Completed',
                     value: '$completedCount',
+                    icon: Icons.task_alt_rounded,
                     accentColor: AppColors.success,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatCard(
-                    title: 'Total Bookings',
-                    value: '$totalCount',
-                    accentColor: AppColors.goldDark,
                   ),
                 ],
               ),
@@ -272,12 +287,12 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
           const SizedBox(height: 20),
 
-          // Recent Booking Requests & Clients Header
+          // Recent Booking Requests Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Recent Booking Requests & Clients',
+                'Recent Booking Requests',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -302,6 +317,33 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
 
           Builder(
             builder: (_) {
+              if (_recentBookings.isNotEmpty) {
+                return Column(
+                  children: _recentBookings.take(3).map((booking) {
+                    final location = [
+                      booking.eventLocation,
+                      booking.venueLocation,
+                    ].map((value) => value?.trim() ?? '').firstWhere(
+                      (value) => value.isNotEmpty,
+                      orElse: () => 'N/A',
+                    );
+                    final price = booking.totalAmount;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _buildRecentEnquiryCard(
+                        clientName: booking.customerName ?? 'Client',
+                        event: booking.serviceName ?? 'Package',
+                        budget: price == null
+                            ? 'Custom'
+                            : '₹${AppBookingService.formatIndianCurrency(price.toInt())}',
+                        date: _formatRecentBookingDate(booking.eventDate),
+                        venue: location,
+                        timeAgo: booking.status,
+                      ),
+                    );
+                  }).toList(),
+                );
+              }
               if (bookingService.bookings.isNotEmpty) {
                 return Column(
                   children: bookingService.bookings.take(3).map(
@@ -311,7 +353,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                             clientName: b.clientName,
                             event: '${b.eventType} • ${b.package}',
                             budget: b.total,
-                            date: b.date,
+                            date: _formatRecentBookingDate(b.date),
                             venue: b.venue,
                             timeAgo: b.status,
                           ),
@@ -329,8 +371,10 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                             clientName: rb.customerName ?? 'Client',
                             event: rb.serviceName ?? 'Package',
                             budget: rb.totalAmount != null ? '₹${rb.totalAmount}' : 'Custom',
-                            date: rb.eventDate ?? 'Upcoming',
-                            venue: 'Venue TBD',
+                            date: _formatRecentBookingDate(rb.eventDate),
+                            venue: rb.eventLocation?.trim().isNotEmpty == true
+                                ? rb.eventLocation!.trim()
+                                : 'N/A',
                             timeAgo: rb.status ?? 'Pending',
                           ),
                         ),
@@ -354,48 +398,92 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
     );
   }
 
+  String _formatRecentBookingDate(String? value) {
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty) return 'Upcoming';
+
+    final datePart = raw.split('T').first;
+    final parsed = DateTime.tryParse(datePart);
+    if (parsed == null) return datePart;
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${parsed.day} ${months[parsed.month - 1]} ${parsed.year}';
+  }
+
   Widget _buildStatCard({
     required String title,
     required String value,
+    required IconData icon,
     required Color accentColor,
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: AppColors.grey.withValues(alpha: 0.18),
+            color: accentColor.withValues(alpha: 0.18),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              color: accentColor.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: Column(
+        child: Row(
           children: [
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-                color: AppColors.darkGrey,
-                height: 1.1,
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: Icon(icon, color: accentColor, size: 20),
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: AppColors.black,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      height: 1.05,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.black,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -924,7 +1012,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
               ),
               const SizedBox(width: 10),
               const Icon(Icons.location_on_outlined,
-                  size: 12, color: AppColors.grey),
+                  size: 16, color: AppColors.grey),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(

@@ -24,6 +24,7 @@ dependencies:
   flutter_widget_from_html_core: ^0.17.4
   video_player: ^2.11.1
   chewie: ^1.15.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

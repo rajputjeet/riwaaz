@@ -1113,9 +1113,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
       icon: Icons.logout_rounded,
       iconColor: AppColors.primary,
       iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      title: 'Log Out of Vendor Hub?',
-      message:
-          'Are you sure you want to log out? You can sign back into your vendor account anytime.',
+      title: 'Log Out?',
+      message: 'You can sign back in anytime to continue using Widoora.',
       confirmLabel: 'Log Out',
       cancelLabel: 'Cancel',
       confirmColor: AppColors.primary,
@@ -1317,7 +1316,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final response = snapshot.data;
                   if (response == null || response.isSuccess != true) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load FAQs from server.',
+                      message: response?.message ?? 'Could not load FAQs. Please try again.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }

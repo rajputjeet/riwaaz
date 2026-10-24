@@ -649,6 +649,40 @@ class VendorPackagesScreenState extends State<VendorPackagesScreen> {
     );
   }
 
+  Widget _buildOfferingAction({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterChips() {
     final filters = [
       {'label': 'All', 'count': _items.length},
@@ -891,37 +925,22 @@ class VendorPackagesScreenState extends State<VendorPackagesScreen> {
                                                 ),
                                                 Row(
                                                   children: [
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                          Icons.edit_outlined,
-                                                          color: AppColors
-                                                              .darkGrey,
-                                                          size: 20),
-                                                      onPressed: () =>
+                                                    _buildOfferingAction(
+                                                      label: 'Edit',
+                                                      icon: Icons.edit_outlined,
+                                                      color: AppColors.success,
+                                                      onTap: () =>
                                                           _showAddEditPackageSheet(
                                                         itemToEdit: item,
                                                       ),
-                                                      constraints:
-                                                          const BoxConstraints(),
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              4),
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                          Icons
-                                                              .delete_outline_rounded,
-                                                          color: AppColors.error,
-                                                          size: 20),
-                                                      onPressed: () =>
-                                                          _confirmDeleteItem(
-                                                              item),
-                                                      constraints:
-                                                          const BoxConstraints(),
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              4),
+                                                    const SizedBox(width: 6),
+                                                    _buildOfferingAction(
+                                                      label: 'Delete',
+                                                      icon: Icons.delete_outline_rounded,
+                                                      color: AppColors.error,
+                                                      onTap: () =>
+                                                          _confirmDeleteItem(item),
                                                     ),
                                                   ],
                                                 ),

@@ -1,5 +1,5 @@
 const bool isProdMode = true;
- 
+
 abstract class ApiConstants {
   static const String _prodUrl = "https://widoora.com";
   static const String _localUrl = "http://192.168.1.100:5174";
@@ -32,10 +32,16 @@ abstract class ApiConstants {
   static const String editProfile = "/api/users/edit-profile";
   static const String changePassword = "/api/users/change-password";
   static const String deleteAccount = "/api/users/delete-account";
+  static const String savedVendors = "/api/users/wishlist";
+  static String toggleSavedVendor(String vendorId) =>
+      "/api/users/wishlist/toggle/$vendorId";
+  static const String clearSavedVendors = "/api/users/wishlist/clear";
 
   // 6. Vendor Subscription Plan APIs
   static const String vendorActivePlan = "/api/users/vendor/plan/active";
   static const String vendorBuyPlan = "/api/users/vendor/plan/buy";
+  static const String vendorCoupons = "/api/vendor/coupons";
+  static const String vendorCouponApply = "/api/vendor/coupon/apply";
 
   // 7. Vendor Portfolio APIs
   static const String vendorPortfolioAdd = "/api/users/vendor/portfolio/add";
@@ -69,9 +75,14 @@ abstract class ApiConstants {
   // 10. Bookings APIs (Customer & Vendor)
   static const String bookingCreate = "/api/booking/create";
   static const String bookingList = "/api/booking/list";
+  static String bookingDetail(String bookingId) => "/api/booking/$bookingId";
+  static String bookingCancel(String bookingId) =>
+      "/api/booking/cancel/$bookingId";
+  static String bookingUpdateStatus(String bookingId) =>
+      "/api/booking/status/$bookingId";
   static const String vendorBookingsList = "/api/booking/list";
   static String vendorUpdateBookingStatus(String bookingId) =>
-      "/api/users/vendor/booking/status/$bookingId";
+      bookingUpdateStatus(bookingId);
 
   // 11. Vendor Dashboard Stats API
   static const String vendorDashboardStats =
@@ -92,6 +103,17 @@ abstract class ApiConstants {
   static const String adActiveVendors = "/api/ad/active-vendors";
 
   // 15. Public & Verified Vendors Discovery API
-  static const String vendorList = "/api/vendors";
+  static const String vendorList = "/api/vendor/list";
+  static String vendorDetail(String id) => "/api/vendor/detail/$id";
   static const String vendorListAll = "/api/users/vendors";
+
+  // 16. Customer & Vendor Notifications APIs
+  static const String notificationsList = "/api/notifications/list";
+  static String notificationView(String id) => "/api/notifications/view/$id";
+  static String notificationRead(String id) => "/api/notifications/read/$id";
+  static const String notificationsReadAll = "/api/notifications/read-all";
+  static String notificationDelete(String id) => "/api/notifications/$id";
+  static const String notificationsDeleteMultiple =
+      "/api/notifications/delete-multiple";
+  static const String notificationsDeleteAll = "/api/notifications/delete-all";
 }

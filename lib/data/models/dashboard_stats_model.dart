@@ -137,6 +137,7 @@ class RecentBooking {
   final String? customerName;
   final String? serviceName;
   final String? eventDate;
+  final String? eventLocation;
   final String? status;
   final num? totalAmount;
 
@@ -146,6 +147,7 @@ class RecentBooking {
     this.customerName,
     this.serviceName,
     this.eventDate,
+    this.eventLocation,
     this.status,
     this.totalAmount,
   });
@@ -157,6 +159,12 @@ class RecentBooking {
       customerName: json['customerName']?.toString(),
       serviceName: json['serviceName']?.toString(),
       eventDate: json['eventDate']?.toString(),
+      eventLocation:
+          (json['eventLocation'] ??
+                  json['venueLocation'] ??
+                  json['eventVenue'] ??
+                  json['venueAddress'])
+              ?.toString(),
       status: json['status']?.toString(),
       totalAmount: json['totalAmount'] is num ? json['totalAmount'] : null,
     );

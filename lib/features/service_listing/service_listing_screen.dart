@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_images.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
+import '../../core/services/wishlist_service.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/user_model.dart';
 import '../../shared/widgets/bottom_nav_bar.dart';
@@ -14,7 +14,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/category_controller.dart';
 import '../../shared/widgets/app_search_bar.dart';
-import '../../shared/widgets/cached_image_view.dart';
+import '../../shared/widgets/vendor_image_view.dart';
 
 class ServiceListingScreen extends StatefulWidget {
   final String category;
@@ -22,7 +22,7 @@ class ServiceListingScreen extends StatefulWidget {
 
   const ServiceListingScreen({
     super.key,
-    this.category = 'Photographers & Videographers',
+    this.category = 'All',
     this.showBottomNav = false,
   });
 
@@ -47,14 +47,17 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     super.initState();
     _currentCategory = widget.category;
     _fetchVendors();
+    WishlistService.instance.ensureLoaded();
 
     _searchFocusNode.addListener(() {
       setState(() {});
     });
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
     _listController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -72,37 +75,39 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
 
     try {
       String? categoryId;
-      final isAll = _currentCategory.toLowerCase() == 'all' ||
+      final isAll =
+          _currentCategory.toLowerCase() == 'all' ||
           _currentCategory.toLowerCase() == 'all categories' ||
           _currentCategory.toLowerCase() == 'all vendors';
 
       if (!isAll && Get.isRegistered<CategoryController>()) {
-        final resolved =
-            CategoryController.to.resolveCategoryId(_currentCategory);
+        final resolved = CategoryController.to.resolveCategoryId(
+          _currentCategory,
+        );
         if (resolved.isNotEmpty &&
             RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(resolved)) {
           categoryId = resolved;
         }
       }
 
-      final res =
-          await _vendorApi.getVendorsList(categoryId: categoryId);
+      final res = await _vendorApi.getVendorsList(categoryId: categoryId);
 
       if (!mounted) return;
 
       if (res.isSuccess == true && res.data != null) {
-        var list =
-            res.data!.map((u) => _VendorData.fromUserModel(u)).toList();
+        var list = res.data!.map((u) => _VendorData.fromUserModel(u)).toList();
 
         // If a specific category was selected and server returned vendors,
         // also apply category-match filtering locally if needed
         if (!isAll && list.isNotEmpty) {
           final lowerCat = _currentCategory.toLowerCase();
           final filtered = list.where((v) {
-            final matchesCat = v.category != null &&
+            final matchesCat =
+                v.category != null &&
                 (v.category!.toLowerCase().contains(lowerCat) ||
                     lowerCat.contains(v.category!.toLowerCase()));
-            final matchesProfile = v.userModel?.vendorProfile?.services?.any(
+            final matchesProfile =
+                v.userModel?.vendorProfile?.services?.any(
                   (s) =>
                       s.toLowerCase().contains(lowerCat) ||
                       lowerCat.contains(s.toLowerCase()),
@@ -165,18 +170,20 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               child: _isLoading
                   ? _buildVendorsLoadingSkeleton()
                   : displayedVendors.isEmpty
-                      ? _buildEmptyState(query)
-                      : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics(),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          itemCount: displayedVendors.length,
-                          itemBuilder: (context, i) {
-                            return _buildVendorCard(displayedVendors[i]);
-                          },
-                        ),
+                  ? _buildEmptyState(query)
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: displayedVendors.length,
+                      itemBuilder: (context, i) {
+                        return _buildVendorCard(displayedVendors[i]);
+                      },
+                    ),
             ),
           ),
         ],
@@ -189,7 +196,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                   Navigator.pop(context);
                 } else {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => MainShell(initialIndex: i)),
+                    MaterialPageRoute(
+                      builder: (_) => MainShell(initialIndex: i),
+                    ),
                     (route) => false,
                   );
                 }
@@ -261,12 +270,16 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                         borderRadius: BorderRadius.circular(22),
                       ),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 22, vertical: 10),
+                        horizontal: 22,
+                        vertical: 10,
+                      ),
                     ),
                     child: const Text(
                       'Clear Search',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -292,10 +305,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
             decoration: BoxDecoration(
               color: AppColors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFFEADBCE),
-                width: 1.2,
-              ),
+              border: Border.all(color: const Color(0xFFEADBCE), width: 1.2),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.04),
@@ -366,7 +376,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           borderRadius: BorderRadius.circular(22),
                         ),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                     if (!isAll)
@@ -392,7 +404,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                             borderRadius: BorderRadius.circular(22),
                           ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 10),
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                   ],
@@ -500,9 +514,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFFAF2E9),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFEADBCE), width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFEADBCE), width: 1)),
       ),
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: SizedBox(
@@ -527,8 +539,10 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary.withValues(alpha: 0.08)
@@ -555,8 +569,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       'All',
                       style: TextStyle(
                         fontSize: 12.5,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         color: isSelected
                             ? AppColors.primary
                             : const Color(0xFF555555),
@@ -581,8 +596,10 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withValues(alpha: 0.08)
@@ -609,8 +626,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     cat.title,
                     style: TextStyle(
                       fontSize: 12.5,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w600,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w600,
                       color: isSelected
                           ? AppColors.primary
                           : const Color(0xFF555555),
@@ -633,11 +651,7 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFFFFF),
-            Color(0xFFFFFDFC),
-            Color(0xFFFAF2E9),
-          ],
+          colors: [Color(0xFFFFFFFF), Color(0xFFFFFDFC), Color(0xFFFAF2E9)],
         ),
         border: const Border(
           bottom: BorderSide(color: Color(0xFFEADBCE), width: 1.2),
@@ -742,8 +756,6 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
     );
   }
 
-
-
   Widget _buildVendorCard(_VendorData vendor) {
     return AnimatedTapWidget(
       onTap: () {
@@ -752,11 +764,6 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
             page: VendorDetailScreen(
               vendorName: vendor.name,
               location: vendor.location,
-              rating: vendor.rating,
-              reviews: vendor.reviews,
-              startingPrice: vendor.startingPrice,
-              category: vendor.category,
-              imageUrl: vendor.imagePath,
               vendorModel: vendor.userModel,
             ),
           ),
@@ -791,13 +798,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        CachedImageView(
+                        VendorImageView(
                           imageUrl: vendor.imagePath,
                           fit: BoxFit.cover,
-                          fallbackIcon: Icons.camera_alt_rounded,
-                          iconColor: Colors.white54,
-                          iconSize: 40,
-                          backgroundColor: AppColors.primaryDark,
                         ),
                         // Subtle dark overlay at the bottom for badge readability
                         Positioned(
@@ -827,28 +830,37 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: AnimatedTapWidget(
-                    onTap: () {},
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        vendor.isWishlisted
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: vendor.isWishlisted
-                            ? AppColors.primary
-                            : AppColors.grey,
-                        size: 16,
-                      ),
-                    ),
+                  child: AnimatedBuilder(
+                    animation: WishlistService.instance,
+                    builder: (context, _) {
+                      final wishlist = WishlistService.instance;
+                      final isSaved = wishlist.isSaved(vendor.id);
+                      return AnimatedTapWidget(
+                        onTap:
+                            vendor.id.isEmpty || wishlist.isToggling(vendor.id)
+                            ? null
+                            : () => wishlist.toggleVendor(
+                                vendor.id,
+                                vendor: vendor.userModel,
+                              ),
+                        child: Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isSaved ? Icons.favorite : Icons.favorite_border,
+                            color: isSaved ? AppColors.primary : AppColors.grey,
+                            size: 16,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                // Badge (Sponsored / Featured or Top Rated)
+                // Sponsored badge
                 if (vendor.userModel?.isFeatured == true ||
                     (vendor.userModel?.vendorProfile?.isAdActive == true) ||
                     (vendor.userModel?.adBadge != null &&
@@ -858,7 +870,9 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                     left: 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFD97706), Color(0xFFB45309)],
@@ -875,8 +889,11 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.workspace_premium_rounded,
-                              size: 12, color: Colors.white),
+                          const Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 12,
+                            color: Colors.white,
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             vendor.userModel?.adBadge != null &&
@@ -888,45 +905,6 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else if (vendor.isWishlisted || vendor.rating >= 4.8)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryDark],
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 12, color: Colors.white),
-                          const SizedBox(width: 3),
-                          Text(
-                            vendor.rating >= 4.8 ? 'Top Rated' : 'Verified Partner',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
                             ),
                           ),
                         ],
@@ -948,49 +926,52 @@ class _ServiceListingScreenState extends State<ServiceListingScreen>
                           style: AppTextStyles.headlineSmall.copyWith(
                             fontSize: 15,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.star_rounded,
-                          color: AppColors.gold, size: 16),
-                      const SizedBox(width: 3),
-                      Text(
-                        vendor.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                      if (vendor.experience.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 135),
+                          child: Text(
+                            '${vendor.experience} experience',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        ' (${vendor.reviews})',
-                        style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
-                      ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_rounded,
-                          color: AppColors.grey, size: 13),
-                      const SizedBox(width: 2),
-                      Text(
-                        vendor.location,
-                        style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Text(
-                        vendor.startingPrice > 0
-                            ? (vendor.startingPrice >= 1000
-                                ? '₹${(vendor.startingPrice / 1000).toStringAsFixed(0)}K onwards'
-                                : '₹${vendor.startingPrice} onwards')
-                            : 'Starting price on request',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                  if (vendor.location.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          color: AppColors.grey,
+                          size: 16,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            vendor.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1005,10 +986,7 @@ class _VendorData {
   final String id;
   final String name;
   final String location;
-  final double rating;
-  final int reviews;
-  final int startingPrice;
-  final bool isWishlisted;
+  final String experience;
   final String imagePath;
   final String? category;
   final UserModel? userModel;
@@ -1017,10 +995,7 @@ class _VendorData {
     required this.id,
     required this.name,
     required this.location,
-    required this.rating,
-    required this.reviews,
-    required this.startingPrice,
-    required this.isWishlisted,
+    required this.experience,
     required this.imagePath,
     this.category,
     this.userModel,
@@ -1028,33 +1003,31 @@ class _VendorData {
 
   factory _VendorData.fromUserModel(UserModel user) {
     final profile = user.vendorProfile;
-    final bName = (profile?.businessName != null &&
+    final bName =
+        (profile?.businessName != null &&
             profile!.businessName!.trim().isNotEmpty)
         ? profile.businessName!.trim()
         : (user.fullName != null && user.fullName!.trim().isNotEmpty
-            ? user.fullName!.trim()
-            : 'Wedding Vendor Partner');
+              ? user.fullName!.trim()
+              : 'Wedding Vendor Partner');
 
-    final loc = (profile?.city != null && profile!.city!.trim().isNotEmpty)
-        ? profile.city!.trim()
-        : 'Punjab';
+    final loc =
+        [
+              profile?.businessAddress,
+              user.address,
+              profile?.city ?? user.city,
+              profile?.state ?? user.state,
+            ]
+            .map((part) => part?.trim() ?? '')
+            .where((part) => part.isNotEmpty)
+            .toSet()
+            .join(', ');
+    final rawExperience = profile?.yearsOfExperience?.trim() ?? '';
+    final experience = RegExp(r'^\d+(\.\d+)?$').hasMatch(rawExperience)
+        ? '$rawExperience years'
+        : rawExperience;
 
-    int price = 0;
-    if (profile?.packages != null && profile!.packages!.isNotEmpty) {
-      final firstPkg = profile.packages!.first;
-      if (firstPkg is Map && firstPkg['price'] != null) {
-        price = int.tryParse(firstPkg['price'].toString()) ?? 0;
-      }
-    }
-
-    String img = '';
-    if (user.profileImgUrl != null && user.profileImgUrl!.trim().isNotEmpty) {
-      img = user.profileImgUrl!.trim();
-    } else if (profile?.portfolio != null && profile!.portfolio!.isNotEmpty) {
-      img = profile.portfolio!.first.toString();
-    } else {
-      img = AppImages.vendorRoyalClick;
-    }
+    final img = user.vendorCardImageUrl ?? '';
 
     final services = profile?.services;
     final categoryStr = (services != null && services.isNotEmpty)
@@ -1065,10 +1038,7 @@ class _VendorData {
       id: user.id ?? '',
       name: bName,
       location: loc,
-      rating: 4.9,
-      reviews: 120,
-      startingPrice: price,
-      isWishlisted: false,
+      experience: experience,
       imagePath: img,
       category: categoryStr,
       userModel: user,

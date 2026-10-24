@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import '../../utils/helper/storage_helper.dart';
 import '../injector.dart';
 import '../models/booking_model.dart';
 import '../network_handling.dart';
@@ -15,78 +14,24 @@ class BookingApiProvider {
 
   // POST /api/booking/create
   Future<DataResponse<BookingModel>> createBooking({
+    required String vendorId,
     required String serviceName,
-    String? eventType,
-    String? eventDate,
-    String? eventTime,
-    int? guestCount,
-    String? venueLocation,
-    String? city,
-    num? totalAmount,
-    num? advancePaid,
-    String? paymentStatus,
-    String? paymentMethod,
-    String? notes,
-    String? specialRequests,
-    String? customerName,
-    String? customerEmail,
-    String? customerPhone,
-    String? userId,
+    required String eventDate,
+    required String eventTime,
+    required String eventLocation,
+    required num totalAmount,
   }) async {
     try {
-      final currentUserId = (userId != null && userId.isNotEmpty)
-          ? userId
-          : StorageHelper().getUserId();
-
-      final currentName = (customerName != null && customerName.isNotEmpty)
-          ? customerName
-          : StorageHelper().getUserName();
-
-      final currentEmail = (customerEmail != null && customerEmail.isNotEmpty)
-          ? customerEmail
-          : StorageHelper().getUserEmail();
-
-      final currentPhone = (customerPhone != null && customerPhone.isNotEmpty)
-          ? customerPhone
-          : StorageHelper().getUserMobile();
-
-      final payload = <String, dynamic>{
-        if (currentUserId != null && currentUserId.isNotEmpty)
-          'userId': currentUserId,
-        if (currentName != null && currentName.isNotEmpty)
-          'customerName': currentName,
-        if (currentEmail != null && currentEmail.isNotEmpty)
-          'customerEmail': currentEmail,
-        if (currentPhone != null && currentPhone.isNotEmpty)
-          'customerPhone': currentPhone,
-        'serviceName': serviceName,
-        'eventType': (eventType != null && eventType.isNotEmpty)
-            ? eventType
-            : 'Wedding',
-        if (eventDate != null && eventDate.isNotEmpty)
-          'eventDate': eventDate
-        else
-          'eventDate': DateTime.now()
-              .add(const Duration(days: 30))
-              .toIso8601String(),
-        'eventTime': (eventTime != null && eventTime.isNotEmpty)
-            ? eventTime
-            : 'Full Day',
-        'guestCount': guestCount ?? 100,
-        'venueLocation': venueLocation ?? '',
-        'city': (city != null && city.isNotEmpty) ? city : 'Chandigarh',
-        'totalAmount': totalAmount ?? 0,
-        'advancePaid': advancePaid ?? 0,
-        'paymentStatus': paymentStatus ?? 'Pending',
-        'paymentMethod': paymentMethod ?? 'Pay In Person',
-        'status': 'Pending',
-        'notes': notes ?? '',
-        'specialRequests': specialRequests ?? '',
-      };
-
       final response = await _dio.post(
         ApiConstants.bookingCreate,
-        data: payload,
+        data: {
+          'vendorId': vendorId,
+          'serviceName': serviceName,
+          'eventDate': eventDate,
+          'eventTime': eventTime,
+          'eventLocation': eventLocation,
+          'totalAmount': totalAmount,
+        },
         options: Injector.getHeaderToken(),
       );
 
@@ -139,7 +84,38 @@ class BookingApiProvider {
     }
   }
 
-  // PUT /api/users/vendor/booking/status/:bookingId
+  // PUT /api/booking/cancel/:bookingId (customer)
+  Future<DataResponse<BookingModel>> cancelBooking({
+    required String bookingId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.bookingCancel(bookingId),
+        data: {'reason': reason ?? 'Cancelled by customer'},
+        options: Injector.getHeaderToken(),
+      );
+      return DataResponse<BookingModel>.fromJson(
+        response.data as Map<String, dynamic>,
+        (json) {
+          final payload = Map<String, dynamic>.from(json as Map);
+          final booking = payload['booking'] ?? payload['data'];
+          return BookingModel.fromJson(
+            booking is Map ? Map<String, dynamic>.from(booking) : payload,
+          );
+        },
+      );
+    } catch (e) {
+      final msg = NetworkHandling.getDioException(e);
+      return DataResponse<BookingModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
+    }
+  }
+
+  // PUT /api/booking/status/:bookingId
   Future<DataResponse<dynamic>> updateBookingStatus({
     required String bookingId,
     required bool accept,
@@ -149,9 +125,9 @@ class BookingApiProvider {
       final response = await _dio.put(
         ApiConstants.vendorUpdateBookingStatus(bookingId),
         data: {
-          'status': accept ? 'Confirmed' : 'Cancelled',
-          'notes':
-              notes ?? (accept ? 'Accepted by vendor' : 'Declined by vendor'),
+          'status': accept ? 'Confirmed' : 'Rejected',
+          'notes': notes ??
+              (accept ? 'Booking confirmed by vendor' : 'Booking rejected by vendor'),
         },
         options: Injector.getHeaderToken(),
       );
@@ -161,11 +137,7 @@ class BookingApiProvider {
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
-      return DataResponse<dynamic>(
-        isSuccess: false,
-        message: msg,
-        error: msg,
-      );
+      return DataResponse<dynamic>(isSuccess: false, message: msg, error: msg);
     }
   }
 }

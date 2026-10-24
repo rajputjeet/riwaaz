@@ -29,6 +29,8 @@ class VendorProfileModel {
   String? businessName;
   String? ownerName;
   String? businessDescription;
+  String? categoryName;
+  int? startingPrice;
   String? businessAddress;
   String? city;
   String? state;
@@ -80,6 +82,8 @@ class VendorProfileModel {
     this.businessName,
     this.ownerName,
     this.businessDescription,
+    this.categoryName,
+    this.startingPrice,
     this.businessAddress,
     this.city,
     this.state,
@@ -137,15 +141,28 @@ class VendorProfileModel {
       applicationStatus: json['applicationStatus']?.toString(),
       businessName: json['businessName']?.toString(),
       ownerName: json['ownerName']?.toString(),
-      businessDescription: json['businessDescription']?.toString() ?? json['description']?.toString(),
-      businessAddress: json['businessAddress']?.toString() ?? json['address']?.toString(),
+      businessDescription:
+          json['businessDescription']?.toString() ??
+          json['description']?.toString(),
+      categoryName:
+          json['categoryName']?.toString() ??
+          (json['category'] is Map
+              ? (json['category'] as Map)['name']?.toString()
+              : null),
+      startingPrice: json['startingPrice'] is num
+          ? (json['startingPrice'] as num).round()
+          : int.tryParse(json['startingPrice']?.toString() ?? ''),
+      businessAddress:
+          json['businessAddress']?.toString() ?? json['address']?.toString(),
       city: json['city']?.toString(),
       state: json['state']?.toString(),
       pincode: json['pincode']?.toString(),
       addressUrl: json['addressUrl']?.toString(),
       yearsOfExperience: json['yearsOfExperience']?.toString(),
       categoryId: json['categoryId']?.toString(),
-      aadharFrontUrl: extractDocUrl(docs?['aadharFront'] ?? json['aadharFront']),
+      aadharFrontUrl: extractDocUrl(
+        docs?['aadharFront'] ?? json['aadharFront'],
+      ),
       aadharBackUrl: extractDocUrl(docs?['aadharBack'] ?? json['aadharBack']),
       liveSelfieUrl: extractDocUrl(docs?['liveSelfie'] ?? json['liveSelfie']),
       packages: json['packages'] is List ? (json['packages'] as List) : null,
@@ -154,10 +171,10 @@ class VendorProfileModel {
       bannerImgId: json['bannerImgId'] != null
           ? ImageModel.fromJson(json['bannerImgId'])
           : (json['bannerImg'] != null
-              ? ImageModel.fromJson(json['bannerImg'])
-              : (json['banner'] != null
-                  ? ImageModel.fromJson(json['banner'])
-                  : null)),
+                ? ImageModel.fromJson(json['bannerImg'])
+                : (json['banner'] != null
+                      ? ImageModel.fromJson(json['banner'])
+                      : null)),
       isExpiringSoon: json['isExpiringSoon'] as bool?,
       daysLeft: json['daysLeft'] is int
           ? json['daysLeft']
@@ -170,7 +187,8 @@ class VendorProfileModel {
       isSubscriptionActive: json['isSubscriptionActive'] as bool?,
       subscriptionStartDate: json['subscriptionStartDate']?.toString(),
       subscriptionEndDate: json['subscriptionEndDate']?.toString(),
-      subscriptionPlanTitle: planMap?['title']?.toString() ?? planMap?['name']?.toString(),
+      subscriptionPlanTitle:
+          planMap?['title']?.toString() ?? planMap?['name']?.toString(),
       subscriptionPlanType: planMap?['type']?.toString(),
       subscriptionPlanDurationMonths: planMap?['durationInMonths'] is int
           ? planMap!['durationInMonths']
@@ -202,7 +220,10 @@ class VendorProfileModel {
       if (applicationStatus != null) 'applicationStatus': applicationStatus,
       if (businessName != null) 'businessName': businessName,
       if (ownerName != null) 'ownerName': ownerName,
-      if (businessDescription != null) 'businessDescription': businessDescription,
+      if (businessDescription != null)
+        'businessDescription': businessDescription,
+      if (categoryName != null) 'categoryName': categoryName,
+      if (startingPrice != null) 'startingPrice': startingPrice,
       if (businessAddress != null) 'businessAddress': businessAddress,
       if (city != null) 'city': city,
       if (state != null) 'state': state,
@@ -222,9 +243,12 @@ class VendorProfileModel {
       if (daysRemaining != null) 'daysRemaining': daysRemaining,
       if (expiringMessage != null) 'expiringMessage': expiringMessage,
       if (subscriptionStatus != null) 'subscriptionStatus': subscriptionStatus,
-      if (isSubscriptionActive != null) 'isSubscriptionActive': isSubscriptionActive,
-      if (subscriptionStartDate != null) 'subscriptionStartDate': subscriptionStartDate,
-      if (subscriptionEndDate != null) 'subscriptionEndDate': subscriptionEndDate,
+      if (isSubscriptionActive != null)
+        'isSubscriptionActive': isSubscriptionActive,
+      if (subscriptionStartDate != null)
+        'subscriptionStartDate': subscriptionStartDate,
+      if (subscriptionEndDate != null)
+        'subscriptionEndDate': subscriptionEndDate,
       if (isAdActive != null) 'isAdActive': isAdActive,
       if (adTitle != null) 'adTitle': adTitle,
       if (adDuration != null) 'adDuration': adDuration,
@@ -247,6 +271,28 @@ class UserModel {
   String? profileImgUrl;
   ImageModel? bannerImgId;
   String? get bannerImgUrl => bannerImgId?.url ?? vendorProfile?.bannerImgUrl;
+
+  String? get vendorCardImageUrl {
+    final profileImage = profileImgUrl?.trim();
+    if (profileImage?.isNotEmpty == true) return profileImage;
+
+    final bannerImage = bannerImgUrl?.trim();
+    if (bannerImage?.isNotEmpty == true) return bannerImage;
+
+    final portfolio = vendorProfile?.portfolio;
+    if (portfolio != null && portfolio.isNotEmpty) {
+      final firstItem = portfolio.first;
+      final portfolioImage = firstItem is Map
+          ? (firstItem['url'] ?? firstItem['fileUrl'])?.toString().trim()
+          : firstItem is String
+          ? firstItem.trim()
+          : null;
+      if (portfolioImage?.isNotEmpty == true) return portfolioImage;
+    }
+
+    return null;
+  }
+
   int? roleId; // 2 = Customer, 3 = Vendor Partner
   bool? isVerified;
   int? otp;
@@ -305,8 +351,8 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    final rawToken = json['accessToken']?.toString() ??
-        json['token']?.toString();
+    final rawToken =
+        json['accessToken']?.toString() ?? json['token']?.toString();
 
     String? extractDocUrl(dynamic doc) {
       if (doc == null) return null;
@@ -319,22 +365,41 @@ class UserModel {
         ? json['documents'] as Map<String, dynamic>
         : null;
 
-    final vpMap = json['vendorProfile'] != null && json['vendorProfile'] is Map<String, dynamic>
-        ? json['vendorProfile'] as Map<String, dynamic>
-        : null;
+    final rawVendorProfile = json['vendorProfile'];
+    final categoryRaw = json['category'];
+    final vpMap = rawVendorProfile is Map
+        ? Map<String, dynamic>.from(rawVendorProfile)
+        : (json.containsKey('businessName')
+              ? <String, dynamic>{
+                  ...json,
+                  if (categoryRaw is Map)
+                    'categoryName': categoryRaw['name']?.toString(),
+                }
+              : null);
 
     final resolvedCity = json['city']?.toString() ?? vpMap?['city']?.toString();
-    final resolvedState = json['state']?.toString() ?? vpMap?['state']?.toString();
-    final resolvedPincode = json['pincode']?.toString() ?? vpMap?['pincode']?.toString();
-    final resolvedAddress = json['address']?.toString() ??
+    final resolvedState =
+        json['state']?.toString() ?? vpMap?['state']?.toString();
+    final resolvedPincode =
+        json['pincode']?.toString() ?? vpMap?['pincode']?.toString();
+    final resolvedAddress =
+        json['address']?.toString() ??
         json['businessAddress']?.toString() ??
         vpMap?['businessAddress']?.toString();
 
-    final bannerVal = json['bannerImgId'] ?? json['bannerImg'] ?? vpMap?['bannerImgId'] ?? vpMap?['bannerImg'] ?? vpMap?['banner'];
+    final bannerVal =
+        json['bannerImgId'] ??
+        json['bannerImg'] ??
+        vpMap?['bannerImgId'] ??
+        vpMap?['bannerImg'] ??
+        vpMap?['banner'];
 
     return UserModel(
       id: (json['_id'] ?? json['userId'] ?? json['id'])?.toString(),
-      fullName: json['fullName']?.toString() ?? vpMap?['ownerName']?.toString() ?? vpMap?['businessName']?.toString(),
+      fullName:
+          json['fullName']?.toString() ??
+          vpMap?['ownerName']?.toString() ??
+          vpMap?['businessName']?.toString(),
       email: json['email']?.toString(),
       mobile: (json['mobile'] ?? json['phone'])?.toString(),
       password: json['password']?.toString(),
@@ -356,11 +421,23 @@ class UserModel {
       city: resolvedCity,
       state: resolvedState,
       pincode: resolvedPincode,
-      about: json['about']?.toString() ?? json['bio']?.toString() ?? vpMap?['businessDescription']?.toString(),
-      bio: json['bio']?.toString() ?? json['about']?.toString() ?? vpMap?['businessDescription']?.toString(),
-      aadharFrontUrl: extractDocUrl(json['aadharFront'] ?? docs?['aadharFront'] ?? vpMap?['aadharFront']),
-      aadharBackUrl: extractDocUrl(json['aadharBack'] ?? docs?['aadharBack'] ?? vpMap?['aadharBack']),
-      liveSelfieUrl: extractDocUrl(json['liveSelfie'] ?? docs?['liveSelfie'] ?? vpMap?['liveSelfie']),
+      about:
+          json['about']?.toString() ??
+          json['bio']?.toString() ??
+          vpMap?['businessDescription']?.toString(),
+      bio:
+          json['bio']?.toString() ??
+          json['about']?.toString() ??
+          vpMap?['businessDescription']?.toString(),
+      aadharFrontUrl: extractDocUrl(
+        json['aadharFront'] ?? docs?['aadharFront'] ?? vpMap?['aadharFront'],
+      ),
+      aadharBackUrl: extractDocUrl(
+        json['aadharBack'] ?? docs?['aadharBack'] ?? vpMap?['aadharBack'],
+      ),
+      liveSelfieUrl: extractDocUrl(
+        json['liveSelfie'] ?? docs?['liveSelfie'] ?? vpMap?['liveSelfie'],
+      ),
       token: rawToken,
       accessToken: json['accessToken']?.toString(),
       refreshToken: json['refreshToken']?.toString(),

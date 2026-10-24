@@ -8,6 +8,7 @@ import '../../controllers/category_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/service_categories.dart';
 import '../../core/utils/app_animations.dart';
+import '../../data/api_provider/vendor_api_provider.dart';
 import '../../shared/widgets/app_search_bar.dart';
 import '../../shared/widgets/service_categories_bar.dart';
 import '../../utils/helper/storage_helper.dart';
@@ -16,6 +17,7 @@ import 'controllers/vendor_registration_controller.dart';
 import '../auth/controllers/auth_controller.dart';
 import '../auth/vendor_signup_screen.dart';
 import 'vendor_submitted_screen.dart';
+import 'vendor_subscription_checkout_flow.dart';
 
 class VendorRegistrationWizardScreen extends StatefulWidget {
   final int initialStep;
@@ -90,7 +92,6 @@ class _VendorRegistrationWizardScreenState
   // Step 5 State: Subscription Plans (fetched dynamically from /api/subscription/list)
   String _selectedPlan = '6_months'; // will hold selected plan _id
   bool _isSubscriptionPaid = false;
-  String _selectedPaymentMethod = 'UPI';
 
 
   List<Map<String, dynamic>> get _availablePlans {
@@ -98,10 +99,7 @@ class _VendorRegistrationWizardScreenState
       return _vendorController.subscriptionPlans.map((sub) {
         final id = sub.id ?? '';
         final name = sub.displayName;
-        final duration = sub.type ??
-            (sub.durationInMonths != null
-                ? '${sub.durationInMonths} Months'
-                : 'Subscription');
+        final duration = sub.durationLabel;
         final months = sub.durationInMonths ??
             (duration.contains('12')
                 ? 12
@@ -110,10 +108,7 @@ class _VendorRegistrationWizardScreenState
                     : (duration.contains('3') ? 3 : 1)));
         final price = sub.planPrice;
         final monthlyRate = months > 0 ? (price / months).round() : price;
-        final desc =
-            (sub.description != null && sub.description!.trim().isNotEmpty)
-                ? sub.description!.trim()
-                : 'Vendor partner subscription plan on Widoora';
+        final desc = sub.description?.trim() ?? '';
         final isPopular = months == 6 ||
             name.toLowerCase().contains('gold') ||
             name.toLowerCase().contains('popular');
@@ -150,13 +145,6 @@ class _VendorRegistrationWizardScreenState
           'isPopular': isPopular,
           'color': color,
           'icon': icon,
-          'features': [
-            'Verified Vendor Profile badge for $duration',
-            'Direct Bride & Groom Leads & WhatsApp inquiries',
-            'Portfolio & packages showcase on Widoora',
-            'Real-time inquiry dashboard & lead alerts',
-            '0% Commission on client bookings',
-          ],
         };
       }).toList();
     }
@@ -348,10 +336,10 @@ class _VendorRegistrationWizardScreenState
                   ),
                 ],
               ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 
@@ -503,7 +491,7 @@ class _VendorRegistrationWizardScreenState
     final categoryId = _resolveCategoryId();
     final planId = _resolvePlanId();
 
-    Utils.showInfo('Saving application & documents to server...');
+    Utils.showInfo('Saving your application and documents...');
 
     final res = await _vendorController.submitApplication(
       ownerName: _ownerNameController.text.trim().isNotEmpty
@@ -549,7 +537,7 @@ class _VendorRegistrationWizardScreenState
     if (!mounted) return;
 
     if (res.isSuccess == true) {
-      Utils.showSuccess('Profile details & documents uploaded to server!');
+      Utils.showSuccess('Your profile details and documents were saved.');
     }
   }
 
@@ -813,7 +801,7 @@ class _VendorRegistrationWizardScreenState
 
     if (_currentStep == 5) {
       if (!_isSubscriptionPaid) {
-        _showPaymentSheet();
+        await _showPaymentSheet();
         return;
       }
       _submitRegistration();
@@ -939,263 +927,51 @@ class _VendorRegistrationWizardScreenState
       }
     }
   }
-  void _showPaymentSheet() {
+  Future<void> _showPaymentSheet() async {
     final plan = _getSelectedPlan();
     if (plan == null) {
-      Utils.showError('Please wait for active plans to load, or select a plan to continue.');
+      Utils.showError(
+        'Please wait for plans to load, or select a plan to continue.',
+      );
       return;
     }
-    final price = _getPlanPrice(plan);
-    bool isProcessing = false;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Secure Checkout',
-                        style: GoogleFonts.cormorantGaramond(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                      Text(
-                        'Widoora Partner Subscription',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.darkGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Summary Box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${plan['name']}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        Text(
-                          '₹$price',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'GST (18% Included)',
-                          style: TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                        ),
-                        Text(
-                          'Inclusive',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Payable Amount',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        Text(
-                          '₹$price',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Payment Modes
-              const Text(
-                'Select Payment Mode',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              ...[
-                ('UPI (GPay / PhonePe / Paytm / BHIM)', Icons.qr_code_2_rounded),
-                ('Credit / Debit Card (Visa, Master, RuPay)', Icons.credit_card_rounded),
-                ('Net Banking (All Major Indian Banks)', Icons.account_balance_rounded),
-              ].map((m) {
-                final isSelected = _selectedPaymentMethod == m.$1;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () {
-                      setSheetState(() => _selectedPaymentMethod = m.$1);
-                      setState(() => _selectedPaymentMethod = m.$1);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.cream : AppColors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.grey.withValues(alpha: 0.3),
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(m.$2, size: 20, color: isSelected ? AppColors.primary : AppColors.darkGrey),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              m.$1,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primary : AppColors.black,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 16),
-
-              // Pay Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: isProcessing
-                      ? null
-                      : () async {
-                          final nav = Navigator.of(ctx);
-                          setSheetState(() => isProcessing = true);
-                          await Future.delayed(const Duration(milliseconds: 900));
-                          if (!mounted) return;
-                          setState(() => _isSubscriptionPaid = true);
-                          nav.pop();
-                          Utils.showSuccess('Payment Successful! ${plan['name']} activated.');
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: isProcessing
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.lock_rounded, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Pay ₹$price Securely',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.shield_outlined, size: 14, color: AppColors.grey),
-                    SizedBox(width: 4),
-                    Text(
-                      '256-Bit SSL Encrypted • Powered by Widoora Pay',
-                      style: TextStyle(fontSize: 11, color: AppColors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    final paymentCompleted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => VendorSubscriptionCouponScreen(
+          plan: plan,
+          onPay: (paymentMethod, couponCode) async {
+            final planId = plan['id']?.toString() ?? '';
+            if (planId.isEmpty || planId.startsWith('3_') ||
+                planId.startsWith('6_') || planId.startsWith('12_')) {
+              Utils.showError('Subscription plan ID is missing. Please reload plans.');
+              return false;
+            }
+            final result = await VendorApiProvider().buyPlan(
+              subscriptionPlanId: planId,
+              paymentMethod: paymentMethod == 'Net banking'
+                  ? 'NetBanking'
+                  : paymentMethod,
+              couponCode: couponCode,
+              transactionId: paymentMethod == 'Free' ? 'FREE-COUPON' : null,
+            );
+            if (!mounted) return false;
+            if (result.isSuccess == true) {
+              return true;
+            }
+            Utils.showError(
+              result.message ?? result.error ?? 'Plan purchase failed. Please try again.',
+            );
+            return false;
+          },
         ),
       ),
     );
-  }
+    if (!mounted || paymentCompleted != true) return;
 
+    setState(() => _isSubscriptionPaid = true);
+    Utils.showSuccess('Subscription activated successfully: ${plan['name']}.');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1269,11 +1045,11 @@ class _VendorRegistrationWizardScreenState
 
             // Step Content
             Expanded(
-              child: SingleChildScrollView(
+              child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: _buildCurrentStepView(),
+                children: [_buildCurrentStepView()],
               ),
             ),
 
@@ -1382,7 +1158,7 @@ class _VendorRegistrationWizardScreenState
                   const Icon(Icons.storefront_outlined, size: 36, color: AppColors.grey),
                   const SizedBox(height: 8),
                   Text(
-                    'No categories available from server',
+                    'No categories available',
                     style: GoogleFonts.cormorantGaramond(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1391,7 +1167,7 @@ class _VendorRegistrationWizardScreenState
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Vendor categories will appear here once loaded from the server.',
+                    'Vendor categories will appear here when available.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: AppColors.grey),
                   ),
@@ -1805,28 +1581,36 @@ class _VendorRegistrationWizardScreenState
     final isSelected = filePath != null && filePath.isNotEmpty;
     final isMissingError = _showDocValidationErrors && isRequired && !isSelected;
     final fileName = isSelected ? filePath.split(RegExp(r'[\\/]')).last : null;
+    final statusLabel = isSelected
+        ? 'UPLOADED'
+        : (isMissingError ? 'MISSING' : (isRequired ? 'REQUIRED' : 'OPTIONAL'));
+    final statusColor = isSelected
+        ? AppColors.success
+        : (isRequired ? AppColors.error : AppColors.darkGrey);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isMissingError ? const Color(0xFFFFF6F6) : AppColors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: isMissingError
+            ? const Color(0xFFFFF8F8)
+            : (isSelected ? const Color(0xFFFCFFFD) : AppColors.white),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected
-              ? AppColors.success.withValues(alpha: 0.6)
+              ? AppColors.success.withValues(alpha: 0.32)
               : (isMissingError
                   ? AppColors.error
-                  : AppColors.grey.withValues(alpha: 0.25)),
-          width: isSelected || isMissingError ? 1.6 : 1,
+                  : AppColors.grey.withValues(alpha: 0.18)),
+          width: isMissingError ? 1.4 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? AppColors.success.withValues(alpha: 0.08)
+                ? AppColors.success.withValues(alpha: 0.05)
                 : (isMissingError
-                    ? AppColors.error.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.03)),
-            blurRadius: 8,
+                    ? AppColors.error.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.025)),
+            blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
@@ -1835,154 +1619,168 @@ class _VendorRegistrationWizardScreenState
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showDocumentSourceSheet(key, title),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isSelected)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      color: AppColors.cream,
-                      child: Image.file(
-                        File(filePath),
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, e, s) => const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.success,
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isMissingError
-                          ? AppColors.error.withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      isMissingError ? Icons.error_outline_rounded : icon,
-                      color: isMissingError ? AppColors.error : AppColors.primary,
-                      size: 24,
-                    ),
-                  ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: isMissingError ? AppColors.error : AppColors.black,
+                Row(
+                  children: [
+                    if (isSelected)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 54,
+                          height: 54,
+                          child: Image.file(
+                            File(filePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (c, e, s) => Container(
+                              color: AppColors.success.withValues(alpha: 0.08),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.description_outlined,
+                                color: AppColors.success,
+                                size: 25,
                               ),
                             ),
                           ),
-                          if (isRequired) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.success.withValues(alpha: 0.12)
-                                    : (isMissingError
-                                        ? AppColors.error
-                                        : AppColors.error.withValues(alpha: 0.1)),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                isSelected
-                                    ? 'ATTACHED ✓'
-                                    : (isMissingError ? 'REQUIRED *' : 'REQUIRED'),
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.3,
-                                  color: isSelected
-                                      ? AppColors.success
-                                      : (isMissingError ? Colors.white : AppColors.error),
-                                ),
-                              ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: isMissingError
+                              ? AppColors.error.withValues(alpha: 0.08)
+                              : AppColors.primary.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          isMissingError ? Icons.error_outline_rounded : icon,
+                          color: isMissingError
+                              ? AppColors.error
+                              : AppColors.primary,
+                          size: 26,
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.2,
+                              fontWeight: FontWeight.w700,
+                              color: isMissingError
+                                  ? AppColors.error
+                                  : AppColors.black,
                             ),
-                          ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isSelected && fileName != null
+                                ? _shortenFileName(fileName)
+                                : (isMissingError
+                                    ? 'Upload this required document to continue'
+                                    : subtitle),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.3,
+                              color: isSelected
+                                  ? AppColors.success
+                                  : (isMissingError
+                                      ? AppColors.error
+                                      : AppColors.darkGrey),
+                              fontWeight: isSelected || isMissingError
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        isSelected
-                            ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded')
-                            : (isMissingError ? 'Please upload this required document' : subtitle),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: isSelected
-                              ? AppColors.success
-                              : (isMissingError ? AppColors.error : AppColors.darkGrey),
-                          fontWeight: isSelected || isMissingError ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.success.withValues(alpha: 0.12)
-                        : (isMissingError
-                            ? AppColors.error.withValues(alpha: 0.12)
-                            : AppColors.primary.withValues(alpha: 0.08)),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.success.withValues(alpha: 0.5)
-                          : (isMissingError
-                              ? AppColors.error.withValues(alpha: 0.6)
-                              : AppColors.primary.withValues(alpha: 0.3)),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isSelected
-                            ? Icons.check_circle_rounded
-                            : (isMissingError ? Icons.warning_amber_rounded : Icons.upload_file_rounded),
-                        size: 13,
-                        color: isSelected
-                            ? AppColors.success
-                            : (isMissingError ? AppColors.error : AppColors.primary),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isSelected
-                            ? 'Selected ✓'
-                            : (isMissingError ? 'Upload *' : 'Upload'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected
-                              ? AppColors.success
-                              : (isMissingError ? AppColors.error : AppColors.primary),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.2),
                         ),
                       ),
-                    ],
-                  ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.35,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.success.withValues(alpha: 0.08)
+                            : AppColors.primary.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.success.withValues(alpha: 0.25)
+                              : AppColors.primary.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.edit_outlined
+                                : Icons.upload_file_outlined,
+                            size: 15,
+                            color: isSelected
+                                ? AppColors.success
+                                : AppColors.primary,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            isSelected ? 'Change file' : 'Upload document',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected
+                                  ? AppColors.success
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -3057,12 +2855,12 @@ class _VendorRegistrationWizardScreenState
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    'Plans designed for $_selectedCategory partners',
-                    style: const TextStyle(
+                  const Text(
+                    'Select your partnership duration',
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                      color: AppColors.darkGrey,
                     ),
                   ),
                 ],
@@ -3070,54 +2868,7 @@ class _VendorRegistrationWizardScreenState
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'Select your partnership duration (3, 6, or 12 Months) to get verified, receive real-time client leads, and activate your vendor profile on Widoora.',
-          style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey, height: 1.4),
-        ),
         const SizedBox(height: 14),
-
-        // Server Sync Confirmation Banner
-        Container(
-          margin: const EdgeInsets.only(bottom: 18),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF86EFAC)),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.cloud_done_rounded, color: Color(0xFF16A34A), size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Details & Documents Saved to Server',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF15803D),
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Your business profile has been securely registered on our server. Select a plan below to activate instant client bookings.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF166534),
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
 
         // Plans List (Fetched dynamically from /api/subscription/list)
         Obx(() {
@@ -3142,7 +2893,7 @@ class _VendorRegistrationWizardScreenState
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Loading live subscription plans from server...',
+                    'Loading subscription plans...',
                     style: TextStyle(
                       fontSize: 13,
                       color: AppColors.darkGrey,
@@ -3169,12 +2920,12 @@ class _VendorRegistrationWizardScreenState
                   const Icon(Icons.cloud_off_rounded, color: AppColors.darkGrey, size: 36),
                   const SizedBox(height: 8),
                   const Text(
-                    'No active plans returned by server',
+                    'No subscription plans are available right now.',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Tap below to reload dynamic subscription plans from http://192.168.1.100:5174/api/subscription/list',
+                    'Please try again in a moment.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.darkGrey, fontSize: 12),
                   ),
@@ -3182,7 +2933,7 @@ class _VendorRegistrationWizardScreenState
                   ElevatedButton.icon(
                     onPressed: () => _vendorController.fetchSubscriptions(forceRefresh: true),
                     icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Retry Fetching Plans'),
+                    label: const Text('Try Again'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -3200,7 +2951,6 @@ class _VendorRegistrationWizardScreenState
               final price = _getPlanPrice(plan);
               final isPopular = plan['isPopular'] == true;
               final savings = plan['savings'] as String?;
-              final status = (plan['status'] as String?) ?? 'Active';
 
               return GestureDetector(
                 onTap: () {
@@ -3343,64 +3093,13 @@ class _VendorRegistrationWizardScreenState
                                                     ),
                                                   ),
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.success.withValues(alpha: 0.12),
-                                                    borderRadius: BorderRadius.circular(5),
-                                                  ),
-                                                  child: Text(
-                                                    '● $status',
-                                                    style: const TextStyle(
-                                                      fontSize: 8.5,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: AppColors.success,
-                                                    ),
-                                                  ),
-                                                ),
                                               ],
-                                            ),
-                                            Text(
-                                              plan['tagline'] as String,
-                                              style: const TextStyle(
-                                                fontSize: 11.5,
-                                                color: AppColors.darkGrey,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : AppColors.grey.withValues(alpha: 0.5),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: isSelected
-                                      ? Center(
-                                          child: Container(
-                                            width: 12,
-                                            height: 12,
-                                            decoration: const BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                        )
-                                      : null,
                                 ),
                               ],
                             ),
@@ -3440,36 +3139,17 @@ class _VendorRegistrationWizardScreenState
                             const SizedBox(height: 12),
                             const Divider(height: 1),
                             const SizedBox(height: 12),
-                            // Features
-                            ...((plan['features'] as List<String>).map((feat) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Padding(
-                                      padding: EdgeInsets.only(top: 2, right: 8),
-                                      child: Icon(
-                                        Icons.check_circle_rounded,
-                                        color: AppColors.success,
-                                        size: 15,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        feat,
-                                        style: const TextStyle(
-                                          fontSize: 12.5,
-                                          color: AppColors.black,
-                                          fontWeight: FontWeight.w500,
-                                          height: 1.35,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                            if ((plan['tagline'] as String?)?.isNotEmpty ==
+                                true) ...[
+                              Text(
+                                plan['tagline'] as String,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.darkGrey,
+                                  height: 1.4,
                                 ),
-                              );
-                            })),
+                              ),
+                            ],
                             const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,

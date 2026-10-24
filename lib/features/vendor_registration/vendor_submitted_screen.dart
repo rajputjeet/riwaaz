@@ -272,7 +272,7 @@ class _VendorSubmittedScreenState extends State<VendorSubmittedScreen> {
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        'SERVER STATUS: ${status.toUpperCase()}',
+                                        'STATUS: ${status.toUpperCase()}',
                                         style: TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w800,
