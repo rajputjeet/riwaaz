@@ -17,7 +17,6 @@ import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/app_confirmation_dialog.dart';
-import '../../shared/widgets/delete_account_dialog.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
@@ -134,7 +133,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   String get _planSubtitle {
     if (_activePlan == null) return 'No active plan • View plans';
     final plan = _activePlan!;
-    if (plan.isExpired) return 'Plan expired • Choose a plan';
+    if (plan.isExpired) return 'Plan expired • Renew now';
     return '${plan.planTitle ?? 'Active Plan'} • ${plan.daysRemaining} days left';
   }
 
@@ -606,7 +605,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: const Text(
-                                              'Buy Plan',
+                                              'Renew',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,
@@ -1115,7 +1114,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
       iconColor: AppColors.primary,
       iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
       title: 'Log Out?',
-      message: 'You can sign back in anytime to continue using Widoora.',
+      message:
+          'Are you sure you want to log out? You can sign back into your vendor account anytime.',
       confirmLabel: 'Log Out',
       cancelLabel: 'Cancel',
       confirmColor: AppColors.primary,
@@ -1134,29 +1134,73 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     );
   }
 
-  Future<void> _showDeleteAccountDialog(BuildContext context) async {
-    final deleted = await DeleteAccountDialog.show(
+  void _showDeleteAccountDialog(BuildContext context) {
+    AppConfirmationDialog.show(
       context: context,
-      isVendor: true,
-      onDelete: (reason) async {
-        final response = await _userApi.deleteAccount(reason: reason);
-        if (response.isSuccess == true) return null;
-        return response.message ?? response.error ?? 'Unable to delete your account. Please try again.';
+      icon: Icons.warning_amber_rounded,
+      iconColor: AppColors.error,
+      iconBackgroundColor: AppColors.error.withValues(alpha: 0.1),
+      isDestructive: true,
+      title: 'Delete Vendor Account?',
+      message:
+          'This action is permanent and cannot be undone. All your vendor data will be permanently erased.',
+      confirmLabel: 'Delete Permanently',
+      cancelLabel: 'Keep Account',
+      customContent: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                SizedBox(width: 6),
+                Text(
+                  'The following will be deleted:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text('• Business profile, verified badge & reviews',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Portfolio photos, media & service packages',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Active vendor subscription plan & remaining days',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+            SizedBox(height: 4),
+            Text('• Client booking records & incoming requests',
+                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
+          ],
+        ),
+      ),
+      onConfirm: () async {
+        if (Get.isRegistered<AuthController>()) {
+          await Get.find<AuthController>().logout();
+        } else {
+          await StorageHelper().clearAllData();
+        }
+        Utils.showSuccess('Your vendor account has been deleted successfully.');
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          FadeScaleRoute(page: const LoginScreen()),
+          (route) => false,
+        );
       },
     );
-    if (deleted != true) return;
-    if (Get.isRegistered<AuthController>()) {
-      await Get.find<AuthController>().logout();
-    } else {
-      await StorageHelper().clearAllData();
-    }
-    if (!context.mounted) return;
-    Utils.showSuccess('Your account has been permanently deleted.');
-    Navigator.of(context).pushAndRemoveUntil(
-      FadeScaleRoute(page: const LoginScreen()),
-      (route) => false,
-    );
   }
+
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
@@ -1273,7 +1317,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final response = snapshot.data;
                   if (response == null || response.isSuccess != true) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load FAQs. Please try again.',
+                      message: response?.message ?? 'Could not load FAQs from server.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
