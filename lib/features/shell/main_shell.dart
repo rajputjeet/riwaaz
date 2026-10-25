@@ -27,6 +27,7 @@ import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/app_confirmation_dialog.dart';
+import '../../shared/widgets/delete_account_dialog.dart';
 
 /// The main navigation shell — holds all customer tabs in an [IndexedStack]
 class MainShell extends StatefulWidget {
@@ -2624,101 +2625,29 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    AppConfirmationDialog.show(
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    final deleted = await DeleteAccountDialog.show(
       context: context,
-      icon: Icons.warning_amber_rounded,
-      iconColor: AppColors.error,
-      iconBackgroundColor: AppColors.error.withValues(alpha: 0.1),
-      isDestructive: true,
-      title: 'Delete Account Permanently?',
-      message:
-          'This action is irreversible. All your wedding planning data will be permanently erased.',
-      confirmLabel: 'Delete Permanently',
-      cancelLabel: 'Keep Account',
-      customContent: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 16,
-                  color: AppColors.error,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'The following will be deleted:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.error,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            Text(
-              '• Profile & event celebration details',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.darkGrey,
-                height: 1.35,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '• Wedding checklist & task progress',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.darkGrey,
-                height: 1.35,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '• Wedding budget tracker & cost estimates',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.darkGrey,
-                height: 1.35,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '• Saved vendor shortlists & bookings',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.darkGrey,
-                height: 1.35,
-              ),
-            ),
-          ],
-        ),
-      ),
-      onConfirm: () async {
-        if (Get.isRegistered<AuthController>()) {
-          await Get.find<AuthController>().logout();
-        } else {
-          await StorageHelper().clearAllData();
-        }
-        Utils.showSuccess('Your account has been deleted successfully.');
-        if (!context.mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          FadeScaleRoute(page: const LoginScreen()),
-          (route) => false,
-        );
+      isVendor: false,
+      onDelete: (reason) async {
+        final response = await _userApi.deleteAccount(reason: reason);
+        if (response.isSuccess == true) return null;
+        return response.message ?? response.error ?? 'Unable to delete your account. Please try again.';
       },
     );
+    if (deleted != true) return;
+    if (Get.isRegistered<AuthController>()) {
+      await Get.find<AuthController>().logout();
+    } else {
+      await StorageHelper().clearAllData();
+    }
+    if (!context.mounted) return;
+    Utils.showSuccess('Your account has been permanently deleted.');
+    Navigator.of(context).pushAndRemoveUntil(
+      FadeScaleRoute(page: const LoginScreen()),
+      (route) => false,
+    );
   }
-
   @override
   Widget build(BuildContext context) {
     if (_isNoInternet) {

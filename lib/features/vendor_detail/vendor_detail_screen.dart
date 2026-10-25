@@ -657,6 +657,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     required IconData icon,
     required String title,
     required String message,
+    bool alignLeft = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -676,6 +677,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           ],
         ),
         child: Column(
+          crossAxisAlignment: alignLeft
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
             Container(
               width: 54,
@@ -689,7 +693,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             const SizedBox(height: 14),
             Text(
               title,
-              textAlign: TextAlign.center,
+              textAlign: alignLeft ? TextAlign.left : TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -699,7 +703,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             const SizedBox(height: 6),
             Text(
               message,
-              textAlign: TextAlign.center,
+              textAlign: alignLeft ? TextAlign.left : TextAlign.center,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.darkGrey,
                 height: 1.45,
@@ -870,28 +874,38 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         icon: Icons.info_outline_rounded,
         title: 'About information coming soon',
         message: "This vendor hasn't added business details yet.",
+        alignLeft: true,
       );
     }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'About ${widget.vendorName}',
+            textAlign: TextAlign.left,
             style: AppTextStyles.headlineSmall,
           ),
           if (bio.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(bio, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
+            Text(
+              bio,
+              textAlign: TextAlign.left,
+              style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
+            ),
           ],
           if (details.isNotEmpty) ...[
             const SizedBox(height: 16),
             ...details.map(
               (detail) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text(detail, style: AppTextStyles.bodyMedium),
+                child: Text(
+                  detail,
+                  textAlign: TextAlign.left,
+                  style: AppTextStyles.bodyMedium,
+                ),
               ),
             ),
           ],

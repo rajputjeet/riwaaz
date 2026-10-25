@@ -18,6 +18,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
   final AdApiProvider _adApi = AdApiProvider();
 
   bool _isLoading = true;
+  bool _campaignStatusLoaded = false;
   String? _errorMsg;
 
   VendorMyAdModel _myAd = VendorMyAdModel();
@@ -33,6 +34,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
+      _campaignStatusLoaded = false;
       _errorMsg = null;
     });
 
@@ -49,6 +51,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
         setState(() {
           if (myAdRes.isSuccess == true && myAdRes.data != null) {
             _myAd = myAdRes.data as VendorMyAdModel;
+            _campaignStatusLoaded = true;
+          } else {
+            _errorMsg =
+                'Unable to check your current campaign. Please refresh to try again.';
           }
           if (plansRes.isSuccess == true && plansRes.data != null) {
             _adPlans = (plansRes.data as List<AdPlanModel>);
@@ -64,7 +70,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 duration: '1 Day',
                 durationInDays: 1,
                 price: 199,
-                description: 'Showcase your business at top of homepage for 24 hours.',
+                description:
+                    'Showcase your business at top of homepage for 24 hours.',
               ),
               AdPlanModel(
                 id: '3_days_spotlight',
@@ -72,7 +79,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 duration: '3 Days',
                 durationInDays: 3,
                 price: 499,
-                description: 'Get featured on home & category listings for 3 full days.',
+                description:
+                    'Get featured on home & category listings for 3 full days.',
               ),
               AdPlanModel(
                 id: '1_week_platinum',
@@ -80,14 +88,17 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 duration: '1 Week',
                 durationInDays: 7,
                 price: 999,
-                description: 'Maximum visibility across app for 7 consecutive days.',
+                description:
+                    'Maximum visibility across app for 7 consecutive days.',
               ),
             ];
           }
 
           if (_selectedPlanId == null && _adPlans.isNotEmpty) {
             // Default select the middle/popular plan or first
-            _selectedPlanId = _adPlans.length > 1 ? _adPlans[1].id : _adPlans.first.id;
+            _selectedPlanId = _adPlans.length > 1
+                ? _adPlans[1].id
+                : _adPlans.first.id;
           }
 
           _isLoading = false;
@@ -112,7 +123,16 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
   }
 
   Future<void> _openAdCheckoutFlow([AdPlanModel? targetPlan]) async {
-    final plan = targetPlan ??
+    if (!_campaignStatusLoaded || _myAd.isAdActive) {
+      Utils.showError(
+        _myAd.isAdActive
+            ? 'You can buy another ad plan once your current campaign is inactive.'
+            : 'Please refresh to check your current campaign before buying an ad plan.',
+      );
+      return;
+    }
+    final plan =
+        targetPlan ??
         _selectedPlan ??
         (_adPlans.isNotEmpty ? _adPlans.first : null);
     if (plan == null) {
@@ -135,6 +155,22 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
           plan: planMap,
           isAd: true,
           onPay: (paymentMethod, couponCode) async {
+            // Recheck immediately before purchase in case another device activated an ad.
+            final currentAd = await _adApi.getMyAd();
+            if (!mounted) return false;
+            if (currentAd.isSuccess != true || currentAd.data == null) {
+              Utils.showError(
+                'Unable to check your current campaign. Please try again.',
+              );
+              return false;
+            }
+            setState(() => _myAd = currentAd.data!);
+            if (_myAd.isAdActive) {
+              Utils.showError(
+                'You can buy another ad plan once your current campaign is inactive.',
+              );
+              return false;
+            }
             final res = await _adApi.buyAdPlan(
               plan.id ?? '',
               couponCode: couponCode,
@@ -175,7 +211,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
         final res = await _adApi.uploadAdBanner(bannerFile);
         if (res.isSuccess == true) {
           Utils.showSuccess(
-            res.message ?? 'Ad banner uploaded and attached to running campaign!',
+            res.message ??
+                'Ad banner uploaded and attached to running campaign!',
           );
           await _loadData();
           return true;
@@ -205,7 +242,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: AppColors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -224,7 +265,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
               color: AppColors.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -239,12 +283,19 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _errorMsg!,
-                                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                style: const TextStyle(
+                                  color: AppColors.error,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ],
@@ -261,30 +312,40 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
 
                     const SizedBox(height: 24),
 
-                    // 3. Section Header: Available Ad Plans
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt_rounded, color: Color(0xFFEAB308), size: 22),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Choose Your Ad Duration',
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
+                    if (_campaignStatusLoaded && !_myAd.isAdActive) ...[
+                      // 3. Section Header: Available Ad Plans
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.bolt_rounded,
+                            color: Color(0xFFEAB308),
+                            size: 22,
                           ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Choose Your Ad Duration',
+                            style: GoogleFonts.cormorantGaramond(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Get guaranteed top placement on user app homepage, search ranking & category banners.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.darkGrey,
+                          height: 1.35,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Get guaranteed top placement on user app homepage, search ranking & category banners.',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.darkGrey, height: 1.35),
-                    ),
-                    const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
-                    // 4. Ad Plans List
-                    ..._adPlans.map((plan) => _buildAdPlanCard(plan)),
+                      // 4. Ad Plans List
+                      ..._adPlans.map((plan) => _buildAdPlanCard(plan)),
+                    ],
 
                     const SizedBox(height: 24),
 
@@ -297,7 +358,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 ),
               ),
             ),
-      bottomNavigationBar: _isLoading
+      bottomNavigationBar:
+          _isLoading || !_campaignStatusLoaded || _myAd.isAdActive
           ? null
           : Container(
               color: AppColors.white,
@@ -323,10 +385,16 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                               SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               ),
                               SizedBox(width: 10),
-                              Text('Activating Ad...', style: TextStyle(fontWeight: FontWeight.w700)),
+                              Text(
+                                'Activating Ad...',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
                             ],
                           )
                         : Row(
@@ -335,10 +403,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                               const Icon(Icons.rocket_launch_rounded, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                _myAd.isAdActive
-                                    ? 'Extend / Boost Ad Duration'
-                                    : 'Boost Profile with Ad (₹${_selectedPlan?.planPrice ?? 499})',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                'Boost Profile with Ad (₹${_selectedPlan?.planPrice ?? 499})',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ],
                           ),
@@ -376,7 +445,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4.5,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFF3D088), Color(0xFFD4A017)],
@@ -392,8 +464,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.workspace_premium_rounded,
-                          color: Color(0xFF2E090D), size: 13),
+                      Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Color(0xFF2E090D),
+                        size: 13,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'ACTIVE AD CAMPAIGN',
@@ -408,16 +483,25 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.timer_outlined, size: 12, color: Colors.white),
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 12,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${ad.daysLeft} Day${ad.daysLeft == 1 ? "" : "s"} Left',
@@ -444,7 +528,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
             ),
             const SizedBox(height: 3),
             Text(
-              'Duration: ${ad.duration ?? "${ad.durationInDays ?? 3} Days"} • Top Placement Active',
+              'Duration: ${ad.duration ?? "${ad.durationInDays ?? 3} Days"}',
               style: TextStyle(
                 fontSize: 12.5,
                 color: Colors.white.withValues(alpha: 0.85),
@@ -455,7 +539,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  height: 90,
+                  height: 160,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.25),
@@ -466,15 +550,22 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                       Image.network(
                         ad.bannerUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Center(
-                          child: Icon(Icons.broken_image_rounded, color: Colors.white70),
-                        ),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                              child: Icon(
+                                Icons.broken_image_rounded,
+                                color: Colors.white70,
+                              ),
+                            ),
                       ),
                       Positioned(
                         top: 6,
                         left: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2E7D32),
                             borderRadius: BorderRadius.circular(8),
@@ -482,7 +573,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 11,
+                                color: Colors.white,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'Live on Home Carousel',
@@ -508,13 +603,15 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
               child: ElevatedButton.icon(
                 onPressed: () => _openBannerUploadDialog(),
                 icon: Icon(
-                  ad.hasBanner ? Icons.edit_rounded : Icons.add_photo_alternate_outlined,
+                  ad.hasBanner
+                      ? Icons.edit_rounded
+                      : Icons.add_photo_alternate_outlined,
                   size: 16,
                   color: AppColors.primaryDark,
                 ),
                 label: Text(
                   ad.hasBanner
-                      ? 'Update Homepage Banner'
+                      ? 'Update Ad Banner'
                       : 'Upload Homepage Ad Banner',
                   style: const TextStyle(
                     fontSize: 13,
@@ -544,10 +641,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE8DCCF),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE8DCCF), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -620,7 +714,9 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
 
   Widget _buildAdPlanCard(AdPlanModel plan) {
     final isSelected = _selectedPlanId == plan.id;
-    final isPopular = (plan.durationInDays == 3) || (plan.title?.contains('Spotlight') == true);
+    final isPopular =
+        (plan.durationInDays == 3) ||
+        (plan.title?.contains('Spotlight') == true);
     final days = plan.durationInDays ?? 1;
 
     final IconData planIcon = days <= 1
@@ -679,7 +775,9 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                       ),
                       child: Icon(
                         planIcon,
-                        color: isSelected ? AppColors.primary : AppColors.goldDark,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.goldDark,
                         size: 22,
                       ),
                     ),
@@ -690,7 +788,9 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: isSelected ? AppColors.primaryDark : AppColors.black,
+                          color: isSelected
+                              ? AppColors.primaryDark
+                              : AppColors.black,
                           letterSpacing: 0.2,
                         ),
                       ),
@@ -699,7 +799,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                     // Selected Pill (with check icon) or Popular Badge
                     if (isSelected)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4.5,
+                        ),
                         decoration: BoxDecoration(
                           gradient: AppColors.primaryGradient,
                           borderRadius: BorderRadius.circular(20),
@@ -714,7 +817,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_rounded, color: Colors.white, size: 13),
+                            Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 13,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'SELECTED',
@@ -730,7 +837,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                       )
                     else if (isPopular)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFF3D088), Color(0xFFD4A017)],
@@ -758,7 +868,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  plan.description ?? 'Boost your business visibility and get top placement.',
+                  plan.description ??
+                      'Boost your business visibility and get top placement.',
                   style: const TextStyle(
                     fontSize: 12.5,
                     color: AppColors.darkGrey,
@@ -772,7 +883,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
@@ -1020,44 +1134,59 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        ..._myAd.history.map((h) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        h.title ?? 'Ad Campaign',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        ..._myAd.history.map(
+          (h) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      h.title ?? 'Ad Campaign',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
-                      Text(
-                        '${h.duration ?? ""} • ₹${h.price?.toInt() ?? 0}',
-                        style: const TextStyle(fontSize: 11.5, color: AppColors.darkGrey),
+                    ),
+                    Text(
+                      '${h.duration ?? ""} • ₹${h.price?.toInt() ?? 0}',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.darkGrey,
                       ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.offWhite,
-                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      h.status ?? 'Completed',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.darkGrey),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.offWhite,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    h.status ?? 'Completed',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkGrey,
                     ),
                   ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

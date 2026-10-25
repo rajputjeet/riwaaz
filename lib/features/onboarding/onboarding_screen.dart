@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     _floatingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
   }
 
@@ -199,175 +199,111 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // CENTER VISUAL (Mobile Mockup with Badges positioned closely)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildPhoneMockupVisual() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availH = constraints.maxHeight;
-        final availW = constraints.maxWidth;
-
-        // Mobile Phone height & width based on available visual area
-        final phoneH = (availH * 0.94).clamp(320.0, 520.0);
-        // Cropped phone aspect ratio is 423 / 941 ≈ 0.4495
-        final phoneW = phoneH * 0.4495;
-        final phoneLeft = (availW - phoneW) / 2;
-
-        // Badge card dimensions (prominent size, cream rounded cards)
-        const badgeW = 76.0;
-        const badgeH = 70.0;
-
-        // Position badges snugly close to the mobile's outer edges
-        // Right side badges moved more close to the mobile (hovering over phone bezel)
-        final leftBadgePos = (phoneLeft - badgeW).clamp(4.0, availW * 0.22);
-        final rightBadgePos = (phoneLeft - badgeW + 12.0).clamp(
-          8.0,
-          availW * 0.28,
-        );
-
-        return AnimatedBuilder(
-          animation: _floatingController,
-          builder: (context, _) {
-            final t = _floatingController.value;
-            final f0 = math.sin(t * math.pi) * 4.5;
-            final f1 = math.sin(t * math.pi + 1.1) * 4.5;
-            final f2 = math.sin(t * math.pi + 2.2) * 4.5;
-            final phoneFloat = math.sin(t * math.pi) * 3.0;
-
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                // ── Centered Mobile Phone Mockup ──
-                Center(
-                  child: Transform.translate(
-                    offset: Offset(0, phoneFloat),
-                    child: SizedBox(
-                      width: phoneW,
-                      height: phoneH,
-                      child: Image.asset(
-                        AppImages.onboardingPhoneMockup,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                      ),
-                    ),
-                  ),
+    // Scale the illustration together so badges never overlap the phone.
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: 380,
+          height: 450,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildBadgeColumn(const [
+                (AppImages.onboardingBadgePhotographers, 'Photographers'),
+                (AppImages.onboardingBadgeMakeup, 'Makeup Artists'),
+                (AppImages.onboardingBadgeDecorators, 'Decorators'),
+              ]),
+              const SizedBox(width: 2),
+              AnimatedBuilder(
+                animation: _floatingController,
+                child: Image.asset(
+                  AppImages.onboardingPhoneMockup,
+                  width: 188,
+                  height: 420,
+                  fit: BoxFit.contain,
                 ),
-
-                // ── Left Badge Column (Photographers, Makeup Artists, Decorators) ──
-                Positioned(
-                  left: leftBadgePos,
-                  top: availH * 0.05,
-                  bottom: availH * 0.05,
-                  width: badgeW,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Transform.translate(
-                        offset: Offset(0, f0),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgePhotographers,
-                          label: 'Photographers',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(0, -f1),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgeMakeup,
-                          label: 'Makeup Artists',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(0, f2),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgeDecorators,
-                          label: 'Decorators',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                    ],
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(
+                    0,
+                    math.sin(_floatingController.value * math.pi) * 3,
                   ),
+                  child: child,
                 ),
-
-                // ── Right Badge Column (Caterers, Venues, & More) ──
-                Positioned(
-                  right: rightBadgePos,
-                  top: availH * 0.05,
-                  bottom: availH * 0.05,
-                  width: badgeW,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Transform.translate(
-                        offset: Offset(0, -f0),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgeCaterers,
-                          label: 'Caterers',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(0, f1),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgeVenues,
-                          label: 'Venues',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(14.0, -f2),
-                        child: _buildBadgeCard(
-                          imagePath: AppImages.onboardingBadgeMore,
-                          label: '& More',
-                          badgeW: badgeW,
-                          badgeH: badgeH,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+              const SizedBox(width: 2),
+              _buildBadgeColumn(const [
+                (AppImages.onboardingBadgeCaterers, 'Caterers'),
+                (AppImages.onboardingBadgeVenues, 'Venues'),
+                (AppImages.onboardingBadgeMore, '& More'),
+              ]),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildBadgeCard({
-    required String imagePath,
-    required String label,
-    required double badgeW,
-    required double badgeH,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: badgeW,
-          height: badgeH,
-          child: Image.asset(imagePath, fit: BoxFit.contain),
+  Widget _buildBadgeColumn(List<(String, String)> badges) {
+    return AnimatedBuilder(
+      animation: _floatingController,
+      child: SizedBox(
+        width: 84,
+        height: 390,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            for (final badge in badges)
+              _buildBadgeCard(imagePath: badge.$1, label: badge.$2),
+          ],
         ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF2A2A2A),
-            height: 1.2,
+      ),
+      // Matching vertical motion keeps left and right badges aligned.
+      builder: (context, child) => Transform.translate(
+        offset: Offset(
+          0,
+          math.cos(_floatingController.value * math.pi) * 9,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildBadgeCard({required String imagePath, required String label}) {
+    return SizedBox(
+      height: 104,
+      width: 84,
+      child: Column(
+        children: [
+          Image.asset(
+            imagePath,
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 20,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2A2A2A),
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
