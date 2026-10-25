@@ -40,8 +40,10 @@ abstract class ApiConstants {
   // 6. Vendor Subscription Plan APIs
   static const String vendorActivePlan = "/api/users/vendor/plan/active";
   static const String vendorActivePlanAlt = "/api/user/vendor/plan/active";
-  static const String vendorBuyPlan = "/api/users/vendor/plan/buy";
-  static const String vendorBuyPlanAlt = "/api/user/vendor/plan/buy";
+  static const String vendorBuyPlan = "/api/user/vendor/plan/buy";
+  static const String vendorBuyPlanAlt = "/api/users/vendor/plan/buy";
+  static const String razorpayCreateOrder = "/api/payment/razorpay/create-order";
+  static const String razorpayVerifyPayment = "/api/payment/razorpay/verify";
   static const String vendorCoupons = "/api/vendor/coupons";
   static const String vendorCouponApply = "/api/vendor/coupon/apply";
   static const String discountCoupons = "/api/discount/coupons";

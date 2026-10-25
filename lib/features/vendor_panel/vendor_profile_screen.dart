@@ -134,7 +134,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   String get _planSubtitle {
     if (_activePlan == null) return 'No active plan • View plans';
     final plan = _activePlan!;
-    if (plan.isExpired) return 'Plan expired • Renew now';
+    if (plan.isExpired) return 'Plan expired • Choose a plan';
     return '${plan.planTitle ?? 'Active Plan'} • ${plan.daysRemaining} days left';
   }
 
@@ -606,7 +606,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: const Text(
-                                              'Renew',
+                                              'Buy Plan',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,

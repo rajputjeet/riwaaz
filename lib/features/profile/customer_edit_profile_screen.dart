@@ -430,12 +430,11 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                       controller: _emailCtrl,
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      isRequired: true,
+                      isRequired: false,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter email address';
-                        }
-                        if (!v.contains('@') || !v.contains('.')) {
+                        final email = v?.trim() ?? '';
+                        if (email.isNotEmpty &&
+                            (!email.contains('@') || !email.contains('.'))) {
                           return 'Please enter a valid email address';
                         }
                         return null;
@@ -451,7 +450,10 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                       controller: _addressCtrl,
                       icon: Icons.location_on_outlined,
                       maxLines: 1,
-                      isRequired: false,
+                      isRequired: true,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Please enter your street address'
+                          : null,
                     ),
 
                     const SizedBox(height: 14),
@@ -466,7 +468,10 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                             hintText: 'e.g. Jaipur',
                             controller: _cityCtrl,
                             icon: Icons.location_city_outlined,
-                            isRequired: false,
+                            isRequired: true,
+                            validator: (v) => v == null || v.trim().isEmpty
+                                ? 'Please enter your city'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -476,7 +481,10 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                             hintText: 'e.g. Rajasthan',
                             controller: _stateCtrl,
                             icon: Icons.map_outlined,
-                            isRequired: false,
+                            isRequired: true,
+                            validator: (v) => v == null || v.trim().isEmpty
+                                ? 'Please enter your state'
+                                : null,
                           ),
                         ),
                       ],
@@ -492,6 +500,9 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                       icon: Icons.pin_drop_outlined,
                       keyboardType: TextInputType.number,
                       isRequired: true,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Please enter your pincode'
+                          : null,
                     ),
 
                     const SizedBox(height: 28),

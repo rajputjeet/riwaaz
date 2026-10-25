@@ -120,14 +120,17 @@ class ApplyCouponResultModel {
       );
     }
     final discount = _number(json['discountAmount']);
-    final int months = ((json['durationMonths'] ??
-            json['durationMonth'] ??
-            json['durationInMonths'] ??
-            json['duration_months'] ??
-            json['duration_month'] ??
-            1) as num)
-        .toInt();
-    final String durStr = json['duration']?.toString() ??
+    final int months =
+        ((json['durationMonths'] ??
+                    json['durationMonth'] ??
+                    json['durationInMonths'] ??
+                    json['duration_months'] ??
+                    json['duration_month'] ??
+                    1)
+                as num)
+            .toInt();
+    final String durStr =
+        json['duration']?.toString() ??
         json['durations']?.toString() ??
         '$months Month${months > 1 ? "s" : ""}';
 
@@ -141,7 +144,7 @@ class ApplyCouponResultModel {
       originalPrice: _number(json['originalPrice']),
       discountAmount: discount,
       finalPrice: finalPrice,
-      isFree: (json['isFree'] == true) || finalPrice == 0,
+      isFree: finalPrice == 0,
       savings: _number(json['savings'], fallback: discount),
       durationInMonths: months,
       durationMonths: months,

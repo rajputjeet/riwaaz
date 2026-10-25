@@ -14,7 +14,8 @@ class VendorEditProfileScreen extends StatefulWidget {
   const VendorEditProfileScreen({super.key});
 
   @override
-  State<VendorEditProfileScreen> createState() => _VendorEditProfileScreenState();
+  State<VendorEditProfileScreen> createState() =>
+      _VendorEditProfileScreenState();
 }
 
 class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
@@ -46,7 +47,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
     super.initState();
     final storage = StorageHelper();
     _nameCtrl = TextEditingController(text: storage.getUserName() ?? '');
-    _businessNameCtrl = TextEditingController(text: storage.getUserName() ?? '');
+    _businessNameCtrl = TextEditingController(
+      text: storage.getUserName() ?? '',
+    );
     _discCtrl = TextEditingController();
     _emailCtrl = TextEditingController(text: storage.getUserEmail() ?? '');
     _addressCtrl = TextEditingController(text: storage.getUserAddress() ?? '');
@@ -169,7 +172,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                           Utils.showError('Camera error: $e');
                         }
                       },
-                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      icon: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: AppColors.primary,
+                      ),
                       label: const Text(
                         'Camera',
                         style: TextStyle(
@@ -180,7 +186,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -204,7 +212,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                           Utils.showError('Gallery error: $e');
                         }
                       },
-                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
+                      icon: const Icon(
+                        Icons.photo_library_rounded,
+                        color: AppColors.white,
+                      ),
                       label: const Text(
                         'Gallery',
                         style: TextStyle(
@@ -215,7 +226,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -286,7 +299,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                           Utils.showError('Camera error: $e');
                         }
                       },
-                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                      icon: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: AppColors.primary,
+                      ),
                       label: const Text(
                         'Camera',
                         style: TextStyle(
@@ -297,7 +313,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -321,7 +339,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                           Utils.showError('Gallery error: $e');
                         }
                       },
-                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
+                      icon: const Icon(
+                        Icons.photo_library_rounded,
+                        color: AppColors.white,
+                      ),
                       label: const Text(
                         'Gallery',
                         style: TextStyle(
@@ -332,7 +353,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -372,15 +395,13 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           final url = res['url']?.toString() ?? '';
           final publicId = res['public_id']?.toString() ?? '';
           if (url.isNotEmpty) {
-            bannerPayload = {
-              'url': url,
-              'public_id': publicId,
-            };
+            bannerPayload = {'url': url, 'public_id': publicId};
           }
         } catch (e) {
           debugPrint('Cloudinary banner upload error: $e');
         }
-      } else if (_currentBannerImgUrl != null && _currentBannerImgUrl!.isNotEmpty) {
+      } else if (_currentBannerImgUrl != null &&
+          _currentBannerImgUrl!.isNotEmpty) {
         bannerPayload = {
           'url': _currentBannerImgUrl!,
           'public_id': _currentBannerPublicId ?? '',
@@ -478,8 +499,11 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.primary,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -504,19 +528,29 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                   children: [
                     // ── Business Profile Header (Banner in Background - Identical to Profile) ──
                     AnimatedBuilder(
-                      animation: Listenable.merge([_businessNameCtrl, _nameCtrl, _emailCtrl]),
+                      animation: Listenable.merge([
+                        _businessNameCtrl,
+                        _nameCtrl,
+                        _emailCtrl,
+                      ]),
                       builder: (context, _) {
-                        final bool hasBanner = _selectedBannerImage != null ||
-                            (_currentBannerImgUrl != null && _currentBannerImgUrl!.isNotEmpty);
-                        final String displayName = _businessNameCtrl.text.trim().isNotEmpty
+                        final bool hasBanner =
+                            _selectedBannerImage != null ||
+                            (_currentBannerImgUrl != null &&
+                                _currentBannerImgUrl!.isNotEmpty);
+                        final String displayName =
+                            _businessNameCtrl.text.trim().isNotEmpty
                             ? _businessNameCtrl.text.trim()
                             : (_nameCtrl.text.trim().isNotEmpty
-                                ? _nameCtrl.text.trim()
-                                : (StorageHelper().getUserName() ?? 'Vendor Partner'));
-                        final String displayEmail = _emailCtrl.text.trim().isNotEmpty
+                                  ? _nameCtrl.text.trim()
+                                  : (StorageHelper().getUserName() ??
+                                        'Vendor Partner'));
+                        final String displayEmail =
+                            _emailCtrl.text.trim().isNotEmpty
                             ? _emailCtrl.text.trim()
                             : (StorageHelper().getUserEmail() ?? '');
-                        final String displayMobile = StorageHelper().getUserMobile() ?? '';
+                        final String displayMobile =
+                            StorageHelper().getUserMobile() ?? '';
 
                         return Container(
                           width: double.infinity,
@@ -531,7 +565,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: hasBanner ? 0.08 : 0.04),
+                                color: Colors.black.withValues(
+                                  alpha: hasBanner ? 0.08 : 0.04,
+                                ),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -570,8 +606,12 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
                                           colors: [
-                                            Colors.black.withValues(alpha: 0.35),
-                                            Colors.black.withValues(alpha: 0.82),
+                                            Colors.black.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                            Colors.black.withValues(
+                                              alpha: 0.82,
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -588,8 +628,12 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            AppColors.primary.withValues(alpha: 0.07),
-                                            AppColors.gold.withValues(alpha: 0.14),
+                                            AppColors.primary.withValues(
+                                              alpha: 0.07,
+                                            ),
+                                            AppColors.gold.withValues(
+                                              alpha: 0.14,
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -606,7 +650,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                   onTap: _showBannerSourceSheet,
                                   borderRadius: BorderRadius.circular(20),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: hasBanner
                                           ? Colors.black.withValues(alpha: 0.55)
@@ -614,8 +661,12 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
                                         color: hasBanner
-                                            ? Colors.white.withValues(alpha: 0.4)
-                                            : AppColors.gold.withValues(alpha: 0.4),
+                                            ? Colors.white.withValues(
+                                                alpha: 0.4,
+                                              )
+                                            : AppColors.gold.withValues(
+                                                alpha: 0.4,
+                                              ),
                                         width: 1,
                                       ),
                                     ),
@@ -625,15 +676,21 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                         Icon(
                                           Icons.camera_alt_outlined,
                                           size: 13,
-                                          color: hasBanner ? AppColors.white : AppColors.primary,
+                                          color: hasBanner
+                                              ? AppColors.white
+                                              : AppColors.primary,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          hasBanner ? 'Edit Banner' : 'Add Banner',
+                                          hasBanner
+                                              ? 'Edit Banner'
+                                              : 'Add Banner',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w700,
-                                            color: hasBanner ? AppColors.white : AppColors.primary,
+                                            color: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
                                           ),
                                         ),
                                       ],
@@ -646,10 +703,16 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    24,
+                                    20,
+                                    20,
+                                  ),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       // Avatar (80x80 matching profile)
@@ -669,7 +732,10 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.15),
+                                                    color: Colors.black
+                                                        .withValues(
+                                                          alpha: 0.15,
+                                                        ),
                                                     blurRadius: 8,
                                                   ),
                                                 ],
@@ -678,21 +744,28 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                               child: ClipOval(
                                                 child: _selectedImage != null
                                                     ? Image.file(
-                                                        File(_selectedImage!.path),
+                                                        File(
+                                                          _selectedImage!.path,
+                                                        ),
                                                         width: 80,
                                                         height: 80,
                                                         fit: BoxFit.cover,
                                                       )
                                                     : CachedImageView(
-                                                        imageUrl: _currentProfileImgUrl ?? '',
+                                                        imageUrl:
+                                                            _currentProfileImgUrl ??
+                                                            '',
                                                         width: 80,
                                                         height: 80,
                                                         fit: BoxFit.cover,
                                                         isCircle: true,
-                                                        fallbackIcon: Icons.storefront_rounded,
-                                                        iconColor: AppColors.gold,
+                                                        fallbackIcon: Icons
+                                                            .storefront_rounded,
+                                                        iconColor:
+                                                            AppColors.gold,
                                                         iconSize: 40,
-                                                        backgroundColor: AppColors.primary,
+                                                        backgroundColor:
+                                                            AppColors.primary,
                                                       ),
                                               ),
                                             ),
@@ -700,7 +773,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                               bottom: 0,
                                               right: 0,
                                               child: Container(
-                                                padding: const EdgeInsets.all(5),
+                                                padding: const EdgeInsets.all(
+                                                  5,
+                                                ),
                                                 decoration: BoxDecoration(
                                                   color: AppColors.primary,
                                                   shape: BoxShape.circle,
@@ -728,7 +803,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.w800,
-                                          color: hasBanner ? AppColors.white : AppColors.black,
+                                          color: hasBanner
+                                              ? AppColors.white
+                                              : AppColors.black,
                                           shadows: hasBanner
                                               ? const [
                                                   Shadow(
@@ -749,9 +826,13 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 13,
-                                            fontWeight: hasBanner ? FontWeight.w500 : FontWeight.w400,
+                                            fontWeight: hasBanner
+                                                ? FontWeight.w500
+                                                : FontWeight.w400,
                                             color: hasBanner
-                                                ? AppColors.white.withValues(alpha: 0.90)
+                                                ? AppColors.white.withValues(
+                                                    alpha: 0.90,
+                                                  )
                                                 : AppColors.darkGrey,
                                           ),
                                         ),
@@ -766,7 +847,9 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: hasBanner
-                                                ? AppColors.white.withValues(alpha: 0.80)
+                                                ? AppColors.white.withValues(
+                                                    alpha: 0.80,
+                                                  )
                                                 : AppColors.grey,
                                           ),
                                         ),
@@ -778,30 +861,49 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                                           icon: Icon(
                                             Icons.photo_camera_rounded,
                                             size: 14,
-                                            color: hasBanner ? AppColors.white : AppColors.primary,
+                                            color: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
                                           ),
                                           label: Text(
                                             'Change Profile Photo',
                                             style: TextStyle(
-                                              color: hasBanner ? AppColors.white : AppColors.primary,
+                                              color: hasBanner
+                                                  ? AppColors.white
+                                                  : AppColors.primary,
                                             ),
                                           ),
                                           style: OutlinedButton.styleFrom(
-                                            foregroundColor: hasBanner ? AppColors.white : AppColors.primary,
+                                            foregroundColor: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
                                             backgroundColor: hasBanner
-                                                ? Colors.black.withValues(alpha: 0.35)
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.35,
+                                                  )
                                                 : Colors.transparent,
                                             side: BorderSide(
                                               color: hasBanner
-                                                  ? Colors.white.withValues(alpha: 0.5)
-                                                  : AppColors.primary.withValues(alpha: 0.4),
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.5,
+                                                    )
+                                                  : AppColors.primary
+                                                        .withValues(alpha: 0.4),
                                             ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(20),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                             ),
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                            visualDensity: VisualDensity.compact,
-                                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 6,
+                                            ),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            textStyle: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -860,7 +962,8 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                     // 3. Business Description (Disc)
                     _buildTextField(
                       label: 'Business Description',
-                      hintText: 'Describe your wedding services, style and offerings...',
+                      hintText:
+                          'Describe your wedding services, style and offerings...',
                       controller: _discCtrl,
                       icon: Icons.description_outlined,
                       maxLines: 4,
@@ -885,12 +988,11 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                       controller: _emailCtrl,
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      isRequired: true,
+                      isRequired: false,
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Please enter business email address';
-                        }
-                        if (!v.contains('@') || !v.contains('.')) {
+                        final email = v?.trim() ?? '';
+                        if (email.isNotEmpty &&
+                            (!email.contains('@') || !email.contains('.'))) {
                           return 'Please enter a valid email address';
                         }
                         return null;
@@ -959,12 +1061,18 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildTextField(
-                            label: 'Pincode (Optional)',
+                            label: 'Pincode',
                             hintText: 'e.g. 400050',
                             controller: _pincodeCtrl,
                             icon: Icons.pin_drop_outlined,
                             keyboardType: TextInputType.number,
-                            isRequired: false,
+                            isRequired: true,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Enter pincode';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                       ],
@@ -1047,73 +1155,92 @@ class _VendorEditProfileScreenState extends State<VendorEditProfileScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          validator: validator,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.black,
+        if (maxLines > 1)
+          Stack(
+            children: [
+              _buildProfileInput(
+                label: hintText,
+                controller: controller,
+                icon: icon,
+                maxLines: maxLines,
+                keyboardType: keyboardType,
+                validator: validator,
+                multiline: true,
+              ),
+              Positioned(
+                left: 13,
+                top: 15,
+                child: IgnorePointer(
+                  child: Icon(icon, color: AppColors.primary, size: 20),
+                ),
+              ),
+            ],
+          )
+        else
+          _buildProfileInput(
+            label: hintText,
+            controller: controller,
+            icon: icon,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            validator: validator,
           ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
-            prefixIcon: maxLines > 1
-                ? Container(
-                    width: 46,
-                    alignment: Alignment.topCenter,
-                    padding: const EdgeInsets.only(top: 15),
-                    child: Icon(icon, color: AppColors.primary, size: 20),
-                  )
-                : Icon(icon, color: AppColors.primary, size: 20),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 46,
-              minHeight: 46,
-            ),
-            filled: true,
-            fillColor: AppColors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 15,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: AppColors.grey.withValues(alpha: 0.3),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: AppColors.grey.withValues(alpha: 0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: AppColors.primary,
-                width: 1.6,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: AppColors.error,
-                width: 1.2,
-              ),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: AppColors.error,
-                width: 1.6,
-              ),
-            ),
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildProfileInput({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required int maxLines,
+    required TextInputType keyboardType,
+    required String? Function(String?)? validator,
+    bool multiline = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.black,
+      ),
+      decoration: InputDecoration(
+        hintText: label,
+        hintStyle: const TextStyle(fontSize: 13, color: AppColors.darkGrey),
+        prefixIcon: multiline
+            ? null
+            : Icon(icon, color: AppColors.primary, size: 20),
+        filled: true,
+        fillColor: AppColors.white,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: multiline ? 46 : 16,
+          vertical: 15,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.grey.withValues(alpha: 0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppColors.grey.withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.6),
+        ),
+      ),
     );
   }
 }

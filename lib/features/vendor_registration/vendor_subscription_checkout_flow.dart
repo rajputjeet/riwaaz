@@ -1,12 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../data/api_provider/ad_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/vendor_coupon_model.dart';
+import '../../data/models/razorpay_payment_models.dart';
+import '../../utils/helper/storage_helper.dart';
 
 typedef VendorPlanPurchase =
-    Future<bool> Function(String paymentMethod, String? couponCode);
+    Future<bool> Function(
+      String paymentMethod,
+      String? couponCode,
+      String? transactionId,
+    );
 
 /// Coupon entry and checkout are separate routes to keep each step focused
 /// and avoid nested bottom-sheet layout constraints.
@@ -65,18 +75,22 @@ class _VendorSubscriptionCouponScreenState
       final result = await _adApi.getAvailableAdCoupons();
       if (!mounted) return;
       setState(() {
-        _coupons = (result.data ?? []).map((c) => VendorCouponModel(
-          id: c.id,
-          title: c.title,
-          description: c.description,
-          couponCode: c.couponCode,
-          discountType: c.discountType,
-          discountValue: c.discountValue,
-          discountPercentage: c.discountPercentage,
-          applicableFor: 'ad',
-          minAmount: c.minAmount,
-          validUntil: c.validUntil,
-        )).toList();
+        _coupons = (result.data ?? [])
+            .map(
+              (c) => VendorCouponModel(
+                id: c.id,
+                title: c.title,
+                description: c.description,
+                couponCode: c.couponCode,
+                discountType: c.discountType,
+                discountValue: c.discountValue,
+                discountPercentage: c.discountPercentage,
+                applicableFor: 'ad',
+                minAmount: c.minAmount,
+                validUntil: c.validUntil,
+              ),
+            )
+            .toList();
         _isLoadingCoupons = false;
         if (result.isSuccess != true) {
           _couponLoadError = result.message ?? 'Could not load ad coupons.';
@@ -204,6 +218,8 @@ class _VendorSubscriptionCouponScreenState
           plan: widget.plan,
           coupon: _appliedCoupon,
           onPay: widget.onPay,
+          isAd: widget.isAd,
+          api: widget.api,
         ),
       ),
     );
@@ -675,12 +691,16 @@ class VendorSecureCheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> plan;
   final ApplyCouponResultModel? coupon;
   final VendorPlanPurchase onPay;
+  final bool isAd;
+  final VendorApiProvider? api;
 
   const VendorSecureCheckoutScreen({
     super.key,
     required this.plan,
     required this.coupon,
     required this.onPay,
+    this.isAd = false,
+    this.api,
   });
 
   @override
@@ -690,33 +710,244 @@ class VendorSecureCheckoutScreen extends StatefulWidget {
 
 class _VendorSecureCheckoutScreenState
     extends State<VendorSecureCheckoutScreen> {
-  String _paymentMethod = 'UPI';
+  late final Razorpay _razorpay;
+  Completer<PaymentSuccessResponse?>? _paymentCompleter;
+  RazorpayOrderModel? _pendingOrder;
+  PaymentSuccessResponse? _pendingPayment;
+  String? _verifiedTransactionId;
+  num? _serverConfirmedPrice;
   bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay()
+      ..on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess)
+      ..on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentFailure)
+      ..on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    final pending = _paymentCompleter;
+    if (pending != null && !pending.isCompleted) pending.complete(null);
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _onPaymentSuccess(PaymentSuccessResponse response) {
+    final pending = _paymentCompleter;
+    if (pending != null && !pending.isCompleted) {
+      pending.complete(response);
+    }
+  }
+
+  void _onPaymentFailure(PaymentFailureResponse response) {
+    final pending = _paymentCompleter;
+    if (pending != null && !pending.isCompleted) {
+      pending.completeError(
+        response.message?.trim().isNotEmpty == true
+            ? response.message!
+            : 'Payment was not completed.',
+      );
+    }
+  }
+
+  void _onExternalWallet(ExternalWalletResponse response) {
+    // Checkout continues after wallet selection and reports its final result
+    // through the payment success or failure event.
+  }
+
+  Future<PaymentSuccessResponse?> _openRazorpay({
+    required RazorpayOrderModel order,
+    required String planName,
+  }) async {
+    final orderId = order.orderId?.trim() ?? '';
+    final keyId = order.keyId?.trim() ?? '';
+    if (orderId.isEmpty || keyId.isEmpty || order.amountInPaise <= 0) {
+      throw StateError('The server returned incomplete payment order details.');
+    }
+    final pending = Completer<PaymentSuccessResponse?>();
+    _paymentCompleter = pending;
+    final storage = StorageHelper();
+    try {
+      // razorpay_flutter exposes open() as `void async`, so a missing native
+      // plugin throws into the current Zone instead of returning a Future we
+      // can await. Capture that asynchronous error and route it through the
+      // same checkout error handling as payment failures.
+      runZonedGuarded(
+        () {
+          _razorpay.open({
+            'key': keyId,
+            'amount': order.amountInPaise,
+            'currency': order.currency,
+            'order_id': orderId,
+            'name': 'Widoora',
+            'description': planName,
+            'prefill': {
+              if (storage.getUserEmail()?.trim().isNotEmpty == true)
+                'email': storage.getUserEmail()!.trim(),
+              if (storage.getUserMobile()?.trim().isNotEmpty == true)
+                'contact': storage.getUserMobile()!.trim(),
+            },
+            'theme': {'color': '#790D16'},
+          });
+        },
+        (error, stackTrace) {
+          if (!pending.isCompleted) {
+            pending.completeError(
+              error is MissingPluginException
+                  ? StateError(
+                      'Razorpay is not registered in this app build. Fully stop the app, rebuild and reinstall it, then try again.',
+                    )
+                  : error,
+              stackTrace,
+            );
+          }
+        },
+      );
+    } catch (_) {
+      _paymentCompleter = null;
+      rethrow;
+    }
+    try {
+      return await pending.future;
+    } finally {
+      if (identical(_paymentCompleter, pending)) _paymentCompleter = null;
+    }
+  }
 
   Future<void> _pay() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
     try {
-      final isFree = widget.coupon?.isFree == true;
-      final completed = await widget.onPay(
-        isFree ? 'Free' : _paymentMethod,
-        widget.coupon?.couponCode,
-      );
+      final planId =
+          (widget.plan['serverPlanId'] ?? widget.plan['id'])
+              ?.toString()
+              .trim() ??
+          '';
+      if (planId.isEmpty) throw StateError('Plan ID is missing. Please retry.');
+      final couponCode = widget.coupon?.couponCode.trim();
+      final paymentApi = widget.api ?? VendorApiProvider();
+      bool completed;
+      if (_verifiedTransactionId != null) {
+        completed = await widget.onPay(
+          'Razorpay',
+          couponCode,
+          _verifiedTransactionId,
+        );
+      } else if (_pendingPayment != null && _pendingOrder != null) {
+        completed = await _verifyAndFinalize(
+          paymentApi: paymentApi,
+          couponCode: couponCode,
+        );
+      } else {
+        final orderResult = await paymentApi.createRazorpayOrder(
+          type: widget.isAd ? 'ad' : 'subscription',
+          planId: planId,
+          couponCode: couponCode?.isNotEmpty == true ? couponCode : null,
+        );
+        if (orderResult.isSuccess != true || orderResult.data == null) {
+          throw StateError(
+            orderResult.message ??
+                orderResult.error ??
+                'Could not create a payment order.',
+          );
+        }
+        final order = orderResult.data!;
+        if (couponCode?.isNotEmpty == true &&
+            order.couponCode?.trim().toUpperCase() !=
+                couponCode!.toUpperCase()) {
+          throw StateError(
+            'The server did not confirm coupon ${couponCode.toUpperCase()}. Reapply the coupon or try another one.',
+          );
+        }
+        if (order.isFree) {
+          completed = await widget.onPay(
+            couponCode?.isNotEmpty == true ? 'Coupon' : 'Free',
+            couponCode,
+            null,
+          );
+        } else {
+          final displayedPrice =
+              _serverConfirmedPrice ??
+              widget.coupon?.finalPrice ??
+              (widget.plan['price'] is num
+                  ? widget.plan['price'] as num
+                  : num.tryParse('${widget.plan['price']}') ?? 0);
+          final displayedPriceInPaise = (displayedPrice * 100).round();
+          if (order.amountInPaise != displayedPriceInPaise) {
+            final serverPrice = order.amountInPaise / 100;
+            setState(() => _serverConfirmedPrice = serverPrice);
+            throw StateError(
+              'The server calculated ₹${serverPrice.toStringAsFixed(2)}, but the coupon preview showed ₹${displayedPrice.toStringAsFixed(2)}. The updated total is shown below. Review it and tap Pay again to continue.',
+            );
+          }
+          _pendingOrder = order;
+          _pendingPayment = await _openRazorpay(
+            order: order,
+            planName:
+                order.planTitle ??
+                widget.plan['name']?.toString() ??
+                'Vendor plan',
+          );
+          completed = await _verifyAndFinalize(
+            paymentApi: paymentApi,
+            couponCode: couponCode,
+          );
+        }
+      }
       if (!mounted) return;
       if (completed) {
         Navigator.of(context).pop(true);
       } else {
         setState(() => _isProcessing = false);
       }
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not complete checkout. Please try again.'),
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Bad state: ', '')),
         ),
       );
     }
+  }
+
+  Future<bool> _verifyAndFinalize({
+    required VendorApiProvider paymentApi,
+    required String? couponCode,
+  }) async {
+    final order = _pendingOrder!;
+    final payment = _pendingPayment!;
+    final paymentId = payment.paymentId?.trim() ?? '';
+    final signature = payment.signature?.trim() ?? '';
+    final razorpayOrderId = payment.orderId?.trim() ?? '';
+    if (paymentId.isEmpty || signature.isEmpty || razorpayOrderId.isEmpty) {
+      throw StateError('Razorpay did not return complete payment details.');
+    }
+    if (razorpayOrderId != order.orderId) {
+      throw StateError('The payment does not match this checkout order.');
+    }
+    final verification = await paymentApi.verifyRazorpayPayment(
+      orderId: razorpayOrderId,
+      paymentId: paymentId,
+      signature: signature,
+    );
+    if (verification.isSuccess != true || verification.data?.verified != true) {
+      throw StateError(
+        verification.message ??
+            'Payment verification failed. Your plan was not activated.',
+      );
+    }
+    if ((verification.data?.orderId != null &&
+            verification.data!.orderId != razorpayOrderId) ||
+        (verification.data?.paymentId != null &&
+            verification.data!.paymentId != paymentId)) {
+      throw StateError('Payment verification returned a different purchase.');
+    }
+    _verifiedTransactionId = verification.data?.transactionId ?? paymentId;
+    return widget.onPay('Razorpay', couponCode, _verifiedTransactionId);
   }
 
   @override
@@ -727,7 +958,13 @@ class _VendorSecureCheckoutScreenState
     final originalPrice = priceValue is num
         ? priceValue.round()
         : int.tryParse('$priceValue') ?? 0;
-    final price = widget.coupon?.finalPrice.round() ?? originalPrice;
+    final price =
+        _serverConfirmedPrice?.round() ??
+        widget.coupon?.finalPrice.round() ??
+        originalPrice;
+    final discountAmount = _serverConfirmedPrice == null
+        ? widget.coupon?.discountAmount ?? 0
+        : (originalPrice - _serverConfirmedPrice!).clamp(0, originalPrice);
     final isFree = widget.coupon?.isFree == true;
 
     return PopScope(
@@ -803,7 +1040,7 @@ class _VendorSecureCheckoutScreenState
                       const SizedBox(height: 5),
                       _PriceLine(
                         label: 'Coupon savings',
-                        value: -widget.coupon!.discountAmount,
+                        value: -discountAmount,
                         isDiscount: true,
                       ),
                       const Divider(height: 16),
@@ -844,76 +1081,82 @@ class _VendorSecureCheckoutScreenState
                       ),
                     ],
                   ),
-                )
-              else ...[
-                const Text(
-                  'Select payment mode',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
-                  ),
                 ),
-                const SizedBox(height: 10),
-                _PaymentOption(
-                  title: 'UPI',
-                  subtitle: 'Google Pay, PhonePe, Paytm',
-                  icon: Icons.qr_code_rounded,
-                  isSelected: _paymentMethod == 'UPI',
-                  onTap: () => setState(() => _paymentMethod = 'UPI'),
-                ),
-                _PaymentOption(
-                  title: 'Credit or debit card',
-                  subtitle: 'Visa, Mastercard, RuPay',
-                  icon: Icons.credit_card_rounded,
-                  isSelected: _paymentMethod == 'Card',
-                  onTap: () => setState(() => _paymentMethod = 'Card'),
-                ),
-                _PaymentOption(
-                  title: 'Net banking',
-                  subtitle: 'All major banks',
-                  icon: Icons.account_balance_rounded,
-                  isSelected: _paymentMethod == 'Net banking',
-                  onTap: () => setState(() => _paymentMethod = 'Net banking'),
-                ),
-              ],
             ],
           ),
         ),
         bottomNavigationBar: SafeArea(
           minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: SizedBox(
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _isProcessing ? null : _pay,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 50),
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!isFree) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.grey.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Pay securely with Razorpay. UPI, cards, net banking and supported wallets are available at checkout.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: AppColors.darkGrey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isProcessing ? null : _pay,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 50),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isProcessing
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          isFree
+                              ? 'Activate plan for free'
+                              : 'Pay ₹$price securely',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
-              child: _isProcessing
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: AppColors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      isFree
-                          ? 'Activate plan for free'
-                          : 'Pay ₹$price securely',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-            ),
+            ],
           ),
         ),
       ),
@@ -1030,90 +1273,6 @@ class _PlanSummaryCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PaymentOption extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PaymentOption({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(13),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(13),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.grey.withValues(alpha: 0.25),
-                width: isSelected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected ? AppColors.primary : AppColors.darkGrey,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.darkGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    color: AppColors.primary,
-                    size: 19,
-                  ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

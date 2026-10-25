@@ -93,43 +93,41 @@ class _VendorRegistrationWizardScreenState
   String _selectedPlan = '6_months'; // will hold selected plan _id
   bool _isSubscriptionPaid = false;
 
-
   List<Map<String, dynamic>> get _availablePlans {
     if (_vendorController.subscriptionPlans.isNotEmpty) {
       return _vendorController.subscriptionPlans.map((sub) {
         final id = sub.id ?? '';
         final name = sub.displayName;
         final duration = sub.durationLabel;
-        final months = sub.durationInMonths ??
+        final months =
+            sub.durationInMonths ??
             (duration.contains('12')
                 ? 12
                 : (duration.contains('6')
-                    ? 6
-                    : (duration.contains('3') ? 3 : 1)));
+                      ? 6
+                      : (duration.contains('3') ? 3 : 1)));
         final price = sub.planPrice;
         final monthlyRate = months > 0 ? (price / months).round() : price;
         final desc = sub.description?.trim() ?? '';
-        final isPopular = months == 6 ||
+        final isPopular =
+            months == 6 ||
             name.toLowerCase().contains('gold') ||
             name.toLowerCase().contains('popular');
-        final isBestValue = months == 12 ||
+        final isBestValue =
+            months == 12 ||
             name.toLowerCase().contains('royal') ||
             name.toLowerCase().contains('platinum');
         final badge = isPopular
             ? 'MOST POPULAR'
-            : (isBestValue
-                ? 'BEST VALUE'
-                : (months == 1 ? 'STARTER' : 'PRO'));
+            : (isBestValue ? 'BEST VALUE' : (months == 1 ? 'STARTER' : 'PRO'));
         final color = isPopular
             ? AppColors.primary
-            : (isBestValue
-                ? const Color(0xFF790D16)
-                : const Color(0xFF6B7280));
+            : (isBestValue ? const Color(0xFF790D16) : const Color(0xFF6B7280));
         final icon = isPopular
             ? Icons.stars_rounded
             : (isBestValue
-                ? Icons.diamond_rounded
-                : Icons.calendar_today_rounded);
+                  ? Icons.diamond_rounded
+                  : Icons.calendar_today_rounded);
 
         return {
           'id': id,
@@ -140,8 +138,7 @@ class _VendorRegistrationWizardScreenState
           'monthlyRate': monthlyRate,
           'tagline': desc,
           'badge': badge,
-          'savings':
-              isBestValue ? 'SAVE 25%' : (isPopular ? 'SAVE 15%' : null),
+          'savings': isBestValue ? 'SAVE 25%' : (isPopular ? 'SAVE 15%' : null),
           'isPopular': isPopular,
           'color': color,
           'icon': icon,
@@ -241,7 +238,8 @@ class _VendorRegistrationWizardScreenState
       );
       if (picked != null) {
         setState(() {
-          if (key == 'aadhar' || key == 'aadharFront') _aadharPath = picked.path;
+          if (key == 'aadhar' || key == 'aadharFront')
+            _aadharPath = picked.path;
           if (key == 'aadharBack') _aadharBackPath = picked.path;
           if (key == 'liveSelfie') _liveSelfiePath = picked.path;
           if (key == 'pan') _panPath = picked.path;
@@ -309,12 +307,23 @@ class _VendorRegistrationWizardScreenState
                         Navigator.of(ctx).pop();
                         _pickDocumentImage(key, ImageSource.camera);
                       },
-                      icon: const Icon(Icons.camera_alt_rounded, color: AppColors.primary),
-                      label: const Text('Camera', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      icon: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: AppColors.primary,
+                      ),
+                      label: const Text(
+                        'Camera',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -325,21 +334,32 @@ class _VendorRegistrationWizardScreenState
                         Navigator.of(ctx).pop();
                         _pickDocumentImage(key, ImageSource.gallery);
                       },
-                      icon: const Icon(Icons.photo_library_rounded, color: AppColors.white),
-                      label: const Text('Gallery', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700)),
+                      icon: const Icon(
+                        Icons.photo_library_rounded,
+                        color: AppColors.white,
+                      ),
+                      label: const Text(
+                        'Gallery',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              ],
-            ),
+            ],
           ),
         ),
+      ),
     );
   }
 
@@ -361,13 +381,18 @@ class _VendorRegistrationWizardScreenState
       final match = _vendorController.categories.firstWhereOrNull(
         (c) =>
             c.name?.toLowerCase().trim() == categoryName.toLowerCase().trim() ||
-            categoryName.toLowerCase().contains(c.name?.toLowerCase().trim() ?? '') ||
+            categoryName.toLowerCase().contains(
+              c.name?.toLowerCase().trim() ?? '',
+            ) ||
             (c.name != null &&
-                categoryName.toLowerCase().contains(c.name!.toLowerCase().trim())),
+                categoryName.toLowerCase().contains(
+                  c.name!.toLowerCase().trim(),
+                )),
       );
       if (match != null && match.id != null) {
         _vendorController.selectedCategoryId.value = match.id!;
-        _vendorController.selectedCategoryName.value = match.name ?? categoryName;
+        _vendorController.selectedCategoryName.value =
+            match.name ?? categoryName;
         return;
       }
     }
@@ -379,9 +404,11 @@ class _VendorRegistrationWizardScreenState
       final match = _vendorController.subscriptionPlans.firstWhereOrNull(
         (p) =>
             p.id == planId ||
-            (p.durationInMonths != null && planId.contains('${p.durationInMonths}')) ||
+            (p.durationInMonths != null &&
+                planId.contains('${p.durationInMonths}')) ||
             (p.type != null && planId.contains(p.type!.split(' ').first)) ||
-            (p.title != null && p.title!.toLowerCase().contains(planId.toLowerCase())),
+            (p.title != null &&
+                p.title!.toLowerCase().contains(planId.toLowerCase())),
       );
       if (match != null && match.id != null) {
         _vendorController.selectedSubscriptionPlanId.value = match.id!;
@@ -399,51 +426,19 @@ class _VendorRegistrationWizardScreenState
     if (_vendorController.categories.isNotEmpty) {
       final match = _vendorController.categories.firstWhereOrNull(
         (c) =>
-            c.name?.toLowerCase().trim() == _selectedCategory.toLowerCase().trim() ||
-            _selectedCategory.toLowerCase().contains(c.name?.toLowerCase().trim() ?? '') ||
+            c.name?.toLowerCase().trim() ==
+                _selectedCategory.toLowerCase().trim() ||
+            _selectedCategory.toLowerCase().contains(
+              c.name?.toLowerCase().trim() ?? '',
+            ) ||
             (c.name != null &&
-                _selectedCategory.toLowerCase().contains(c.name!.toLowerCase().trim())),
+                _selectedCategory.toLowerCase().contains(
+                  c.name!.toLowerCase().trim(),
+                )),
       );
       if (match != null && match.id != null) return match.id!;
     }
     return '';
-  }
-
-  String _resolvePlanId() {
-    String planId = _vendorController.selectedSubscriptionPlanId.value;
-    if (planId.isNotEmpty &&
-        planId != '6_months' &&
-        planId != '3_months' &&
-        planId != '12_months') {
-      return planId;
-    }
-    if (_selectedPlan.isNotEmpty &&
-        _selectedPlan != '6_months' &&
-        _selectedPlan != '3_months' &&
-        _selectedPlan != '12_months') {
-      _vendorController.selectedSubscriptionPlanId.value = _selectedPlan;
-      return _selectedPlan;
-    }
-    if (_vendorController.subscriptionPlans.isNotEmpty) {
-      final prefix = _selectedPlan.split('_').first;
-      final match = _vendorController.subscriptionPlans.firstWhereOrNull(
-        (p) =>
-            p.id == _selectedPlan ||
-            (p.durationInMonths != null && _selectedPlan.contains('${p.durationInMonths}')) ||
-            (p.type != null && _selectedPlan.contains(p.type!.split(' ').first)) ||
-            (p.title != null && p.title!.toLowerCase().contains(prefix.toLowerCase())),
-      );
-      if (match != null && match.id != null && match.id!.isNotEmpty) {
-        _vendorController.selectedSubscriptionPlanId.value = match.id!;
-        return match.id!;
-      }
-      final firstId = _vendorController.subscriptionPlans.first.id;
-      if (firstId != null && firstId.isNotEmpty) {
-        _vendorController.selectedSubscriptionPlanId.value = firstId;
-        return firstId;
-      }
-    }
-    return _selectedPlan;
   }
 
   void _persistCurrentDraft() {
@@ -471,7 +466,6 @@ class _VendorRegistrationWizardScreenState
       'addressProofPath': _addressProofPath,
       'gstDocPath': _gstDocPath,
       'selectedPlan': _selectedPlan,
-      'isSubscriptionPaid': _isSubscriptionPaid,
     });
   }
 
@@ -489,7 +483,6 @@ class _VendorRegistrationWizardScreenState
     }
 
     final categoryId = _resolveCategoryId();
-    final planId = _resolvePlanId();
 
     Utils.showInfo('Saving your application and documents...');
 
@@ -506,7 +499,8 @@ class _VendorRegistrationWizardScreenState
           : 'Professional wedding services and premium deliverables on Widoora.',
       businessAddress: _addressController.text.trim().isNotEmpty
           ? _addressController.text.trim()
-          : (StorageHelper().getUserAddress() ?? 'SCO 142, Sector 70, Mohali, Punjab'),
+          : (StorageHelper().getUserAddress() ??
+                'SCO 142, Sector 70, Mohali, Punjab'),
       addressUrl: _addressUrlController.text.trim().isNotEmpty
           ? _addressUrlController.text.trim()
           : null,
@@ -522,7 +516,6 @@ class _VendorRegistrationWizardScreenState
       gstNumber: _gstController.text.trim(),
       categoryId: categoryId,
       categoryName: _selectedCategory,
-      subscriptionPlanId: planId,
       aadharFile: _aadharPath,
       aadharFrontFile: _aadharPath,
       aadharBackFile: _aadharBackPath,
@@ -558,11 +551,16 @@ class _VendorRegistrationWizardScreenState
       if (mounted) {
         if (_vendorController.subscriptionPlans.isNotEmpty) {
           final serverPlans = _vendorController.subscriptionPlans;
-          final existing = serverPlans.firstWhereOrNull((p) => p.id == _selectedPlan);
+          final existing = serverPlans.firstWhereOrNull(
+            (p) => p.id == _selectedPlan,
+          );
           if (existing == null) {
-            final preferred = serverPlans.firstWhereOrNull(
-              (p) => p.durationInMonths == 6 || p.type?.contains('6') == true,
-            ) ?? serverPlans.first;
+            final preferred =
+                serverPlans.firstWhereOrNull(
+                  (p) =>
+                      p.durationInMonths == 6 || p.type?.contains('6') == true,
+                ) ??
+                serverPlans.first;
             if (preferred.id != null) {
               _selectedPlan = preferred.id!;
             }
@@ -578,23 +576,28 @@ class _VendorRegistrationWizardScreenState
 
     if (draft != null) {
       _currentStep = (draft['step'] as int?) ?? widget.initialStep;
-      if (draft['category'] != null && (draft['category'] as String).isNotEmpty) {
+      if (draft['category'] != null &&
+          (draft['category'] as String).isNotEmpty) {
         _selectedCategory = draft['category'] as String;
       }
       _businessNameController.text = (draft['businessName'] as String?) ?? '';
       _ownerNameController.text = (draft['ownerName'] as String?) ?? '';
       _mobileController.text = (draft['mobile'] as String?) ?? '';
       _emailController.text = (draft['email'] as String?) ?? '';
-      _addressController.text = (draft['address'] as String?)?.trim().isNotEmpty == true
+      _addressController.text =
+          (draft['address'] as String?)?.trim().isNotEmpty == true
           ? (draft['address'] as String).trim()
           : (storage.getUserAddress() ?? '');
-      _cityController.text = (draft['city'] as String?)?.trim().isNotEmpty == true
+      _cityController.text =
+          (draft['city'] as String?)?.trim().isNotEmpty == true
           ? (draft['city'] as String).trim()
           : (storage.getUserCity() ?? '');
-      _stateController.text = (draft['state'] as String?)?.trim().isNotEmpty == true
+      _stateController.text =
+          (draft['state'] as String?)?.trim().isNotEmpty == true
           ? (draft['state'] as String).trim()
           : (storage.getUserState() ?? '');
-      _pincodeController.text = (draft['pincode'] as String?)?.trim().isNotEmpty == true
+      _pincodeController.text =
+          (draft['pincode'] as String?)?.trim().isNotEmpty == true
           ? (draft['pincode'] as String).trim()
           : (storage.getUserPincode() ?? '');
       _addressUrlController.text = (draft['addressUrl'] as String?) ?? '';
@@ -609,7 +612,7 @@ class _VendorRegistrationWizardScreenState
       _addressProofPath = draft['addressProofPath'] as String?;
       _gstDocPath = draft['gstDocPath'] as String?;
       _selectedPlan = (draft['selectedPlan'] as String?) ?? '6_months';
-      _isSubscriptionPaid = (draft['isSubscriptionPaid'] as bool?) ?? false;
+      // Local drafts can restore selections, never proof of purchase.
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -624,20 +627,18 @@ class _VendorRegistrationWizardScreenState
       }
       _businessNameController.text =
           (widget.initialBusinessName?.trim().isNotEmpty == true)
-              ? widget.initialBusinessName!
-              : (storage.getUserName() ?? '');
+          ? widget.initialBusinessName!
+          : (storage.getUserName() ?? '');
       _ownerNameController.text =
           (widget.initialOwnerName?.trim().isNotEmpty == true)
-              ? widget.initialOwnerName!
-              : (storage.getUserName() ?? '');
-      _mobileController.text =
-          (widget.initialPhone?.trim().isNotEmpty == true)
-              ? widget.initialPhone!
-              : (storage.getUserMobile() ?? '');
-      _emailController.text =
-          (widget.initialEmail?.trim().isNotEmpty == true)
-              ? widget.initialEmail!
-              : (storage.getUserEmail() ?? '');
+          ? widget.initialOwnerName!
+          : (storage.getUserName() ?? '');
+      _mobileController.text = (widget.initialPhone?.trim().isNotEmpty == true)
+          ? widget.initialPhone!
+          : (storage.getUserMobile() ?? '');
+      _emailController.text = (widget.initialEmail?.trim().isNotEmpty == true)
+          ? widget.initialEmail!
+          : (storage.getUserEmail() ?? '');
       if (widget.initialExperience?.trim().isNotEmpty == true) {
         _experience = widget.initialExperience!.trim();
       }
@@ -737,11 +738,15 @@ class _VendorRegistrationWizardScreenState
       final pincode = _pincodeController.text.trim();
 
       final List<String> missingFields = [];
-      if (ownerName.length < 2) missingFields.add('Owner Full Name (min 2 chars)');
-      if (businessName.length < 2) missingFields.add('Business / Studio Name (min 2 chars)');
+      if (ownerName.length < 2)
+        missingFields.add('Owner Full Name (min 2 chars)');
+      if (businessName.length < 2)
+        missingFields.add('Business / Studio Name (min 2 chars)');
       if (_experience.trim().isEmpty) missingFields.add('Years of Experience');
-      if (desc.length < 10) missingFields.add('Business Description (min 10 chars)');
-      if (address.length < 3) missingFields.add('Street Address / Locality (min 3 chars)');
+      if (desc.length < 10)
+        missingFields.add('Business Description (min 10 chars)');
+      if (address.length < 3)
+        missingFields.add('Street Address / Locality (min 3 chars)');
       if (city.length < 2) missingFields.add('City (min 2 chars)');
       if (state.length < 2) missingFields.add('State (min 2 chars)');
       if (pincode.length < 4) missingFields.add('PIN Code (min 4 chars)');
@@ -789,7 +794,9 @@ class _VendorRegistrationWizardScreenState
           _currentStep = 3;
           _showDocValidationErrors = true;
         });
-        Utils.showError('Please upload all required verification documents first.');
+        Utils.showError(
+          'Please upload all required verification documents first.',
+        );
         return;
       }
       await _uploadVendorDetailsToServer();
@@ -825,15 +832,19 @@ class _VendorRegistrationWizardScreenState
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {
-        Navigator.of(context).pushReplacement(
-          FadeScaleRoute(page: const VendorSignupScreen()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(FadeScaleRoute(page: const VendorSignupScreen()));
       }
     }
   }
 
   void _submitRegistration() async {
     if (_vendorController.isSubmitting.value) return;
+    if (!_isSubscriptionPaid) {
+      Utils.showError('Complete your plan purchase before submitting.');
+      return;
+    }
 
     final missing = _getMissingRequiredDocs();
     if (missing.isNotEmpty) {
@@ -848,7 +859,6 @@ class _VendorRegistrationWizardScreenState
     }
 
     final categoryId = _resolveCategoryId();
-    final planId = _resolvePlanId();
 
     try {
       final res = await _vendorController.submitApplication(
@@ -864,7 +874,8 @@ class _VendorRegistrationWizardScreenState
             : 'Professional wedding services and premium deliverables on Widoora.',
         businessAddress: _addressController.text.trim().isNotEmpty
             ? _addressController.text.trim()
-            : (StorageHelper().getUserAddress() ?? 'SCO 142, Sector 70, Mohali, Punjab'),
+            : (StorageHelper().getUserAddress() ??
+                  'SCO 142, Sector 70, Mohali, Punjab'),
         addressUrl: _addressUrlController.text.trim().isNotEmpty
             ? _addressUrlController.text.trim()
             : null,
@@ -880,7 +891,6 @@ class _VendorRegistrationWizardScreenState
         gstNumber: _gstController.text.trim(),
         categoryId: categoryId,
         categoryName: _selectedCategory,
-        subscriptionPlanId: planId,
         aadharFile: _aadharPath,
         aadharFrontFile: _aadharPath,
         aadharBackFile: _aadharBackPath,
@@ -894,7 +904,8 @@ class _VendorRegistrationWizardScreenState
 
       if (!mounted) return;
 
-      if (res.isSuccess == true || _vendorController.isDraftSavedOnServer.value) {
+      if (res.isSuccess == true ||
+          _vendorController.isDraftSavedOnServer.value) {
         final nav = Navigator.of(context);
         // Clear local draft upon final submission
         await StorageHelper().clearVendorDraft();
@@ -910,7 +921,8 @@ class _VendorRegistrationWizardScreenState
               ownerName: _ownerNameController.text.trim().isNotEmpty
                   ? _ownerNameController.text.trim()
                   : 'Partner',
-              applicationId: res.data?.applicationId ??
+              applicationId:
+                  res.data?.applicationId ??
                   StorageHelper().getApplicationId() ??
                   'WDV12345678',
             ),
@@ -918,7 +930,9 @@ class _VendorRegistrationWizardScreenState
         );
       } else {
         Utils.showError(
-          res.message ?? res.error ?? 'Failed to submit application. Please try again.',
+          res.message ??
+              res.error ??
+              'Failed to submit application. Please try again.',
         );
       }
     } catch (e) {
@@ -927,6 +941,7 @@ class _VendorRegistrationWizardScreenState
       }
     }
   }
+
   Future<void> _showPaymentSheet() async {
     final plan = _getSelectedPlan();
     if (plan == null) {
@@ -940,11 +955,15 @@ class _VendorRegistrationWizardScreenState
       MaterialPageRoute(
         builder: (_) => VendorSubscriptionCouponScreen(
           plan: plan,
-          onPay: (paymentMethod, couponCode) async {
+          onPay: (paymentMethod, couponCode, transactionId) async {
             final planId = plan['id']?.toString() ?? '';
-            if (planId.isEmpty || planId.startsWith('3_') ||
-                planId.startsWith('6_') || planId.startsWith('12_')) {
-              Utils.showError('Subscription plan ID is missing. Please reload plans.');
+            if (planId.isEmpty ||
+                planId.startsWith('3_') ||
+                planId.startsWith('6_') ||
+                planId.startsWith('12_')) {
+              Utils.showError(
+                'Subscription plan ID is missing. Please reload plans.',
+              );
               return false;
             }
             final result = await VendorApiProvider().buyPlan(
@@ -953,14 +972,16 @@ class _VendorRegistrationWizardScreenState
                   ? 'NetBanking'
                   : paymentMethod,
               couponCode: couponCode,
-              transactionId: paymentMethod == 'Free' ? 'FREE-COUPON' : null,
+              transactionId: transactionId,
             );
             if (!mounted) return false;
             if (result.isSuccess == true) {
               return true;
             }
             Utils.showError(
-              result.message ?? result.error ?? 'Plan purchase failed. Please try again.',
+              result.message ??
+                  result.error ??
+                  'Plan purchase failed. Please try again.',
             );
             return false;
           },
@@ -976,10 +997,12 @@ class _VendorRegistrationWizardScreenState
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
 
     return PopScope(
       canPop: false,
@@ -989,78 +1012,87 @@ class _VendorRegistrationWizardScreenState
       },
       child: Scaffold(
         backgroundColor: AppColors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primary, size: 20),
-          onPressed: _prevStep,
-        ),
-        title: Text(
-          _getStepTitle(),
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.black,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            onPressed: _prevStep,
           ),
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.cream.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
-                ),
-                child: Text(
-                  '$_currentStep/$_totalSteps',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+          title: Text(
+            _getStepTitle(),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
+          centerTitle: true,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.cream.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Text(
+                    '$_currentStep/$_totalSteps',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Progress Bar
-            LinearProgressIndicator(
-              value: _currentStep / _totalSteps,
-              backgroundColor: AppColors.lightGrey,
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              minHeight: 3,
-            ),
-
-            // Step Content
-            Expanded(
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                children: [_buildCurrentStepView()],
-              ),
-            ),
-
-            // Bottom Continue Section
-            _buildBottomBar(),
           ],
         ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Progress Bar
+              LinearProgressIndicator(
+                value: _currentStep / _totalSteps,
+                backgroundColor: AppColors.lightGrey,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+                minHeight: 3,
+              ),
+
+              // Step Content
+              Expanded(
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  children: [_buildCurrentStepView()],
+                ),
+              ),
+
+              // Bottom Continue Section
+              _buildBottomBar(),
+            ],
+          ),
+        ),
       ),
-    ),
-  );
+    );
   }
 
   String _getStepTitle() {
@@ -1133,7 +1165,8 @@ class _VendorRegistrationWizardScreenState
         const SizedBox(height: 18),
 
         Obx(() {
-          final isCatLoading = (Get.isRegistered<CategoryController>() &&
+          final isCatLoading =
+              (Get.isRegistered<CategoryController>() &&
                   (CategoryController.to.isLoading.value ||
                       (!CategoryController.to.isLoaded.value &&
                           CategoryController.to.categories.isEmpty))) ||
@@ -1157,8 +1190,11 @@ class _VendorRegistrationWizardScreenState
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.storefront_outlined,
-                        size: 36, color: AppColors.grey),
+                    const Icon(
+                      Icons.storefront_outlined,
+                      size: 36,
+                      color: AppColors.grey,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'No categories available',
@@ -1178,18 +1214,23 @@ class _VendorRegistrationWizardScreenState
                     TextButton.icon(
                       onPressed: () async {
                         if (Get.isRegistered<CategoryController>()) {
-                          await CategoryController.to
-                              .fetchCategories(forceRefresh: true);
+                          await CategoryController.to.fetchCategories(
+                            forceRefresh: true,
+                          );
                           if (mounted) setState(() {});
                         }
                       },
-                      icon: const Icon(Icons.refresh_rounded,
-                          size: 16, color: AppColors.primary),
+                      icon: const Icon(
+                        Icons.refresh_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
                       label: const Text(
                         'Retry Loading',
                         style: TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600),
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -1202,10 +1243,12 @@ class _VendorRegistrationWizardScreenState
           final filteredTypes = query.isEmpty
               ? _businessTypes
               : _businessTypes
-                  .where((t) =>
-                      t.title.toLowerCase().contains(query) ||
-                      t.desc.toLowerCase().contains(query))
-                  .toList();
+                    .where(
+                      (t) =>
+                          t.title.toLowerCase().contains(query) ||
+                          t.desc.toLowerCase().contains(query),
+                    )
+                    .toList();
 
           if (filteredTypes.isEmpty) {
             return Center(
@@ -1290,8 +1333,9 @@ class _VendorRegistrationWizardScreenState
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.5,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         color: isSelected
                             ? AppColors.primary
                             : const Color(0xFF2C2424),
@@ -1307,29 +1351,40 @@ class _VendorRegistrationWizardScreenState
       ],
     );
   }
+
   // ─────────────────────────────────────────────────────────────
   // STEP 2: BASIC INFO
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep2BasicInfo() {
-    final ownerNameErr = _showStep2ValidationErrors && _ownerNameController.text.trim().length < 2
+    final ownerNameErr =
+        _showStep2ValidationErrors &&
+            _ownerNameController.text.trim().length < 2
         ? 'Please enter owner / representative name (min 2 characters)'
         : null;
-    final businessNameErr = _showStep2ValidationErrors && _businessNameController.text.trim().length < 2
+    final businessNameErr =
+        _showStep2ValidationErrors &&
+            _businessNameController.text.trim().length < 2
         ? 'Please enter business / studio name (min 2 characters)'
         : null;
-    final descErr = _showStep2ValidationErrors && _descriptionController.text.trim().length < 10
+    final descErr =
+        _showStep2ValidationErrors &&
+            _descriptionController.text.trim().length < 10
         ? 'Please describe your services (min 10 characters)'
         : null;
-    final addressErr = _showStep2ValidationErrors && _addressController.text.trim().length < 3
+    final addressErr =
+        _showStep2ValidationErrors && _addressController.text.trim().length < 3
         ? 'Please enter street address / locality (min 3 characters)'
         : null;
-    final cityErr = _showStep2ValidationErrors && _cityController.text.trim().length < 2
+    final cityErr =
+        _showStep2ValidationErrors && _cityController.text.trim().length < 2
         ? 'Please enter city'
         : null;
-    final stateErr = _showStep2ValidationErrors && _stateController.text.trim().length < 2
+    final stateErr =
+        _showStep2ValidationErrors && _stateController.text.trim().length < 2
         ? 'Please enter state'
         : null;
-    final pincodeErr = _showStep2ValidationErrors && _pincodeController.text.trim().length < 4
+    final pincodeErr =
+        _showStep2ValidationErrors && _pincodeController.text.trim().length < 4
         ? 'Please enter valid PIN code'
         : null;
 
@@ -1446,7 +1501,8 @@ class _VendorRegistrationWizardScreenState
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.white,
-            hintText: 'Describe your wedding services, studio style, expertise, years in industry, and specialties...',
+            hintText:
+                'Describe your wedding services, studio style, expertise, years in industry, and specialties...',
             hintStyle: const TextStyle(color: AppColors.grey, fontSize: 13),
             counterText: '',
             contentPadding: const EdgeInsets.all(14),
@@ -1582,7 +1638,8 @@ class _VendorRegistrationWizardScreenState
     required IconData icon,
   }) {
     final isSelected = filePath != null && filePath.isNotEmpty;
-    final isMissingError = _showDocValidationErrors && isRequired && !isSelected;
+    final isMissingError =
+        _showDocValidationErrors && isRequired && !isSelected;
     final fileName = isSelected ? filePath.split(RegExp(r'[\\/]')).last : null;
     final statusLabel = isSelected
         ? 'UPLOADED'
@@ -1602,8 +1659,8 @@ class _VendorRegistrationWizardScreenState
           color: isSelected
               ? AppColors.success.withValues(alpha: 0.32)
               : (isMissingError
-                  ? AppColors.error
-                  : AppColors.grey.withValues(alpha: 0.18)),
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.18)),
           width: isMissingError ? 1.4 : 1,
         ),
         boxShadow: [
@@ -1611,8 +1668,8 @@ class _VendorRegistrationWizardScreenState
             color: isSelected
                 ? AppColors.success.withValues(alpha: 0.05)
                 : (isMissingError
-                    ? AppColors.error.withValues(alpha: 0.05)
-                    : Colors.black.withValues(alpha: 0.025)),
+                      ? AppColors.error.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.025)),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1693,8 +1750,8 @@ class _VendorRegistrationWizardScreenState
                             isSelected && fileName != null
                                 ? _shortenFileName(fileName)
                                 : (isMissingError
-                                    ? 'Upload this required document to continue'
-                                    : subtitle),
+                                      ? 'Upload this required document to continue'
+                                      : subtitle),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1703,8 +1760,8 @@ class _VendorRegistrationWizardScreenState
                               color: isSelected
                                   ? AppColors.success
                                   : (isMissingError
-                                      ? AppColors.error
-                                      : AppColors.darkGrey),
+                                        ? AppColors.error
+                                        : AppColors.darkGrey),
                               fontWeight: isSelected || isMissingError
                                   ? FontWeight.w600
                                   : FontWeight.normal,
@@ -1806,8 +1863,8 @@ class _VendorRegistrationWizardScreenState
           color: isSelected
               ? AppColors.success.withValues(alpha: 0.6)
               : (isMissingError
-                  ? AppColors.error
-                  : AppColors.grey.withValues(alpha: 0.3)),
+                    ? AppColors.error
+                    : AppColors.grey.withValues(alpha: 0.3)),
           width: isSelected || isMissingError ? 1.5 : 1,
         ),
         boxShadow: [
@@ -1831,8 +1888,8 @@ class _VendorRegistrationWizardScreenState
                   color: isSelected
                       ? AppColors.success.withValues(alpha: 0.12)
                       : (isMissingError
-                          ? AppColors.error.withValues(alpha: 0.1)
-                          : AppColors.primary.withValues(alpha: 0.08)),
+                            ? AppColors.error.withValues(alpha: 0.1)
+                            : AppColors.primary.withValues(alpha: 0.08)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -1863,13 +1920,15 @@ class _VendorRegistrationWizardScreenState
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? AppColors.success.withValues(alpha: 0.12)
                                 : (isMissingError
-                                    ? AppColors.error
-                                    : AppColors.error.withValues(alpha: 0.1)),
+                                      ? AppColors.error
+                                      : AppColors.error.withValues(alpha: 0.1)),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1881,8 +1940,8 @@ class _VendorRegistrationWizardScreenState
                               color: isSelected
                                   ? AppColors.success
                                   : (isMissingError
-                                      ? Colors.white
-                                      : AppColors.error),
+                                        ? Colors.white
+                                        : AppColors.error),
                             ),
                           ),
                         ),
@@ -1893,8 +1952,8 @@ class _VendorRegistrationWizardScreenState
                       isSelected
                           ? 'Live portrait selfie captured with camera'
                           : (isMissingError
-                              ? 'Live selfie is required for admin verification'
-                              : 'Take a clear front-camera photo of vendor owner'),
+                                ? 'Live selfie is required for admin verification'
+                                : 'Take a clear front-camera photo of vendor owner'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1902,8 +1961,8 @@ class _VendorRegistrationWizardScreenState
                         color: isSelected
                             ? AppColors.success
                             : (isMissingError
-                                ? AppColors.error
-                                : AppColors.darkGrey),
+                                  ? AppColors.error
+                                  : AppColors.darkGrey),
                         fontWeight: isSelected || isMissingError
                             ? FontWeight.w600
                             : FontWeight.normal,
@@ -1923,10 +1982,7 @@ class _VendorRegistrationWizardScreenState
                   height: 56,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.success,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColors.success, width: 2),
                   ),
                   child: ClipOval(
                     child: Image.file(
@@ -1952,7 +2008,9 @@ class _VendorRegistrationWizardScreenState
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _shortenFileName(_liveSelfiePath!.split(RegExp(r'[\\/]')).last),
+                        _shortenFileName(
+                          _liveSelfiePath!.split(RegExp(r'[\\/]')).last,
+                        ),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.darkGrey,
@@ -1964,14 +2022,23 @@ class _VendorRegistrationWizardScreenState
                 OutlinedButton.icon(
                   onPressed: _captureLiveSelfie,
                   icon: const Icon(Icons.camera_alt_outlined, size: 14),
-                  label: const Text('Retake',
-                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  label: const Text(
+                    'Retake',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -1981,8 +2048,11 @@ class _VendorRegistrationWizardScreenState
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _captureLiveSelfie,
-                icon: const Icon(Icons.camera_front_rounded,
-                    color: AppColors.white, size: 18),
+                icon: const Icon(
+                  Icons.camera_front_rounded,
+                  color: AppColors.white,
+                  size: 18,
+                ),
                 label: const Text(
                   'Open Camera & Take Live Selfie',
                   style: TextStyle(
@@ -1992,7 +2062,9 @@ class _VendorRegistrationWizardScreenState
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isMissingError ? AppColors.error : AppColors.primary,
+                  backgroundColor: isMissingError
+                      ? AppColors.error
+                      : AppColors.primary,
                   elevation: 1,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
@@ -2032,13 +2104,15 @@ class _VendorRegistrationWizardScreenState
                 color: allUploaded
                     ? AppColors.success.withValues(alpha: 0.12)
                     : (_showDocValidationErrors
-                        ? AppColors.error.withValues(alpha: 0.12)
-                        : AppColors.primary.withValues(alpha: 0.1)),
+                          ? AppColors.error.withValues(alpha: 0.12)
+                          : AppColors.primary.withValues(alpha: 0.1)),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: allUploaded
                       ? AppColors.success
-                      : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+                      : (_showDocValidationErrors
+                            ? AppColors.error
+                            : AppColors.primary),
                   width: 1.2,
                 ),
               ),
@@ -2049,7 +2123,9 @@ class _VendorRegistrationWizardScreenState
                   fontWeight: FontWeight.w700,
                   color: allUploaded
                       ? AppColors.success
-                      : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+                      : (_showDocValidationErrors
+                            ? AppColors.error
+                            : AppColors.primary),
                 ),
               ),
             ),
@@ -2062,8 +2138,12 @@ class _VendorRegistrationWizardScreenState
               : 'Aadhaar Card (Front & Back), Live Selfie, and PAN Card are required for verification.',
           style: TextStyle(
             fontSize: 12.5,
-            color: _showDocValidationErrors && !allUploaded ? AppColors.error : AppColors.darkGrey,
-            fontWeight: _showDocValidationErrors && !allUploaded ? FontWeight.w600 : FontWeight.normal,
+            color: _showDocValidationErrors && !allUploaded
+                ? AppColors.error
+                : AppColors.darkGrey,
+            fontWeight: _showDocValidationErrors && !allUploaded
+                ? FontWeight.w600
+                : FontWeight.normal,
           ),
         ),
         const SizedBox(height: 12),
@@ -2076,7 +2156,9 @@ class _VendorRegistrationWizardScreenState
             valueColor: AlwaysStoppedAnimation<Color>(
               allUploaded
                   ? AppColors.success
-                  : (_showDocValidationErrors ? AppColors.error : AppColors.primary),
+                  : (_showDocValidationErrors
+                        ? AppColors.error
+                        : AppColors.primary),
             ),
             minHeight: 5,
           ),
@@ -2231,7 +2313,10 @@ class _VendorRegistrationWizardScreenState
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(8),
@@ -2239,7 +2324,11 @@ class _VendorRegistrationWizardScreenState
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 13),
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: Color(0xFF2E7D32),
+                          size: 13,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Verified Draft',
@@ -2255,7 +2344,10 @@ class _VendorRegistrationWizardScreenState
                 ],
               ),
               const SizedBox(height: 14),
-              _buildReviewInfoRow('Business Name', _businessNameController.text),
+              _buildReviewInfoRow(
+                'Business Name',
+                _businessNameController.text,
+              ),
               _buildReviewInfoRow('Owner / Contact', _ownerNameController.text),
               _buildReviewInfoRow('Primary Category', _selectedCategory),
               _buildReviewInfoRow('Experience', _experience),
@@ -2311,7 +2403,9 @@ class _VendorRegistrationWizardScreenState
 
             final displayAddress = _addressController.text.trim().isNotEmpty
                 ? _addressController.text.trim()
-                : (storage.getUserAddress() ?? authUser?.address ?? 'Not Provided');
+                : (storage.getUserAddress() ??
+                      authUser?.address ??
+                      'Not Provided');
             final displayCity = _cityController.text.trim().isNotEmpty
                 ? _cityController.text.trim()
                 : (storage.getUserCity() ?? authUser?.city ?? 'Not Provided');
@@ -2320,14 +2414,20 @@ class _VendorRegistrationWizardScreenState
                 : (storage.getUserState() ?? authUser?.state ?? 'Not Provided');
             final displayPincode = _pincodeController.text.trim().isNotEmpty
                 ? _pincodeController.text.trim()
-                : (storage.getUserPincode() ?? authUser?.pincode ?? 'Not Provided');
+                : (storage.getUserPincode() ??
+                      authUser?.pincode ??
+                      'Not Provided');
             final displayMapUrl = _addressUrlController.text.trim();
 
             final addressParts = [
-              if (displayAddress.isNotEmpty && displayAddress != 'Not Provided') displayAddress,
-              if (displayCity.isNotEmpty && displayCity != 'Not Provided') displayCity,
-              if (displayState.isNotEmpty && displayState != 'Not Provided') displayState,
-              if (displayPincode.isNotEmpty && displayPincode != 'Not Provided') displayPincode,
+              if (displayAddress.isNotEmpty && displayAddress != 'Not Provided')
+                displayAddress,
+              if (displayCity.isNotEmpty && displayCity != 'Not Provided')
+                displayCity,
+              if (displayState.isNotEmpty && displayState != 'Not Provided')
+                displayState,
+              if (displayPincode.isNotEmpty && displayPincode != 'Not Provided')
+                displayPincode,
             ];
 
             return Container(
@@ -2379,7 +2479,10 @@ class _VendorRegistrationWizardScreenState
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
@@ -2387,7 +2490,11 @@ class _VendorRegistrationWizardScreenState
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.edit_outlined, color: AppColors.primary, size: 12),
+                              Icon(
+                                Icons.edit_outlined,
+                                color: AppColors.primary,
+                                size: 12,
+                              ),
                               SizedBox(width: 3),
                               Text(
                                 'Edit',
@@ -2450,22 +2557,10 @@ class _VendorRegistrationWizardScreenState
                     ),
                   ],
 
-                  _buildReviewInfoRow(
-                    'Business Address',
-                    displayAddress,
-                  ),
-                  _buildReviewInfoRow(
-                    'City',
-                    displayCity,
-                  ),
-                  _buildReviewInfoRow(
-                    'State',
-                    displayState,
-                  ),
-                  _buildReviewInfoRow(
-                    'PIN Code',
-                    displayPincode,
-                  ),
+                  _buildReviewInfoRow('Business Address', displayAddress),
+                  _buildReviewInfoRow('City', displayCity),
+                  _buildReviewInfoRow('State', displayState),
+                  _buildReviewInfoRow('PIN Code', displayPincode),
                   if (displayMapUrl.isNotEmpty)
                     _buildReviewInfoRow(
                       'Map Location Link',
@@ -2659,23 +2754,50 @@ class _VendorRegistrationWizardScreenState
               ),
               const SizedBox(height: 12),
               ...[
-                {'name': 'Live Selfie Verification', 'path': _liveSelfiePath, 'req': true},
-                {'name': 'Aadhaar Card (Front)', 'path': _aadharPath, 'req': true},
-                {'name': 'Aadhaar Card (Back)', 'path': _aadharBackPath, 'req': true},
+                {
+                  'name': 'Live Selfie Verification',
+                  'path': _liveSelfiePath,
+                  'req': true,
+                },
+                {
+                  'name': 'Aadhaar Card (Front)',
+                  'path': _aadharPath,
+                  'req': true,
+                },
+                {
+                  'name': 'Aadhaar Card (Back)',
+                  'path': _aadharBackPath,
+                  'req': true,
+                },
                 {'name': 'PAN Card', 'path': _panPath, 'req': true},
-                {'name': 'Business Registration', 'path': _businessCertPath, 'req': false},
-                {'name': 'Address Proof', 'path': _addressProofPath, 'req': false},
+                {
+                  'name': 'Business Registration',
+                  'path': _businessCertPath,
+                  'req': false,
+                },
+                {
+                  'name': 'Address Proof',
+                  'path': _addressProofPath,
+                  'req': false,
+                },
                 {'name': 'GST Certificate', 'path': _gstDocPath, 'req': false},
               ].map((doc) {
-                final hasPath = doc['path'] != null && (doc['path'] as String).isNotEmpty;
-                final fileName = hasPath ? (doc['path'] as String).split(RegExp(r'[\\/]')).last : null;
+                final hasPath =
+                    doc['path'] != null && (doc['path'] as String).isNotEmpty;
+                final fileName = hasPath
+                    ? (doc['path'] as String).split(RegExp(r'[\\/]')).last
+                    : null;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 9),
                   child: Row(
                     children: [
                       Icon(
-                        hasPath ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                        color: hasPath ? const Color(0xFF2E7D32) : AppColors.grey,
+                        hasPath
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        color: hasPath
+                            ? const Color(0xFF2E7D32)
+                            : AppColors.grey,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -2695,9 +2817,14 @@ class _VendorRegistrationWizardScreenState
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 130),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3.5,
+                          ),
                           decoration: BoxDecoration(
-                            color: hasPath ? const Color(0xFFE8F5E9) : AppColors.cream,
+                            color: hasPath
+                                ? const Color(0xFFE8F5E9)
+                                : AppColors.cream,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: hasPath
@@ -2709,20 +2836,30 @@ class _VendorRegistrationWizardScreenState
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (hasPath) ...[
-                                const Icon(Icons.attachment_rounded, size: 11, color: Color(0xFF2E7D32)),
+                                const Icon(
+                                  Icons.attachment_rounded,
+                                  size: 11,
+                                  color: Color(0xFF2E7D32),
+                                ),
                                 const SizedBox(width: 3),
                               ],
                               Flexible(
                                 child: Text(
                                   hasPath
-                                      ? (fileName != null ? _shortenFileName(fileName) : 'Uploaded ✓')
-                                      : (doc['req'] == true ? 'Default' : 'Optional'),
+                                      ? (fileName != null
+                                            ? _shortenFileName(fileName)
+                                            : 'Uploaded ✓')
+                                      : (doc['req'] == true
+                                            ? 'Default'
+                                            : 'Optional'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
-                                    color: hasPath ? const Color(0xFF2E7D32) : AppColors.darkGrey,
+                                    color: hasPath
+                                        ? const Color(0xFF2E7D32)
+                                        : AppColors.darkGrey,
                                   ),
                                 ),
                               ),
@@ -2745,7 +2882,9 @@ class _VendorRegistrationWizardScreenState
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.15),
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2760,7 +2899,11 @@ class _VendorRegistrationWizardScreenState
               const Expanded(
                 child: Text(
                   'I confirm that all details and submitted documents are authentic and accurate as per Widoora Vendor Partnership Guidelines.',
-                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.4),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.darkGrey,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ],
@@ -2770,7 +2913,11 @@ class _VendorRegistrationWizardScreenState
     );
   }
 
-  Widget _buildReviewInfoRow(String label, String value, {bool isLink = false}) {
+  Widget _buildReviewInfoRow(
+    String label,
+    String value, {
+    bool isLink = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 9),
       child: Row(
@@ -2798,7 +2945,9 @@ class _VendorRegistrationWizardScreenState
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: isLink ? const Color(0xFF1E88E5) : AppColors.black,
-                decoration: isLink ? TextDecoration.underline : TextDecoration.none,
+                decoration: isLink
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
               ),
             ),
           ),
@@ -2811,13 +2960,14 @@ class _VendorRegistrationWizardScreenState
     if (fileName.length <= 14) return fileName;
     final dotIndex = fileName.lastIndexOf('.');
     final ext = dotIndex != -1 ? fileName.substring(dotIndex) : '';
-    final nameWithoutExt = dotIndex != -1 ? fileName.substring(0, dotIndex) : fileName;
+    final nameWithoutExt = dotIndex != -1
+        ? fileName.substring(0, dotIndex)
+        : fileName;
     if (nameWithoutExt.length > 7) {
       return '${nameWithoutExt.substring(0, 6)}...$ext';
     }
     return fileName;
   }
-
 
   // ─────────────────────────────────────────────────────────────
   // STEP 5: SUBSCRIPTION PLAN
@@ -2914,11 +3064,17 @@ class _VendorRegistrationWizardScreenState
               decoration: BoxDecoration(
                 color: AppColors.offWhite,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.grey.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.grey.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.cloud_off_rounded, color: AppColors.darkGrey, size: 36),
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    color: AppColors.darkGrey,
+                    size: 36,
+                  ),
                   const SizedBox(height: 8),
                   const Text(
                     'No subscription plans are available right now.',
@@ -2932,7 +3088,9 @@ class _VendorRegistrationWizardScreenState
                   ),
                   const SizedBox(height: 14),
                   ElevatedButton.icon(
-                    onPressed: () => _vendorController.fetchSubscriptions(forceRefresh: true),
+                    onPressed: () => _vendorController.fetchSubscriptions(
+                      forceRefresh: true,
+                    ),
                     icon: const Icon(Icons.refresh_rounded, size: 16),
                     label: const Text('Try Again'),
                     style: ElevatedButton.styleFrom(
@@ -2970,8 +3128,8 @@ class _VendorRegistrationWizardScreenState
                       color: isSelected
                           ? AppColors.primary
                           : isPopular
-                              ? AppColors.primary.withValues(alpha: 0.35)
-                              : AppColors.grey.withValues(alpha: 0.25),
+                          ? AppColors.primary.withValues(alpha: 0.35)
+                          : AppColors.grey.withValues(alpha: 0.25),
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: [
@@ -2993,12 +3151,18 @@ class _VendorRegistrationWizardScreenState
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           decoration: const BoxDecoration(
                             color: AppColors.primary,
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(14),
+                            ),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.star_rounded, size: 14, color: AppColors.cream),
+                              Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: AppColors.cream,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'MOST POPULAR CHOICE • SAVE 15%',
@@ -3018,12 +3182,18 @@ class _VendorRegistrationWizardScreenState
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           decoration: const BoxDecoration(
                             color: Color(0xFF790D16),
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(14),
+                            ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.diamond_rounded, size: 14, color: AppColors.cream),
+                              const Icon(
+                                Icons.diamond_rounded,
+                                size: 14,
+                                color: AppColors.cream,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'BEST VALUE • $savings ON ANNUAL',
@@ -3051,7 +3221,8 @@ class _VendorRegistrationWizardScreenState
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: (plan['color'] as Color).withValues(alpha: 0.12),
+                                          color: (plan['color'] as Color)
+                                              .withValues(alpha: 0.12),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -3063,7 +3234,8 @@ class _VendorRegistrationWizardScreenState
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Row(
                                               children: [
@@ -3072,25 +3244,41 @@ class _VendorRegistrationWizardScreenState
                                                     plan['name'] as String,
                                                     style: const TextStyle(
                                                       fontSize: 16,
-                                                      fontWeight: FontWeight.w800,
+                                                      fontWeight:
+                                                          FontWeight.w800,
                                                       color: AppColors.black,
                                                     ),
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 6),
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: (plan['color'] as Color).withValues(alpha: 0.12),
-                                                    borderRadius: BorderRadius.circular(6),
+                                                    color:
+                                                        (plan['color'] as Color)
+                                                            .withValues(
+                                                              alpha: 0.12,
+                                                            ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     plan['badge'] as String,
                                                     style: TextStyle(
                                                       fontSize: 9,
-                                                      fontWeight: FontWeight.w800,
-                                                      color: plan['color'] as Color,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color:
+                                                          plan['color']
+                                                              as Color,
                                                     ),
                                                   ),
                                                 ),
@@ -3170,16 +3358,22 @@ class _VendorRegistrationWizardScreenState
                                   side: BorderSide(
                                     color: isSelected
                                         ? AppColors.primary
-                                        : AppColors.primary.withValues(alpha: 0.5),
+                                        : AppColors.primary.withValues(
+                                            alpha: 0.5,
+                                          ),
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                                 child: Text(
-                                  isSelected ? 'Selected Plan ✓' : 'Select ${plan['name']}',
+                                  isSelected
+                                      ? 'Selected Plan ✓'
+                                      : 'Select ${plan['name']}',
                                   style: TextStyle(
-                                    color: isSelected ? Colors.white : AppColors.primary,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppColors.primary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                   ),
@@ -3196,14 +3390,9 @@ class _VendorRegistrationWizardScreenState
             }).toList(),
           );
         }),
-
-
       ],
     );
   }
-
-
-
 
   Widget _buildFormField({
     required String label,
@@ -3268,7 +3457,10 @@ class _VendorRegistrationWizardScreenState
             suffixIcon: suffixIcon != null
                 ? Icon(suffixIcon, color: AppColors.grey)
                 : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(
@@ -3296,17 +3488,11 @@ class _VendorRegistrationWizardScreenState
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: AppColors.error,
-                width: 1.4,
-              ),
+              borderSide: const BorderSide(color: AppColors.error, width: 1.4),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: AppColors.error,
-                width: 1.5,
-              ),
+              borderSide: const BorderSide(color: AppColors.error, width: 1.5),
             ),
           ),
         ),
@@ -3337,15 +3523,15 @@ class _VendorRegistrationWizardScreenState
       buttonText = _isSubscriptionPaid
           ? 'Submitting Application...'
           : (activePlan != null
-              ? 'Buy $planName (₹$activePrice)'
-              : 'Choose a Plan');
+                ? 'Buy $planName (₹$activePrice)'
+                : 'Choose a Plan');
     } else if (_currentStep == 4) {
       buttonText = 'Save Details & View Plans';
     } else if (_currentStep == 3) {
       final uploadedCount = _getUploadedRequiredDocsCount();
       buttonText = uploadedCount == 4
           ? 'Continue to Review (4/4 Uploaded ✓)'
-          : 'Upload Required Documents ($uploadedCount/4)';
+          : 'Upload Documents ($uploadedCount/4)';
     } else {
       buttonText = 'Continue';
     }
@@ -3414,7 +3600,6 @@ class _VendorRegistrationWizardScreenState
     );
   }
 }
-
 
 /// Shimmer loading placeholder for vendor category selection (3-column grid)
 class _VendorCategoryShimmerGrid extends StatefulWidget {

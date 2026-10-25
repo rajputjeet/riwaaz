@@ -23,9 +23,10 @@ class VendorShell extends StatefulWidget {
   State<VendorShell> createState() => _VendorShellState();
 }
 
-class _VendorShellState extends State<VendorShell> {
+class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
   late int _currentIndex;
   bool _showApprovalWarning = true;
+  final _dashboardKey = GlobalKey<VendorDashboardTabState>();
   final _profileKey = GlobalKey<VendorProfileScreenState>();
   final _packagesKey = GlobalKey<VendorPackagesScreenState>();
   final _portfolioKey = GlobalKey<VendorPortfolioScreenState>();
@@ -34,12 +35,29 @@ class _VendorShellState extends State<VendorShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentIndex = widget.initialIndex;
     NotificationService.instance.refresh();
     _regController = Get.isRegistered<VendorRegistrationController>()
         ? Get.find<VendorRegistrationController>()
         : Get.put(VendorRegistrationController());
     _regController.fetchApplicationStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (_currentIndex == 4) {
+      _profileKey.currentState?.loadAll(silent: true);
+    } else {
+      _dashboardKey.currentState?.refreshPlanStatus();
+    }
   }
 
   void _onTabTap(int index) {
@@ -51,6 +69,8 @@ class _VendorShellState extends State<VendorShell> {
       _packagesKey.currentState?.refresh(silent: true);
     } else if (index == 4) {
       _profileKey.currentState?.loadAll(silent: true);
+    } else if (index == 0) {
+      _dashboardKey.currentState?.refreshPlanStatus();
     }
   }
 
@@ -137,7 +157,10 @@ class _VendorShellState extends State<VendorShell> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          VendorDashboardTab(onNavigateTab: (idx) => _onTabTap(idx)),
+          VendorDashboardTab(
+            key: _dashboardKey,
+            onNavigateTab: (idx) => _onTabTap(idx),
+          ),
           const VendorBookingsTab(key: ValueKey('vendor_bookings_tab_v2')),
           VendorPortfolioScreen(key: _portfolioKey, isTab: true),
           VendorPackagesScreen(key: _packagesKey, isTab: true),

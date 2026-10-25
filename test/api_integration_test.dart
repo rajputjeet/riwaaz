@@ -110,7 +110,6 @@ void main() {
         city: 'Mohali',
         gstNumber: '03AABCR1234F1Z8',
         categoryId: '6701a2b3c4d5e6f7',
-        subscriptionPlanId: '6702b3c4d5e6f7a8',
       );
 
       expect(res.isSuccess, isTrue);

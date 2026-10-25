@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import '../../models/subscription_coupon_models.dart';
 import '../../utils/helper/storage_helper.dart';
@@ -60,26 +61,31 @@ class AdApiProvider {
   // POST /api/ad/buy
   Future<DataResponse<ActiveAdDetailModel>> buyAdPlan(
     String adPlanId, {
+    required File bannerFile,
     String? couponCode,
-    String paymentMethod = 'In-App',
+    String paymentMethod = 'Razorpay',
     String? transactionId,
     String? adBannerUrl,
   }) async {
     try {
       final token = StorageHelper().getAccessToken();
+      final formData = FormData.fromMap({
+        'planId': adPlanId,
+        if (couponCode != null && couponCode.trim().isNotEmpty)
+          'couponCode': couponCode.trim().toUpperCase(),
+        'paymentMethod': paymentMethod,
+        if (transactionId != null && transactionId.isNotEmpty)
+          'transactionId': transactionId,
+        'banner': await MultipartFile.fromFile(
+          bannerFile.path,
+          filename: bannerFile.path.split(Platform.pathSeparator).last,
+        ),
+        if (adBannerUrl != null && adBannerUrl.isNotEmpty)
+          'adBannerUrl': adBannerUrl,
+      });
       final response = await _dio.post(
         ApiConstants.adBuy,
-        data: {
-          'adPlanId': adPlanId,
-          if (couponCode != null && couponCode.trim().isNotEmpty)
-            'couponCode': couponCode.trim().toUpperCase(),
-          'paymentMethod': paymentMethod,
-          'transactionId': (transactionId != null && transactionId.isNotEmpty)
-              ? transactionId
-              : 'TXN-AD-${DateTime.now().millisecondsSinceEpoch}',
-          if (adBannerUrl != null && adBannerUrl.isNotEmpty)
-            'adBannerUrl': adBannerUrl,
-        },
+        data: formData,
         options: Options(
           headers: {
             if (token != null && token.isNotEmpty)

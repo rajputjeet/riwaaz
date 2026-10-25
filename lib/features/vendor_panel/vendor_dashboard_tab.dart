@@ -21,16 +21,17 @@ class VendorDashboardTab extends StatefulWidget {
   const VendorDashboardTab({super.key, this.onNavigateTab});
 
   @override
-  State<VendorDashboardTab> createState() => _VendorDashboardTabState();
+  State<VendorDashboardTab> createState() => VendorDashboardTabState();
 }
 
-class _VendorDashboardTabState extends State<VendorDashboardTab> {
+class VendorDashboardTabState extends State<VendorDashboardTab> {
   final _vendorApi = VendorApiProvider();
 
   DashboardStatsModel? _stats;
   List<BookingModel> _recentBookings = [];
   ActivePlanModel? _activePlan;
   bool _isLoading = true;
+  bool _hasShownExpiryReminder = false;
   bool _isNoInternet = false;
   String? _errorMsg;
 
@@ -77,6 +78,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
         _isNoInternet = false;
         _errorMsg = null;
       });
+      _maybeShowPlanExpiryReminder();
     } catch (e) {
       if (!mounted) return;
       final isNet = e.toString().toLowerCase().contains('socket') ||
@@ -88,6 +90,65 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> refreshPlanStatus() async {
+    try {
+      final results = await Future.wait([
+        _vendorApi.getActivePlan(),
+        _vendorApi.getDashboardStats(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        final planResult = results[0];
+        final statsResult = results[1];
+        if (planResult.isSuccess == true && planResult.data != null) {
+          _activePlan = planResult.data as ActivePlanModel;
+        }
+        if (statsResult.isSuccess == true && statsResult.data != null) {
+          _stats = statsResult.data as DashboardStatsModel;
+        }
+      });
+      _maybeShowPlanExpiryReminder();
+    } catch (_) {
+      // Keep the dashboard data visible if the quiet status refresh fails.
+    }
+  }
+
+  void _maybeShowPlanExpiryReminder() {
+    if (_hasShownExpiryReminder) return;
+    final activePlan = _activePlan;
+    final isActive = activePlan?.isSubscriptionActive ??
+        _stats?.subscription?.isSubscriptionActive ??
+        false;
+    final daysRemaining = activePlan?.daysRemaining ??
+        _stats?.subscription?.daysRemaining ??
+        -1;
+    if (!isActive || daysRemaining < 0 || daysRemaining > 7) return;
+
+    _hasShownExpiryReminder = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final daysText = daysRemaining == 0
+          ? 'today'
+          : 'in $daysRemaining day${daysRemaining == 1 ? '' : 's'}';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Your vendor plan expires $daysText. Purchase a plan to keep your profile active.',
+            ),
+            action: SnackBarAction(
+              label: 'View plans',
+              onPressed: () => Navigator.of(context).push(
+                FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
+              ),
+            ),
+            duration: const Duration(seconds: 7),
+          ),
+        );
+    });
   }
 
   void Function(int tabIndex)? get onNavigateTab => widget.onNavigateTab;
@@ -585,7 +646,7 @@ class _VendorDashboardTabState extends State<VendorDashboardTab> {
                       : (isActive
                           ? 'Active Subscription • $daysRemaining Days Remaining'
                           : (isExpired
-                              ? 'Plan Expired — Please renew to continue'
+                              ? 'Plan expired — choose a plan to continue'
                               : 'No active plan')),
                   style: const TextStyle(
                     fontSize: 11,

@@ -140,6 +140,14 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
       return;
     }
 
+    final bannerFile = await AdBannerUploadDialog.pickForPurchase(
+      context,
+      adPlan: plan,
+      vendorName: plan.title,
+      vendorCategory: 'Featured Wedding Partner',
+    );
+    if (!mounted || bannerFile == null) return;
+
     final planMap = {
       'id': plan.id ?? '',
       'serverPlanId': plan.id ?? '',
@@ -154,7 +162,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
         builder: (_) => VendorSubscriptionCouponScreen(
           plan: planMap,
           isAd: true,
-          onPay: (paymentMethod, couponCode) async {
+          onPay: (paymentMethod, couponCode, transactionId) async {
             // Recheck immediately before purchase in case another device activated an ad.
             final currentAd = await _adApi.getMyAd();
             if (!mounted) return false;
@@ -173,9 +181,10 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
             }
             final res = await _adApi.buyAdPlan(
               plan.id ?? '',
+              bannerFile: bannerFile,
               couponCode: couponCode,
               paymentMethod: paymentMethod,
-              transactionId: paymentMethod == 'Free' ? 'FREE-COUPON' : null,
+              transactionId: transactionId,
             );
             if (!mounted) return false;
             if (res.isSuccess == true) {
@@ -193,9 +202,6 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
     );
 
     if (paid == true && mounted) {
-      await _loadData();
-      // Mandatory popup to upload the homepage ad banner
-      await _openBannerUploadDialog(plan);
       await _loadData();
     }
   }

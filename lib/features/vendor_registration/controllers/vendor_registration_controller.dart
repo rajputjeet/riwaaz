@@ -74,9 +74,11 @@ class VendorRegistrationController extends GetxController {
         response.data!.isNotEmpty) {
       subscriptionPlans.assignAll(response.data!);
       if (selectedSubscriptionPlanId.isEmpty) {
-        final preferred = subscriptionPlans.firstWhereOrNull(
-          (p) => p.durationInMonths == 6 || p.type?.contains('6') == true,
-        ) ?? subscriptionPlans.first;
+        final preferred =
+            subscriptionPlans.firstWhereOrNull(
+              (p) => p.durationInMonths == 6 || p.type?.contains('6') == true,
+            ) ??
+            subscriptionPlans.first;
         selectedSubscriptionPlanId.value = preferred.id ?? '';
       }
     }
@@ -96,7 +98,6 @@ class VendorRegistrationController extends GetxController {
     String? gstNumber,
     required String categoryId,
     String? categoryName,
-    required String subscriptionPlanId,
     dynamic aadharFile,
     dynamic aadharFrontFile,
     dynamic aadharBackFile,
@@ -110,9 +111,11 @@ class VendorRegistrationController extends GetxController {
     isSubmitting.value = true;
 
     final actualFront = aadharFrontFile ?? aadharFile;
-    final bool hasAadhar = actualFront is MultipartFile ||
+    final bool hasAadhar =
+        actualFront is MultipartFile ||
         (actualFront is String && actualFront.trim().isNotEmpty);
-    final bool hasPan = panFile is MultipartFile ||
+    final bool hasPan =
+        panFile is MultipartFile ||
         (panFile is String && panFile.trim().isNotEmpty);
 
     if (!hasAadhar || !hasPan) {
@@ -125,7 +128,8 @@ class VendorRegistrationController extends GetxController {
       }
       return DataResponse<VendorApplicationModel>(
         isSuccess: false,
-        message: 'Aadhaar and PAN Card documents are required to complete registration.',
+        message:
+            'Aadhaar and PAN Card documents are required to complete registration.',
       );
     }
 
@@ -137,7 +141,8 @@ class VendorRegistrationController extends GetxController {
       'businessAddress': businessAddress.trim(),
       'city': city.trim(),
       if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
-      if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
+      if (pincode != null && pincode.trim().isNotEmpty)
+        'pincode': pincode.trim(),
       if (addressUrl != null && addressUrl.trim().isNotEmpty)
         'addressUrl': addressUrl.trim(),
       if (gstNumber != null && gstNumber.trim().isNotEmpty)
@@ -147,11 +152,13 @@ class VendorRegistrationController extends GetxController {
         'category': categoryName.trim(),
         'categoryName': categoryName.trim(),
       },
-      'subscriptionPlanId': subscriptionPlanId,
     };
 
     // Convert file paths or MultipartFiles to actual multipart form files
-    Future<MultipartFile> toMultipart(dynamic file, String fallbackFilename) async {
+    Future<MultipartFile> toMultipart(
+      dynamic file,
+      String fallbackFilename,
+    ) async {
       if (file is MultipartFile) return file.clone();
       if (file is String && file.trim().isNotEmpty) {
         try {
@@ -166,31 +173,52 @@ class VendorRegistrationController extends GetxController {
     }
 
     if (actualFront != null) {
-      formDataMap['aadharFront'] = await toMultipart(actualFront, 'aadhar_front.jpg');
+      formDataMap['aadharFront'] = await toMultipart(
+        actualFront,
+        'aadhar_front.jpg',
+      );
     }
 
     if (aadharBackFile != null &&
         (aadharBackFile is MultipartFile ||
             (aadharBackFile is String && aadharBackFile.trim().isNotEmpty))) {
-      formDataMap['aadharBack'] =
-          await toMultipart(aadharBackFile, 'aadhar_back.jpg');
+      formDataMap['aadharBack'] = await toMultipart(
+        aadharBackFile,
+        'aadhar_back.jpg',
+      );
     }
 
     if (liveSelfieFile != null &&
         (liveSelfieFile is MultipartFile ||
             (liveSelfieFile is String && liveSelfieFile.trim().isNotEmpty))) {
-      formDataMap['liveSelfie'] =
-          await toMultipart(liveSelfieFile, 'live_selfie.jpg');
+      formDataMap['liveSelfie'] = await toMultipart(
+        liveSelfieFile,
+        'live_selfie.jpg',
+      );
     }
 
     formDataMap['pan'] = await toMultipart(panFile, 'pan_card.jpg');
-    if (businessCertFile != null && (businessCertFile is MultipartFile || (businessCertFile is String && businessCertFile.trim().isNotEmpty))) {
-      formDataMap['businessCert'] = await toMultipart(businessCertFile, 'business_cert.jpg');
+    if (businessCertFile != null &&
+        (businessCertFile is MultipartFile ||
+            (businessCertFile is String &&
+                businessCertFile.trim().isNotEmpty))) {
+      formDataMap['businessCert'] = await toMultipart(
+        businessCertFile,
+        'business_cert.jpg',
+      );
     }
-    if (addressProofFile != null && (addressProofFile is MultipartFile || (addressProofFile is String && addressProofFile.trim().isNotEmpty))) {
-      formDataMap['addressProof'] = await toMultipart(addressProofFile, 'address_proof.jpg');
+    if (addressProofFile != null &&
+        (addressProofFile is MultipartFile ||
+            (addressProofFile is String &&
+                addressProofFile.trim().isNotEmpty))) {
+      formDataMap['addressProof'] = await toMultipart(
+        addressProofFile,
+        'address_proof.jpg',
+      );
     }
-    if (gstDocFile != null && (gstDocFile is MultipartFile || (gstDocFile is String && gstDocFile.trim().isNotEmpty))) {
+    if (gstDocFile != null &&
+        (gstDocFile is MultipartFile ||
+            (gstDocFile is String && gstDocFile.trim().isNotEmpty))) {
       formDataMap['gstDoc'] = await toMultipart(gstDocFile, 'gst_cert.jpg');
     }
 
@@ -206,8 +234,9 @@ class VendorRegistrationController extends GetxController {
       isDraftSavedOnServer.value = true;
 
       await _storageHelper.saveApplicationId(response.data!.applicationId);
-      await _storageHelper
-          .saveApplicationStatus(response.data!.applicationStatus);
+      await _storageHelper.saveApplicationStatus(
+        response.data!.applicationStatus,
+      );
       await _storageHelper.saveIsVerified(response.data!.isVerified);
 
       if (!isPreliminaryUpload) {
@@ -253,8 +282,9 @@ class VendorRegistrationController extends GetxController {
       isVerified.value = response.data!.isVerified ?? false;
 
       await _storageHelper.saveApplicationId(response.data!.applicationId);
-      await _storageHelper
-          .saveApplicationStatus(response.data!.applicationStatus);
+      await _storageHelper.saveApplicationStatus(
+        response.data!.applicationStatus,
+      );
       await _storageHelper.saveIsVerified(response.data!.isVerified);
     }
 

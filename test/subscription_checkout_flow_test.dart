@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shaadi_hub/data/models/razorpay_payment_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shaadi_hub/data/api_provider/vendor_api_provider.dart';
 import 'package:shaadi_hub/data/models/vendor_coupon_model.dart';
@@ -8,6 +10,8 @@ import 'package:shaadi_hub/features/vendor_registration/vendor_subscription_chec
 class _CouponApi implements VendorApiProvider {
   bool empty = false;
   bool reject = false;
+  bool rejectVerification = false;
+  int verificationCalls = 0;
   String? requestedPlan;
 
   @override
@@ -49,6 +53,42 @@ class _CouponApi implements VendorApiProvider {
   }
 
   @override
+  Future<DataResponse<RazorpayOrderModel>> createRazorpayOrder({
+    required String type,
+    required String planId,
+    String? couponCode,
+  }) async => DataResponse(
+    isSuccess: true,
+    data: RazorpayOrderModel.fromJson({
+      'isFree': couponCode == 'FREE100',
+      'orderId': 'order_test',
+      'keyId': 'rzp_test_example',
+      'amount': couponCode == 'FREE100' ? 0 : 999,
+      'amountInPaise': couponCode == 'FREE100' ? 0 : 99900,
+      'couponCode': couponCode,
+    }),
+  );
+
+  @override
+  Future<DataResponse<RazorpayVerificationModel>> verifyRazorpayPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    verificationCalls++;
+    return DataResponse(
+      isSuccess: !rejectVerification,
+      message: rejectVerification ? 'Payment verification failed.' : null,
+      data: RazorpayVerificationModel(
+        verified: !rejectVerification,
+        orderId: orderId,
+        paymentId: paymentId,
+        transactionId: 'transaction_test',
+      ),
+    );
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -80,7 +120,7 @@ Future<void> _open(
           'price': 999,
         },
         api: api,
-        onPay: onPay ?? (_, _) async => false,
+        onPay: onPay ?? (_, _, _) async => false,
       ),
     ),
   );
@@ -88,6 +128,45 @@ Future<void> _open(
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('razorpay_flutter'), (
+          call,
+        ) async {
+          if (call.method == 'open') {
+            return {
+              'type': 0,
+              'data': {
+                'razorpay_payment_id': 'pay_test',
+                'razorpay_order_id': 'order_test',
+                'razorpay_signature': 'signature_test',
+              },
+            };
+          }
+          return null;
+        });
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('razorpay_flutter'),
+          null,
+        );
+  });
+
+  test('an incomplete order cannot silently activate a free plan', () {
+    for (final data in <Map<String, dynamic>>[
+      {},
+      {'isFree': true},
+      {'amount': 0},
+      {'isFree': true, 'amount': 999, 'amountInPaise': 99900},
+      {'isFree': false, 'amount': 999, 'amountInPaise': 999},
+    ]) {
+      expect(() => RazorpayOrderModel.fromJson(data), throwsFormatException);
+    }
+  });
+
   testWidgets('pull to refresh reloads even an empty coupon list', (
     tester,
   ) async {
@@ -111,6 +190,7 @@ void main() {
     'successful checkout returns through both routes to plan selection',
     (tester) async {
       bool? completed;
+      final api = _CouponApi()..empty = true;
       await tester.pumpWidget(
         MaterialApp(
           home: Builder(
@@ -126,8 +206,12 @@ void main() {
                             'name': 'Starter',
                             'price': 999,
                           },
-                          api: _CouponApi()..empty = true,
-                          onPay: (_, _) async => true,
+                          api: api,
+                          onPay: (_, _, transactionId) async {
+                            expect(api.verificationCalls, 1);
+                            expect(transactionId, 'transaction_test');
+                            return true;
+                          },
                         ),
                       ),
                     );
@@ -164,55 +248,54 @@ void main() {
     expect(coupon.isFree, isFalse);
   });
 
-  testWidgets(
-    'paid checkout displays amount and recovers from a failed request',
-    (tester) async {
-      tester.view.physicalSize = const Size(360, 720);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      var requests = 0;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(
-            elevatedButtonTheme: ElevatedButtonThemeData(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 52),
-              ),
+  testWidgets('unverified payment never assigns a plan and allows retry', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var requests = 0;
+    final api = _CouponApi()..rejectVerification = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 52),
             ),
           ),
-          home: VendorSecureCheckoutScreen(
-            plan: const {
-              'id': 'plan-123',
-              'name': 'Starter Partner',
-              'price': 999,
-            },
-            coupon: null,
-            onPay: (method, code) async {
-              requests++;
-              expect(method, 'UPI');
-              expect(code, isNull);
-              throw Exception('offline');
-            },
-          ),
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Select payment mode'), findsOneWidget);
-      await tester.tap(find.text('Pay ₹999 securely'));
-      await tester.pumpAndSettle();
-      expect(requests, 1);
-      expect(
-        find.text('Could not complete checkout. Please try again.'),
-        findsOneWidget,
-      );
-      expect(
-        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
-        isNotNull,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+        home: VendorSecureCheckoutScreen(
+          plan: const {
+            'id': 'plan-123',
+            'name': 'Starter Partner',
+            'price': 999,
+          },
+          coupon: null,
+          api: api,
+          onPay: (method, code, _) async {
+            requests++;
+            expect(method, 'Razorpay');
+            expect(code, isNull);
+            throw Exception('offline');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pay ₹999 securely'), findsOneWidget);
+    await tester.tap(find.text('Pay ₹999 securely'));
+    await tester.pumpAndSettle();
+    expect(requests, 0);
+    expect(api.verificationCalls, 1);
+    expect(find.text('Payment verification failed.'), findsOneWidget);
+    expect(
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+      isNotNull,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'empty offers and inline Apply fit the themed screen with keyboard',
@@ -238,7 +321,7 @@ void main() {
       await _open(
         tester,
         api,
-        onPay: (m, c) async {
+        onPay: (m, c, _) async {
           method = m;
           code = c;
           return false;
@@ -258,7 +341,7 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Activate plan for free'));
       await tester.pumpAndSettle();
-      expect(method, 'Free');
+      expect(method, 'Coupon');
       expect(code, 'FREE100');
       expect(tester.takeException(), isNull);
     },

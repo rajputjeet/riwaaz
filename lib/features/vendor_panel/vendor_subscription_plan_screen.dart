@@ -88,14 +88,16 @@ class _VendorSubscriptionPlanScreenState
           }
         }
         _isLoadingPlans = false;
-        _isNoInternet = plansErrorLower.contains('socket') ||
+        _isNoInternet =
+            plansErrorLower.contains('socket') ||
             plansErrorLower.contains('connection') ||
             plansErrorLower.contains('network');
         _errorMsg = plansError;
       });
     } catch (e) {
       if (!mounted) return;
-      final isNet = e.toString().toLowerCase().contains('socket') ||
+      final isNet =
+          e.toString().toLowerCase().contains('socket') ||
           e.toString().toLowerCase().contains('connection') ||
           e.toString().toLowerCase().contains('network');
       setState(() {
@@ -139,7 +141,7 @@ class _VendorSubscriptionPlanScreenState
       MaterialPageRoute(
         builder: (_) => VendorSubscriptionCouponScreen(
           plan: plan,
-          onPay: (paymentMethod, couponCode) async {
+          onPay: (paymentMethod, couponCode, transactionId) async {
             final serverPlanId = _getServerPlanId(plan['id'] as String);
             if (serverPlanId.isEmpty) {
               Utils.showError('Plan ID not found. Please retry.');
@@ -153,7 +155,7 @@ class _VendorSubscriptionPlanScreenState
               subscriptionPlanId: serverPlanId,
               paymentMethod: normalizedMethod,
               couponCode: couponCode,
-              transactionId: paymentMethod == 'Free' ? 'FREE-COUPON' : null,
+              transactionId: transactionId,
             );
             if (!mounted) return false;
 
@@ -189,19 +191,24 @@ class _VendorSubscriptionPlanScreenState
           backgroundColor: AppColors.white,
           elevation: 0.5,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Subscription Plans',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black)),
+          title: const Text(
+            'Subscription Plans',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
           centerTitle: true,
         ),
-        body: const AppLoadingState(
-            message: 'Loading subscription plans...'),
+        body: const AppLoadingState(message: 'Loading subscription plans...'),
       );
     }
 
@@ -212,15 +219,21 @@ class _VendorSubscriptionPlanScreenState
           backgroundColor: AppColors.white,
           elevation: 0.5,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Subscription Plans',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black)),
+          title: const Text(
+            'Subscription Plans',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
           centerTitle: true,
         ),
         body: AppNoInternetState(onRetry: _loadServerData),
@@ -234,15 +247,21 @@ class _VendorSubscriptionPlanScreenState
           backgroundColor: AppColors.white,
           elevation: 0.5,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Subscription Plans',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black)),
+          title: const Text(
+            'Subscription Plans',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
           centerTitle: true,
         ),
         body: AppErrorState(message: _errorMsg!, onRetry: _loadServerData),
@@ -257,15 +276,21 @@ class _VendorSubscriptionPlanScreenState
           backgroundColor: AppColors.white,
           elevation: 0.5,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.primary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: const Text('Subscription Plans',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black)),
+          title: const Text(
+            'Subscription Plans',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
           centerTitle: true,
         ),
         body: const AppEmptyState(
@@ -283,8 +308,11 @@ class _VendorSubscriptionPlanScreenState
         backgroundColor: AppColors.white,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.primary, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.primary,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -306,31 +334,32 @@ class _VendorSubscriptionPlanScreenState
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           children: [
-              // Current Active Membership Card
-              _buildCurrentPlanBanner(),
+            // Current Active Membership Card
+            _buildCurrentPlanBanner(),
 
-              const SizedBox(height: 18),
+            const SizedBox(height: 18),
 
-              // Section Heading
-              const Text(
-                'Choose Your Plan',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.black,
-                ),
+            // Section Heading
+            const Text(
+              'Choose Your Plan',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.black,
               ),
-              const SizedBox(height: 12),
+            ),
+            const SizedBox(height: 12),
 
-              // Plan Cards
-              ...plansToDisplay.map((plan) {
-                final isCurrent = (_activePlan?.isSubscriptionActive == true &&
-                        _activePlan?.isExpired != true) &&
-                    (plan['id'] == _activePlanId ||
-                        plan['serverPlanId'] == _activePlanServerId);
-                final isPopular = plan['isPopular'] == true;
-                final price = plan['price'] as int;
-                final monthlyEq = plan['monthlyRate'] as int;
+            // Plan Cards
+            ...plansToDisplay.map((plan) {
+              final isCurrent =
+                  (_activePlan?.isSubscriptionActive == true &&
+                      _activePlan?.isExpired != true) &&
+                  (plan['id'] == _activePlanId ||
+                      plan['serverPlanId'] == _activePlanServerId);
+              final isPopular = plan['isPopular'] == true;
+              final price = plan['price'] as int;
+              final monthlyEq = plan['monthlyRate'] as int;
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -341,8 +370,8 @@ class _VendorSubscriptionPlanScreenState
                     color: isCurrent
                         ? AppColors.success
                         : isPopular
-                            ? AppColors.primary.withValues(alpha: 0.35)
-                            : AppColors.grey.withValues(alpha: 0.2),
+                        ? AppColors.primary.withValues(alpha: 0.35)
+                        : AppColors.grey.withValues(alpha: 0.2),
                     width: isCurrent ? 1.5 : 1,
                   ),
                   boxShadow: [
@@ -370,8 +399,9 @@ class _VendorSubscriptionPlanScreenState
                                 width: 46,
                                 height: 46,
                                 decoration: BoxDecoration(
-                                  color: (plan['color'] as Color)
-                                      .withValues(alpha: 0.12),
+                                  color: (plan['color'] as Color).withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 alignment: Alignment.center,
@@ -404,7 +434,9 @@ class _VendorSubscriptionPlanScreenState
                                           const SizedBox(width: 6),
                                           Container(
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 7, vertical: 4),
+                                              horizontal: 7,
+                                              vertical: 4,
+                                            ),
                                             decoration: BoxDecoration(
                                               color: AppColors.success
                                                   .withValues(alpha: 0.12),
@@ -434,7 +466,9 @@ class _VendorSubscriptionPlanScreenState
                           // Price Row
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.offWhite,
                               borderRadius: BorderRadius.circular(10),
@@ -468,10 +502,13 @@ class _VendorSubscriptionPlanScreenState
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF2E7D32)
-                                        .withValues(alpha: 0.1),
+                                    color: const Color(
+                                      0xFF2E7D32,
+                                    ).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -560,8 +597,18 @@ class _VendorSubscriptionPlanScreenState
     try {
       final dt = DateTime.parse(isoDate).toLocal();
       const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
     } catch (_) {
@@ -571,7 +618,8 @@ class _VendorSubscriptionPlanScreenState
 
   Widget _buildCurrentPlanBanner() {
     final active = _activePlan;
-    final isActive = active?.isSubscriptionActive == true && active?.isExpired != true;
+    final isActive =
+        active?.isSubscriptionActive == true && active?.isExpired != true;
     final isExpired = active?.isExpired == true;
 
     if (!isActive && !isExpired) {
@@ -591,8 +639,11 @@ class _VendorSubscriptionPlanScreenState
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.card_membership_rounded,
-                  color: AppColors.primary, size: 22),
+              child: const Icon(
+                Icons.card_membership_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -610,10 +661,7 @@ class _VendorSubscriptionPlanScreenState
                   SizedBox(height: 2),
                   Text(
                     'Choose a plan below to activate vendor partner benefits',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.darkGrey,
-                    ),
+                    style: TextStyle(fontSize: 11.5, color: AppColors.darkGrey),
                   ),
                 ],
               ),
@@ -623,7 +671,8 @@ class _VendorSubscriptionPlanScreenState
       );
     }
 
-    final planName = active?.subscriptionPlan?.title ??
+    final planName =
+        active?.subscriptionPlan?.title ??
         active?.planTitle ??
         'Active Partner';
     final daysRemaining = active?.daysRemaining ?? 0;
@@ -651,15 +700,21 @@ class _VendorSubscriptionPlanScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: const [
-                      Icon(Icons.verified_rounded,
-                          color: AppColors.cream, size: 14),
+                      Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.cream,
+                        size: 14,
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'ACTIVE SUBSCRIPTION',
@@ -674,7 +729,10 @@ class _VendorSubscriptionPlanScreenState
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
@@ -702,7 +760,11 @@ class _VendorSubscriptionPlanScreenState
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.stars_rounded, color: AppColors.gold, size: 20),
+                const Icon(
+                  Icons.stars_rounded,
+                  color: AppColors.gold,
+                  size: 20,
+                ),
               ],
             ),
             if (endDateFormatted.isNotEmpty) ...[

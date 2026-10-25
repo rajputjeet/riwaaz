@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../injector.dart';
 import '../models/active_plan_model.dart';
+import '../models/razorpay_payment_models.dart';
 import '../models/vendor_coupon_model.dart';
 import '../models/booking_model.dart';
 import '../models/dashboard_stats_model.dart';
@@ -141,16 +142,102 @@ class VendorApiProvider {
     }
   }
 
-  // POST /api/users/vendor/plan/buy or /api/user/vendor/plan/buy
-  Future<DataResponse<ActivePlanModel>> buyPlan({
-    required String subscriptionPlanId,
-    String paymentMethod = 'UPI',
-    String? transactionId,
+  Future<DataResponse<RazorpayOrderModel>> createRazorpayOrder({
+    required String type,
+    required String planId,
     String? couponCode,
   }) async {
     try {
+      final response = await _dio.post(
+        ApiConstants.razorpayCreateOrder,
+        data: {
+          'type': type,
+          'planId': planId,
+          if (couponCode != null && couponCode.trim().isNotEmpty)
+            'couponCode': couponCode.trim().toUpperCase(),
+        },
+        options: Injector.getHeaderToken(),
+      );
+      return DataResponse<RazorpayOrderModel>.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+        (raw) =>
+            RazorpayOrderModel.fromJson(Map<String, dynamic>.from(raw as Map)),
+      );
+    } catch (e) {
+      final message = NetworkHandling.getDioException(e);
+      return DataResponse<RazorpayOrderModel>(
+        isSuccess: false,
+        message: message,
+        error: message,
+      );
+    }
+  }
+
+  Future<DataResponse<RazorpayVerificationModel>> verifyRazorpayPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.razorpayVerifyPayment,
+        data: {
+          'razorpayOrderId': orderId,
+          'razorpayPaymentId': paymentId,
+          'razorpaySignature': signature,
+        },
+        options: Injector.getHeaderToken(),
+      );
+      return DataResponse<RazorpayVerificationModel>.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+        (raw) => RazorpayVerificationModel.fromJson(
+          Map<String, dynamic>.from(raw as Map),
+        ),
+      );
+    } catch (e) {
+      final message = NetworkHandling.getDioException(e);
+      return DataResponse<RazorpayVerificationModel>(
+        isSuccess: false,
+        message: message,
+        error: message,
+      );
+    }
+  }
+
+  // Finalize a plan only after the server has verified the Razorpay signature.
+  // POST /api/users/vendor/plan/buy or /api/user/vendor/plan/buy
+  Future<DataResponse<ActivePlanModel>> buyPlan({
+    required String subscriptionPlanId,
+    required String paymentMethod,
+    required String? transactionId,
+    String? couponCode,
+  }) async {
+    try {
+      final isCouponPurchase =
+          paymentMethod == 'Coupon' || paymentMethod == 'Free';
+      if (isCouponPurchase) {
+        if (couponCode?.trim().isNotEmpty != true) {
+          throw StateError('A valid coupon is required for a free plan.');
+        }
+        final confirmation = await createRazorpayOrder(
+          type: 'subscription',
+          planId: subscriptionPlanId,
+          couponCode: couponCode,
+        );
+        if (confirmation.isSuccess != true ||
+            confirmation.data?.isFree != true ||
+            confirmation.data?.couponCode?.trim().toUpperCase() !=
+                couponCode!.trim().toUpperCase()) {
+          throw StateError('The free plan purchase could not be confirmed.');
+        }
+      } else if (paymentMethod != 'Razorpay' ||
+          transactionId?.trim().isNotEmpty != true) {
+        throw StateError(
+          'Complete and verify your payment before activating this plan.',
+        );
+      }
       final data = {
-        'subscriptionPlanId': subscriptionPlanId,
+        'planId': subscriptionPlanId,
         'paymentMethod': paymentMethod,
         if (couponCode != null && couponCode.trim().isNotEmpty)
           'couponCode': couponCode.trim().toUpperCase(),
@@ -226,24 +313,22 @@ class VendorApiProvider {
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{'success': true, 'data': response.data};
 
-      return DataResponse<List<VendorCouponModel>>.fromJson(
-        body,
-        (raw) {
-          final list = raw is List
-              ? raw
-              : (raw is Map && raw['coupons'] is List
+      return DataResponse<List<VendorCouponModel>>.fromJson(body, (raw) {
+        final list = raw is List
+            ? raw
+            : (raw is Map && raw['coupons'] is List
                   ? raw['coupons'] as List
                   : (raw is Map && raw['data'] is List
-                      ? raw['data'] as List
-                      : const <dynamic>[]));
-          return list
-              .whereType<Map>()
-              .map((item) => VendorCouponModel.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
-              .toList();
-        },
-      );
+                        ? raw['data'] as List
+                        : const <dynamic>[]));
+        return list
+            .whereType<Map>()
+            .map(
+              (item) =>
+                  VendorCouponModel.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList();
+      });
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<List<VendorCouponModel>>(
@@ -292,21 +377,18 @@ class VendorApiProvider {
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
 
-      return DataResponse<ApplyCouponResultModel>.fromJson(
-        body,
-        (raw) {
-          if (raw is! Map) {
-            throw const FormatException('Invalid coupon response.');
-          }
-          final map = Map<String, dynamic>.from(raw);
-          return ApplyCouponResultModel.fromJson({
-            ...map,
-            'couponCode': map['couponCode']?.toString().trim().isNotEmpty == true
-                ? map['couponCode']
-                : couponCode.trim().toUpperCase(),
-          });
-        },
-      );
+      return DataResponse<ApplyCouponResultModel>.fromJson(body, (raw) {
+        if (raw is! Map) {
+          throw const FormatException('Invalid coupon response.');
+        }
+        final map = Map<String, dynamic>.from(raw);
+        return ApplyCouponResultModel.fromJson({
+          ...map,
+          'couponCode': map['couponCode']?.toString().trim().isNotEmpty == true
+              ? map['couponCode']
+              : couponCode.trim().toUpperCase(),
+        });
+      });
     } on FormatException {
       return DataResponse<ApplyCouponResultModel>(
         isSuccess: false,
@@ -695,8 +777,11 @@ class VendorApiProvider {
         ApiConstants.vendorUpdateBookingStatus(bookingId),
         data: {
           'status': accept ? 'Confirmed' : 'Rejected',
-          'notes': notes ??
-              (accept ? 'Booking confirmed by vendor' : 'Booking rejected by vendor'),
+          'notes':
+              notes ??
+              (accept
+                  ? 'Booking confirmed by vendor'
+                  : 'Booking rejected by vendor'),
         },
         options: Injector.getHeaderToken(),
       );
