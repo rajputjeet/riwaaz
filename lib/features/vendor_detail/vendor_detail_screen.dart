@@ -18,12 +18,14 @@ class VendorDetailScreen extends StatefulWidget {
   final String vendorName;
   final String location;
   final UserModel? vendorModel;
+  final String? vendorId;
 
   const VendorDetailScreen({
     super.key,
     this.vendorName = 'Verified Vendor Partner',
     this.location = 'Punjab',
     this.vendorModel,
+    this.vendorId,
   });
 
   @override
@@ -192,7 +194,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Future<void> _fetchVendorDetail() async {
-    final vendorId = _vendorModel?.id;
+    final vendorId = widget.vendorId ?? _vendorModel?.id;
     if (vendorId == null || vendorId.isEmpty) return;
 
     final response = await _vendorApi.getVendorDetail(vendorId);

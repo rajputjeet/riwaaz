@@ -11,7 +11,9 @@ import '../../core/constants/app_images.dart';
 import '../../core/utils/app_animations.dart';
 import '../../core/services/wishlist_service.dart';
 import '../../core/services/notification_service.dart';
+import '../../data/api_provider/ad_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
+import '../../data/models/running_ad_banner_model.dart';
 import '../../data/models/user_model.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/vendor_image_view.dart';
@@ -50,36 +52,18 @@ class _DashboardBodyState extends State<DashboardBody> {
   int _currentBannerIndex = 0;
 
   final VendorApiProvider _vendorApi = VendorApiProvider();
+  final AdApiProvider _adApi = AdApiProvider();
   List<UserModel> _featuredVendors = [];
   bool _isLoadingVendors = true;
 
-  // Banners matching the reference screenshot design (top cards exception)
-  final List<_HomeBannerItem> _banners = const [
-    _HomeBannerItem(
-      title: 'Make Your\nDream Wedding\nHappen',
-      buttonText: 'Explore Now',
-      image: AppImages.weddingHero,
-      targetCategory: 'Photographers & Videographers',
-    ),
-    _HomeBannerItem(
-      title: 'Grand Palace Venues\n& Royal Mandaps',
-      buttonText: 'View Venues',
-      image: AppImages.onboardingMandap,
-      targetCategory: 'Venues',
-    ),
-    _HomeBannerItem(
-      title: 'Bridal Glamour\n& Haute Couture',
-      buttonText: 'Book Artists',
-      image: AppImages.exploreDecoration,
-      targetCategory: 'Bridal Makeup & Hair',
-    ),
-  ];
+  List<RunningAdBannerModel> _runningAds = [];
+  bool _isLoadingAds = true;
 
   @override
   void initState() {
     super.initState();
     _bannersPageController = PageController();
-    _startBannerAutoScroll();
+    _fetchRunningAds();
     _fetchFeaturedVendors();
     WishlistService.instance.ensureLoaded();
     NotificationService.instance.refresh();
@@ -88,6 +72,54 @@ class _DashboardBodyState extends State<DashboardBody> {
       if (!catCtrl.isLoaded.value && !catCtrl.isLoading.value) {
         catCtrl.fetchCategories();
       }
+    }
+  }
+
+  Future<void> _fetchRunningAds() async {
+    try {
+      final res = await _adApi.getRunningAds();
+      if (!mounted) return;
+      setState(() {
+        if (res.isSuccess == true && res.data != null && res.data!.isNotEmpty) {
+          _runningAds = res.data!;
+        } else {
+          _runningAds = [];
+        }
+        _isLoadingAds = false;
+      });
+      _startBannerAutoScroll();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _runningAds = [];
+        _isLoadingAds = false;
+      });
+    }
+  }
+
+  void _onRunningAdTapped(RunningAdBannerModel ad) {
+    final v = ad.vendor;
+    final vendorId = ad.vendorId;
+    if (vendorId != null && vendorId.isNotEmpty) {
+      final vendorModel = UserModel(
+        id: vendorId,
+        fullName: v?.displayName ?? ad.displayTitle,
+        city: v?.city,
+        profileImgUrl: v?.profileImg,
+      );
+
+      Navigator.of(context).push(
+        FadeScaleRoute(
+          page: VendorDetailScreen(
+            vendorId: vendorId,
+            vendorName: v?.displayName ?? ad.displayTitle,
+            location: v?.city ?? 'Punjab',
+            vendorModel: vendorModel,
+          ),
+        ),
+      );
+    } else {
+      _navigateToExplore();
     }
   }
 
@@ -122,9 +154,10 @@ class _DashboardBodyState extends State<DashboardBody> {
       } catch (_) {}
     }
     _bannerTimer?.cancel();
+    if (_runningAds.length <= 1) return;
     _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!_bannersPageController.hasClients || _banners.isEmpty) return;
-      final nextIndex = (_currentBannerIndex + 1) % _banners.length;
+      if (!_bannersPageController.hasClients || _runningAds.isEmpty) return;
+      final nextIndex = (_currentBannerIndex + 1) % _runningAds.length;
       _bannersPageController.animateToPage(
         nextIndex,
         duration: const Duration(milliseconds: 650),
@@ -187,6 +220,7 @@ class _DashboardBodyState extends State<DashboardBody> {
             child: RefreshIndicator(
               onRefresh: () async {
                 await Future.wait([
+                  _fetchRunningAds(),
                   _fetchFeaturedVendors(),
                   if (Get.isRegistered<CategoryController>())
                     CategoryController.to.fetchCategories(forceRefresh: true),
@@ -377,82 +411,263 @@ class _DashboardBodyState extends State<DashboardBody> {
     );
   }
 
-  /// Hero dummy banners carousel with overlay text and "Explore Now →"
+  /// Dynamic running ads banners carousel connected to GET /api/ad/running-ads
   Widget _buildBannersSection() {
+    if (_isLoadingAds) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          height: 175,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3EDE4),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_runningAds.isEmpty) {
+      // Elegant empty state fallback when no ads are active in database
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          height: 175,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2E090D), Color(0xFF5A121D)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2E090D).withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3D088).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'FEATURED PARTNERS',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFF3D088),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Make Your Dream\nWedding Happen',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _navigateToExplore,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3D088),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Explore Vendors →',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  AppImages.weddingHero,
+                  width: 110,
+                  height: 130,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.celebration_rounded,
+                    color: Color(0xFFF3D088),
+                    size: 48,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: [
         SizedBox(
           height: 175,
           child: PageView.builder(
             controller: _bannersPageController,
-            itemCount: _banners.length,
+            itemCount: _runningAds.length,
             onPageChanged: (i) {
               setState(() => _currentBannerIndex = i);
             },
             itemBuilder: (context, index) {
-              final b = _banners[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CachedImageView(
-                        imageUrl: b.image,
-                        fit: BoxFit.cover,
-                        backgroundColor: AppColors.cream,
-                        fallbackIcon: Icons.celebration_rounded,
-                      ),
-                      // Gradient overlay for elegant contrast
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.72),
-                              Colors.black.withValues(alpha: 0.40),
-                              Colors.transparent,
-                            ],
-                            stops: const [0.0, 0.58, 1.0],
+              final ad = _runningAds[index];
+              return GestureDetector(
+                onTap: () => _onRunningAdTapped(ad),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedImageView(
+                          imageUrl: ad.effectiveImageUrl,
+                          fit: BoxFit.cover,
+                          backgroundColor: AppColors.cream,
+                          fallbackIcon: Icons.celebration_rounded,
+                        ),
+                        // Dark gradient overlay for text legibility
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.82),
+                                Colors.black.withValues(alpha: 0.35),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.50, 1.0],
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 18,
-                        top: 20,
-                        bottom: 20,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              b.title,
-                              style: GoogleFonts.cormorantGaramond(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.white,
-                                height: 1.15,
-                                letterSpacing: 0.2,
+                        // Top Sponsored Badge
+                        Positioned(
+                          top: 14,
+                          left: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                                width: 0.8,
                               ),
                             ),
-                            const SizedBox(height: 14),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  FadeScaleRoute(
-                                    page: ServiceListingScreen(
-                                      category:
-                                          b.targetCategory ??
-                                          'Photographers & Videographers',
-                                    ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 11,
+                                  color: Color(0xFFF3D088),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'SPONSORED',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFFF3D088),
+                                    letterSpacing: 0.8,
                                   ),
-                                );
-                              },
-                              child: Container(
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Bottom information
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 14,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (ad.vendor?.categoryName != null &&
+                                        ad.vendor!.categoryName.isNotEmpty) ...[
+                                      Text(
+                                        ad.vendor!.categoryName.toUpperCase(),
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFF3D088),
+                                          letterSpacing: 0.6,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                    ],
+                                    Text(
+                                      ad.vendor?.displayName ?? ad.displayTitle,
+                                      style: GoogleFonts.cormorantGaramond(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.white,
+                                        height: 1.15,
+                                        letterSpacing: 0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
+                                  horizontal: 12,
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
@@ -460,9 +675,7 @@ class _DashboardBodyState extends State<DashboardBody> {
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.15,
-                                      ),
+                                      color: Colors.black.withValues(alpha: 0.2),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -472,9 +685,9 @@ class _DashboardBodyState extends State<DashboardBody> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      b.buttonText,
+                                      'View Profile',
                                       style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.black,
                                       ),
@@ -482,40 +695,42 @@ class _DashboardBodyState extends State<DashboardBody> {
                                     const SizedBox(width: 4),
                                     const Icon(
                                       Icons.arrow_forward_rounded,
-                                      size: 13,
+                                      size: 12,
                                       color: AppColors.black,
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (i) {
-            final isActive = _currentBannerIndex == i;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: isActive ? 18 : 6,
-              height: 5,
-              decoration: BoxDecoration(
-                color: isActive ? AppColors.primary : const Color(0xFFD6C8BC),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
+        if (_runningAds.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_runningAds.length, (i) {
+              final isActive = _currentBannerIndex == i;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isActive ? 18 : 6,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.primary : const Color(0xFFD6C8BC),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
       ],
     );
   }
@@ -1085,19 +1300,7 @@ class _DashboardBodyState extends State<DashboardBody> {
   }
 }
 
-class _HomeBannerItem {
-  final String title;
-  final String buttonText;
-  final String image;
-  final String? targetCategory;
 
-  const _HomeBannerItem({
-    required this.title,
-    required this.buttonText,
-    required this.image,
-    this.targetCategory,
-  });
-}
 
 class _FeaturedVendorItem {
   final String id;

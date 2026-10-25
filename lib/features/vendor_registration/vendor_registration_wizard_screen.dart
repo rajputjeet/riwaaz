@@ -971,6 +971,7 @@ class _VendorRegistrationWizardScreenState
 
     setState(() => _isSubscriptionPaid = true);
     Utils.showSuccess('Subscription activated successfully: ${plan['name']}.');
+    _submitRegistration();
   }
 
   @override
@@ -1131,176 +1132,178 @@ class _VendorRegistrationWizardScreenState
 
         const SizedBox(height: 18),
 
-        if (Get.isRegistered<CategoryController>() &&
-            CategoryController.to.isLoading.value) ...[
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
-              ),
-            ),
-          ),
-        ] else if (_businessTypes.isEmpty) ...[
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 24),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.grey.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.storefront_outlined, size: 36, color: AppColors.grey),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No categories available',
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Vendor categories will appear here when available.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: AppColors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: () async {
-                      if (Get.isRegistered<CategoryController>()) {
-                        await CategoryController.to.fetchCategories(forceRefresh: true);
-                        if (mounted) setState(() {});
-                      }
-                    },
-                    icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.primary),
-                    label: const Text(
-                      'Retry Loading',
-                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ] else ...[
-          // 3-Column Grid matching user category layout
-          Builder(
-            builder: (context) {
-              final query = _searchTypeController.text.toLowerCase().trim();
-              final filteredTypes = query.isEmpty
-                  ? _businessTypes
-                  : _businessTypes
-                      .where((t) =>
-                          t.title.toLowerCase().contains(query) ||
-                          t.desc.toLowerCase().contains(query))
-                      .toList();
+        Obx(() {
+          final isCatLoading = (Get.isRegistered<CategoryController>() &&
+                  (CategoryController.to.isLoading.value ||
+                      (!CategoryController.to.isLoaded.value &&
+                          CategoryController.to.categories.isEmpty))) ||
+              _vendorController.isLoading.value;
 
-              if (filteredTypes.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0),
-                    child: Text(
-                      'No business types match "$query"',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppColors.grey,
-                        fontSize: 13,
+          if (isCatLoading) {
+            return const _VendorCategoryShimmerGrid();
+          }
+
+          if (_businessTypes.isEmpty) {
+            return Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.grey.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.storefront_outlined,
+                        size: 36, color: AppColors.grey),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No categories available',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black,
                       ),
                     ),
-                  ),
-                );
-              }
-
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.82,
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Vendor categories will appear here when available.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: AppColors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () async {
+                        if (Get.isRegistered<CategoryController>()) {
+                          await CategoryController.to
+                              .fetchCategories(forceRefresh: true);
+                          if (mounted) setState(() {});
+                        }
+                      },
+                      icon: const Icon(Icons.refresh_rounded,
+                          size: 16, color: AppColors.primary),
+                      label: const Text(
+                        'Retry Loading',
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
-                itemCount: filteredTypes.length,
-                itemBuilder: (context, index) {
-                  final type = filteredTypes[index];
-                  final isSelected = _selectedCategory == type.title;
+              ),
+            );
+          }
 
-                  return AnimatedTapWidget(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = type.title;
-                      });
-                      _syncCategory(type.title);
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+          final query = _searchTypeController.text.toLowerCase().trim();
+          final filteredTypes = query.isEmpty
+              ? _businessTypes
+              : _businessTypes
+                  .where((t) =>
+                      t.title.toLowerCase().contains(query) ||
+                      t.desc.toLowerCase().contains(query))
+                  .toList();
+
+          if (filteredTypes.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32.0),
+                child: Text(
+                  'No business types match "$query"',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.grey,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 14,
+              childAspectRatio: 0.82,
+            ),
+            itemCount: filteredTypes.length,
+            itemBuilder: (context, index) {
+              final type = filteredTypes[index];
+              final isSelected = _selectedCategory == type.title;
+
+              return AnimatedTapWidget(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = type.title;
+                  });
+                  _syncCategory(type.title);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            ServiceIconWrap(
-                              item: type,
-                              size: 84,
-                              iconSize: 64,
-                              borderRadius: 18,
-                              isSelected: isSelected,
-                            ),
-                            if (isSelected)
-                              Positioned(
-                                top: -3,
-                                right: -3,
-                                child: Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black26,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
+                        ServiceIconWrap(
+                          item: type,
+                          size: 84,
+                          iconSize: 64,
+                          borderRadius: 18,
+                          isSelected: isSelected,
+                        ),
+                        if (isSelected)
+                          Positioned(
+                            top: -3,
+                            right: -3,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
                                   ),
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    size: 13,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                ],
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          type.title,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11.5,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w600,
-                            color: isSelected
-                                ? AppColors.primary
-                                : const Color(0xFF2C2424),
-                            height: 1.15,
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 13,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        ),
                       ],
                     ),
-                  );
-                },
+                    const SizedBox(height: 6),
+                    Text(
+                      type.title,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11.5,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w600,
+                        color: isSelected
+                            ? AppColors.primary
+                            : const Color(0xFF2C2424),
+                        height: 1.15,
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
-          ),
-      ],
+          );
+        }),
       ],
     );
   }
@@ -2820,8 +2823,6 @@ class _VendorRegistrationWizardScreenState
   // STEP 5: SUBSCRIPTION PLAN
   // ─────────────────────────────────────────────────────────────
   Widget _buildStep5SubscriptionPlan() {
-    final activePlan = _getSelectedPlan();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3197,84 +3198,6 @@ class _VendorRegistrationWizardScreenState
         }),
 
 
-        const SizedBox(height: 10),
-
-        // Buy / Status Card
-        if (_isSubscriptionPaid && activePlan != null)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.success.withValues(alpha: 0.4), width: 1.2),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${activePlan['name']} Active',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.success,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Payment Successful • Plan ID: ${activePlan['id']}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: Obx(() {
-                    final isSubmitting = _vendorController.isSubmitting.value;
-                    return ElevatedButton(
-                      onPressed: isSubmitting ? null : _submitRegistration,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Complete Registration', style: TextStyle(fontWeight: FontWeight.w700)),
-                                SizedBox(width: 6),
-                                Icon(Icons.arrow_forward_rounded, size: 16),
-                              ],
-                            ),
-                    );
-                  }),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
@@ -3412,7 +3335,7 @@ class _VendorRegistrationWizardScreenState
       final activePrice = _getPlanPrice(activePlan);
       final planName = activePlan?['name'] ?? 'Plan';
       buttonText = _isSubscriptionPaid
-          ? 'Complete Registration'
+          ? 'Submitting Application...'
           : (activePlan != null
               ? 'Buy $planName (₹$activePrice)'
               : 'Choose a Plan');
@@ -3488,6 +3411,113 @@ class _VendorRegistrationWizardScreenState
           ),
         ],
       ),
+    );
+  }
+}
+
+
+/// Shimmer loading placeholder for vendor category selection (3-column grid)
+class _VendorCategoryShimmerGrid extends StatefulWidget {
+  const _VendorCategoryShimmerGrid();
+
+  @override
+  State<_VendorCategoryShimmerGrid> createState() =>
+      _VendorCategoryShimmerGridState();
+}
+
+class _VendorCategoryShimmerGridState extends State<_VendorCategoryShimmerGrid>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _shimmerController,
+      builder: (context, _) {
+        final shimmerGradient = LinearGradient(
+          begin: Alignment(-2.0 + (4.0 * _shimmerController.value), -0.3),
+          end: Alignment(-1.0 + (4.0 * _shimmerController.value), 0.3),
+          colors: const [
+            Color(0xFFEBEBEB),
+            Color(0xFFF8F8F8),
+            Color(0xFFEBEBEB),
+          ],
+          stops: const [0.1, 0.5, 0.9],
+        );
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.82,
+          ),
+          itemCount: 9,
+          itemBuilder: (context, index) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Category icon box shimmer
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: shimmerGradient,
+                    border: Border.all(
+                      color: AppColors.grey.withValues(alpha: 0.12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Title line 1 shimmer
+                Container(
+                  width: (index % 2 == 0) ? 64 : 74,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    gradient: shimmerGradient,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // Title line 2 shimmer
+                Container(
+                  width: (index % 3 == 0) ? 46 : 38,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    gradient: shimmerGradient,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

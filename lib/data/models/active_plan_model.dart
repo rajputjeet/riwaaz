@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'subscription_model.dart';
 
 /// Model for active-plan and buy/renew responses.
@@ -39,6 +41,13 @@ class ActivePlanModel {
   String? get planTitle => subscriptionPlan?.title;
   DateTime? get startDate => DateTime.tryParse(subscriptionStartDate ?? '');
   DateTime? get endDate => DateTime.tryParse(subscriptionEndDate ?? '');
+  int get durationInMonths => subscriptionPlan?.durationInMonths ?? 1;
+  int get durationMonths => durationInMonths;
+  int get durationMonth => durationInMonths;
+  int get duration_months => durationInMonths;
+  int get duration_month => durationInMonths;
+  String get duration => subscriptionPlan?.duration ?? '';
+  String get durations => duration;
 
   factory ActivePlanModel.fromJson(Map<String, dynamic> json) {
     return ActivePlanModel(
@@ -120,6 +129,8 @@ class ActivePlanDetail {
   final String? description;
   int? get durationMonth => durationInMonths;
   int? get durationMonths => durationInMonths;
+  int get duration_months => durationMonths ?? 1;
+  int get duration_month => durationMonth ?? 1;
   String? get durations => duration;
 
   ActivePlanDetail({
@@ -159,6 +170,11 @@ class ActivePlanDetail {
 class SubscriptionHistoryItem {
   final String planTitle;
   final String planType;
+  final int durationInMonths;
+  final int durationMonths;
+  final int durationMonth;
+  final String duration;
+  final String durations;
   final num? originalPrice;
   final num? discountAmount;
   final num? finalAmount;
@@ -169,9 +185,17 @@ class SubscriptionHistoryItem {
   final DateTime? purchasedAt;
   final DateTime? endDate;
 
+  int get duration_months => durationMonths;
+  int get duration_month => durationMonth;
+
   const SubscriptionHistoryItem({
     this.planTitle = '',
     this.planType = '',
+    this.durationInMonths = 1,
+    this.durationMonths = 1,
+    this.durationMonth = 1,
+    this.duration = '',
+    this.durations = '',
     this.originalPrice,
     this.discountAmount,
     this.finalAmount,
@@ -183,24 +207,52 @@ class SubscriptionHistoryItem {
     this.endDate,
   });
 
-  factory SubscriptionHistoryItem.fromJson(Map<String, dynamic> json) =>
-      SubscriptionHistoryItem(
-        planTitle: json['planTitle']?.toString() ?? '',
-        planType: json['planType']?.toString() ?? '',
-        originalPrice: _amount(json['originalPrice']),
-        discountAmount: _amount(json['discountAmount']),
-        finalAmount: _amount(json['finalAmount'] ?? json['finalAmountPaid']),
-        couponApplied: json['couponApplied'] == true,
-        couponCode: json['couponCode']?.toString(),
-        paymentMethod: json['paymentMethod']?.toString(),
-        transactionId: json['transactionId']?.toString(),
-        purchasedAt: DateTime.tryParse(json['purchasedAt']?.toString() ?? ''),
-        endDate: DateTime.tryParse(json['endDate']?.toString() ?? ''),
-      );
+  factory SubscriptionHistoryItem.fromJson(Map<String, dynamic> json) {
+    final int months = ((json['durationMonths'] ??
+            json['durationMonth'] ??
+            json['durationInMonths'] ??
+            json['duration_months'] ??
+            json['duration_month'] ??
+            (json['planType'] == '1 Year'
+                ? 12
+                : json['planType'] == '6 Months'
+                    ? 6
+                    : json['planType'] == '3 Months'
+                        ? 3
+                        : 1)) as num)
+        .toInt();
+    final String durStr = json['duration']?.toString() ??
+        json['durations']?.toString() ??
+        '$months Month${months > 1 ? "s" : ""}';
+
+    return SubscriptionHistoryItem(
+      planTitle: json['planTitle']?.toString() ?? '',
+      planType: json['planType']?.toString() ?? '',
+      durationInMonths: months,
+      durationMonths: months,
+      durationMonth: months,
+      duration: durStr,
+      durations: durStr,
+      originalPrice: _amount(json['originalPrice']),
+      discountAmount: _amount(json['discountAmount']),
+      finalAmount: _amount(json['finalAmount'] ?? json['finalAmountPaid']),
+      couponApplied: json['couponApplied'] == true,
+      couponCode: json['couponCode']?.toString(),
+      paymentMethod: json['paymentMethod']?.toString(),
+      transactionId: json['transactionId']?.toString(),
+      purchasedAt: DateTime.tryParse(json['purchasedAt']?.toString() ?? ''),
+      endDate: DateTime.tryParse(json['endDate']?.toString() ?? ''),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'planTitle': planTitle,
     'planType': planType,
+    'durationInMonths': durationInMonths,
+    'durationMonths': durationMonths,
+    'durationMonth': durationMonth,
+    'duration': duration,
+    'durations': durations,
     if (originalPrice != null) 'originalPrice': originalPrice,
     if (discountAmount != null) 'discountAmount': discountAmount,
     if (finalAmount != null) 'finalAmount': finalAmount,

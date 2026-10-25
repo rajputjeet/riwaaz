@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 class VendorCouponModel {
   final String id;
   final String title;
@@ -82,6 +84,14 @@ class ApplyCouponResultModel {
   final num finalPrice;
   final bool isFree;
   final num savings;
+  final int durationInMonths;
+  final int durationMonths;
+  final int durationMonth;
+  final String duration;
+  final String durations;
+
+  int get duration_months => durationMonths;
+  int get duration_month => durationMonth;
 
   const ApplyCouponResultModel({
     this.couponCode = '',
@@ -95,6 +105,11 @@ class ApplyCouponResultModel {
     this.finalPrice = 0,
     this.isFree = false,
     this.savings = 0,
+    this.durationInMonths = 1,
+    this.durationMonths = 1,
+    this.durationMonth = 1,
+    this.duration = '',
+    this.durations = '',
   });
 
   factory ApplyCouponResultModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +120,17 @@ class ApplyCouponResultModel {
       );
     }
     final discount = _number(json['discountAmount']);
+    final int months = ((json['durationMonths'] ??
+            json['durationMonth'] ??
+            json['durationInMonths'] ??
+            json['duration_months'] ??
+            json['duration_month'] ??
+            1) as num)
+        .toInt();
+    final String durStr = json['duration']?.toString() ??
+        json['durations']?.toString() ??
+        '$months Month${months > 1 ? "s" : ""}';
+
     return ApplyCouponResultModel(
       couponCode: json['couponCode']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
@@ -115,8 +141,13 @@ class ApplyCouponResultModel {
       originalPrice: _number(json['originalPrice']),
       discountAmount: discount,
       finalPrice: finalPrice,
-      isFree: finalPrice == 0,
+      isFree: (json['isFree'] == true) || finalPrice == 0,
       savings: _number(json['savings'], fallback: discount),
+      durationInMonths: months,
+      durationMonths: months,
+      durationMonth: months,
+      duration: durStr,
+      durations: durStr,
     );
   }
 }

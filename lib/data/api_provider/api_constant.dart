@@ -39,9 +39,13 @@ abstract class ApiConstants {
 
   // 6. Vendor Subscription Plan APIs
   static const String vendorActivePlan = "/api/users/vendor/plan/active";
+  static const String vendorActivePlanAlt = "/api/user/vendor/plan/active";
   static const String vendorBuyPlan = "/api/users/vendor/plan/buy";
+  static const String vendorBuyPlanAlt = "/api/user/vendor/plan/buy";
   static const String vendorCoupons = "/api/vendor/coupons";
   static const String vendorCouponApply = "/api/vendor/coupon/apply";
+  static const String discountCoupons = "/api/discount/coupons";
+  static const String discountValidate = "/api/discount/validate";
 
   // 7. Vendor Portfolio APIs
   static const String vendorPortfolioAdd = "/api/users/vendor/portfolio/add";
@@ -101,6 +105,9 @@ abstract class ApiConstants {
   static const String adBuy = "/api/ad/buy";
   static const String adMyAd = "/api/ad/my-ad";
   static const String adActiveVendors = "/api/ad/active-vendors";
+  static const String adUploadBanner = "/api/ad/upload-banner";
+  static const String adRunningAds = "/api/ad/running-ads";
+  static const String bannerList = "/api/banner/list";
 
   // 15. Public & Verified Vendors Discovery API
   static const String vendorList = "/api/vendor/list";

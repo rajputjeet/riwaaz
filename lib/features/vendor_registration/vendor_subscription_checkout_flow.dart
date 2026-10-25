@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../data/api_provider/ad_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/vendor_coupon_model.dart';
 
@@ -13,12 +14,16 @@ class VendorSubscriptionCouponScreen extends StatefulWidget {
   final Map<String, dynamic> plan;
   final VendorPlanPurchase onPay;
   final VendorApiProvider? api;
+  final bool isAd;
+  final AdApiProvider? adApi;
 
   const VendorSubscriptionCouponScreen({
     super.key,
     required this.plan,
     required this.onPay,
     this.api,
+    this.isAd = false,
+    this.adApi,
   });
 
   @override
@@ -30,6 +35,7 @@ class _VendorSubscriptionCouponScreenState
     extends State<VendorSubscriptionCouponScreen> {
   final TextEditingController _couponController = TextEditingController();
   late final VendorApiProvider _vendorApi;
+  late final AdApiProvider _adApi;
   List<VendorCouponModel> _coupons = [];
   ApplyCouponResultModel? _appliedCoupon;
   bool _isLoadingCoupons = true;
@@ -45,6 +51,7 @@ class _VendorSubscriptionCouponScreenState
   void initState() {
     super.initState();
     _vendorApi = widget.api ?? VendorApiProvider();
+    _adApi = widget.adApi ?? AdApiProvider();
     _loadCoupons();
   }
 
@@ -53,6 +60,31 @@ class _VendorSubscriptionCouponScreenState
       _isLoadingCoupons = true;
       _couponLoadError = null;
     });
+
+    if (widget.isAd) {
+      final result = await _adApi.getAvailableAdCoupons();
+      if (!mounted) return;
+      setState(() {
+        _coupons = (result.data ?? []).map((c) => VendorCouponModel(
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          couponCode: c.couponCode,
+          discountType: c.discountType,
+          discountValue: c.discountValue,
+          discountPercentage: c.discountPercentage,
+          applicableFor: 'ad',
+          minAmount: c.minAmount,
+          validUntil: c.validUntil,
+        )).toList();
+        _isLoadingCoupons = false;
+        if (result.isSuccess != true) {
+          _couponLoadError = result.message ?? 'Could not load ad coupons.';
+        }
+      });
+      return;
+    }
+
     final result = await _vendorApi.getVendorCoupons();
     if (!mounted) return;
     setState(() {
@@ -84,6 +116,45 @@ class _VendorSubscriptionCouponScreenState
       _isApplyingCoupon = true;
       _couponError = null;
     });
+    if (widget.isAd) {
+      final result = await _adApi.validateAdCoupon(
+        couponCode: couponCode,
+        adPlanId: _planId,
+      );
+      if (!mounted) return;
+      setState(() => _isApplyingCoupon = false);
+      if (result.isSuccess == true && result.data != null) {
+        final d = result.data!;
+        setState(() {
+          _appliedCoupon = ApplyCouponResultModel(
+            couponCode: d.couponCode,
+            title: d.couponCode,
+            description: '',
+            discountType: d.discountType,
+            originalPrice: d.originalPrice,
+            discountAmount: d.discountAmount,
+            finalPrice: d.finalPrice,
+            isFree: d.isFree,
+            savings: d.discountAmount,
+            duration: d.duration,
+            durationInMonths: d.durationInMonths,
+            durationMonths: d.durationMonths,
+            durationMonth: d.durationMonth,
+          );
+          _couponController.text = d.couponCode.isNotEmpty
+              ? d.couponCode
+              : couponCode;
+        });
+      } else {
+        setState(() {
+          _appliedCoupon = null;
+          _couponError =
+              result.message ?? result.error ?? 'Could not apply this coupon.';
+        });
+      }
+      return;
+    }
+
     final result = await _vendorApi.applyVendorCoupon(
       couponCode: couponCode,
       subscriptionPlanId: _planId,
@@ -167,9 +238,9 @@ class _VendorSubscriptionCouponScreenState
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Coupons & Offers',
-          style: TextStyle(
+        title: Text(
+          widget.isAd ? 'Ad Coupons & Offers' : 'Coupons & Offers',
+          style: const TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.black,

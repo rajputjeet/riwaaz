@@ -4,6 +4,8 @@ import '../../core/constants/app_colors.dart';
 import '../../data/api_provider/ad_api_provider.dart';
 import '../../data/models/ad_plan_model.dart';
 import '../../utils/utils.dart';
+import '../vendor_registration/vendor_subscription_checkout_flow.dart';
+import 'ad_banner_upload_dialog.dart';
 
 class VendorAdsScreen extends StatefulWidget {
   const VendorAdsScreen({super.key});
@@ -16,13 +18,11 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
   final AdApiProvider _adApi = AdApiProvider();
 
   bool _isLoading = true;
-  bool _isPurchasing = false;
   String? _errorMsg;
 
   VendorMyAdModel _myAd = VendorMyAdModel();
   List<AdPlanModel> _adPlans = [];
   String? _selectedPlanId;
-  String _selectedPaymentMethod = 'UPI (GPay / PhonePe / Paytm / BHIM)';
 
   @override
   void initState() {
@@ -53,6 +53,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
           if (plansRes.isSuccess == true && plansRes.data != null) {
             _adPlans = (plansRes.data as List<AdPlanModel>);
           }
+          // Coupons are fetched natively inside VendorSubscriptionCouponScreen
 
           // Fallback demo plans if server list is empty
           if (_adPlans.isEmpty) {
@@ -110,254 +111,82 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
     );
   }
 
-  void _showCheckoutSheet() {
-    final plan = _selectedPlan;
+  Future<void> _openAdCheckoutFlow([AdPlanModel? targetPlan]) async {
+    final plan = targetPlan ??
+        _selectedPlan ??
+        (_adPlans.isNotEmpty ? _adPlans.first : null);
     if (plan == null) {
       Utils.showError('Please select an Ad plan first.');
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Activate Sponsored Ad',
-                        style: GoogleFonts.cormorantGaramond(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                      Text(
-                        'Boost your vendor ranking and lead volume',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.darkGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+    final planMap = {
+      'id': plan.id ?? '',
+      'serverPlanId': plan.id ?? '',
+      'name': plan.title ?? 'Sponsored Ad Boost',
+      'duration': plan.duration ?? '${plan.durationInDays ?? 30} Days',
+      'price': plan.planPrice,
+      'isAd': true,
+    };
 
-              // Summary Box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.cream,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          plan.title ?? 'Sponsored Ad',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        Text(
-                          '₹${plan.planPrice}',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Duration: ${plan.duration ?? "${plan.durationInDays ?? 1} Days"}',
-                          style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
-                        ),
-                        const Text(
-                          '18% GST Included',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.darkGrey),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Payable',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        Text(
-                          '₹${plan.planPrice}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // Payment Method Picker
-              const Text(
-                'Select Payment Mode',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              ...[
-                ('UPI (GPay / PhonePe / Paytm / BHIM)', Icons.qr_code_2_rounded),
-                ('Credit / Debit Card (Visa, Master, RuPay)', Icons.credit_card_rounded),
-                ('Net Banking (All Major Indian Banks)', Icons.account_balance_rounded),
-              ].map((m) {
-                final isSelected = _selectedPaymentMethod == m.$1;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () {
-                      setSheetState(() => _selectedPaymentMethod = m.$1);
-                      setState(() => _selectedPaymentMethod = m.$1);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.cream : AppColors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.grey.withValues(alpha: 0.3),
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(m.$2, size: 20, color: isSelected ? AppColors.primary : AppColors.darkGrey),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              m.$1,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                color: isSelected ? AppColors.primary : AppColors.black,
-                              ),
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 16),
-
-              // Buy Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isPurchasing
-                      ? null
-                      : () async {
-                          Navigator.pop(ctx);
-                          await _handleAdPurchase(plan);
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.rocket_launch_rounded, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Pay ₹${plan.planPrice} & Launch Ad',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+    final paid = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => VendorSubscriptionCouponScreen(
+          plan: planMap,
+          isAd: true,
+          onPay: (paymentMethod, couponCode) async {
+            final res = await _adApi.buyAdPlan(
+              plan.id ?? '',
+              couponCode: couponCode,
+              paymentMethod: paymentMethod,
+              transactionId: paymentMethod == 'Free' ? 'FREE-COUPON' : null,
+            );
+            if (!mounted) return false;
+            if (res.isSuccess == true) {
+              Utils.showSuccess(res.message ?? 'Ad activated successfully!');
+              return true;
+            } else {
+              Utils.showError(
+                res.message ?? res.error ?? 'Failed to activate ad.',
+              );
+              return false;
+            }
+          },
         ),
       ),
     );
+
+    if (paid == true && mounted) {
+      await _loadData();
+      // Mandatory popup to upload the homepage ad banner
+      await _openBannerUploadDialog(plan);
+      await _loadData();
+    }
   }
 
-  Future<void> _handleAdPurchase(AdPlanModel plan) async {
-    setState(() => _isPurchasing = true);
-    Utils.showInfo('Processing Ad activation...');
-
-    try {
-      final res = await _adApi.buyAdPlan(plan.id ?? '');
-      setState(() => _isPurchasing = false);
-
-      if (res.isSuccess == true) {
-        Utils.showSuccess(res.message ?? 'Ad activated successfully for ${plan.duration ?? "selected period"}!');
-        await _loadData();
-      } else {
-        Utils.showError(res.message ?? res.error ?? 'Failed to activate ad. Please try again.');
-      }
-    } catch (e) {
-      setState(() => _isPurchasing = false);
-      Utils.showError('An error occurred during Ad purchase: $e');
-    }
+  Future<void> _openBannerUploadDialog([AdPlanModel? plan]) async {
+    final targetPlan = plan ?? _selectedPlan;
+    await AdBannerUploadDialog.show(
+      context,
+      adPlan: targetPlan,
+      vendorName: targetPlan?.title ?? _myAd.activeAd?.title,
+      vendorCategory: 'Featured Wedding Partner',
+      onUploadBanner: (bannerFile, bannerUrl) async {
+        final res = await _adApi.uploadAdBanner(bannerFile);
+        if (res.isSuccess == true) {
+          Utils.showSuccess(
+            res.message ?? 'Ad banner uploaded and attached to running campaign!',
+          );
+          await _loadData();
+          return true;
+        } else {
+          Utils.showError(
+            res.message ?? res.error ?? 'Failed to upload ad banner.',
+          );
+          return false;
+        }
+      },
+    );
   }
 
   @override
@@ -423,12 +252,16 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                       ),
                     ],
 
-                    // 1. Current Active Ad Card
+                    // 1. Current Ad Campaign Section Card
                     _buildActiveAdCard(),
+                    const SizedBox(height: 20),
+
+                    // 2. How Sponsored Ads Work (Moved above Choose Your Ad Duration)
+                    _buildWhySponsorBanner(),
 
                     const SizedBox(height: 24),
 
-                    // 2. Section Header: Available Ad Plans
+                    // 3. Section Header: Available Ad Plans
                     Row(
                       children: [
                         const Icon(Icons.bolt_rounded, color: Color(0xFFEAB308), size: 22),
@@ -450,13 +283,8 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 3. Ad Plans List
+                    // 4. Ad Plans List
                     ..._adPlans.map((plan) => _buildAdPlanCard(plan)),
-
-                    const SizedBox(height: 20),
-
-                    // 4. Why Sponsor Banner
-                    _buildWhySponsorBanner(),
 
                     const SizedBox(height: 24),
 
@@ -479,7 +307,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isPurchasing ? null : _showCheckoutSheet,
+                    onPressed: _isLoading ? null : () => _openAdCheckoutFlow(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.white,
@@ -488,7 +316,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                       ),
                       elevation: 1,
                     ),
-                    child: _isPurchasing
+                    child: _isLoading
                         ? const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -525,6 +353,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
     final isActive = _myAd.isAdActive && _myAd.activeAd != null;
     final ad = _myAd.activeAd;
 
+    // 1. ACTIVE CAMPAIGN STATE (High-End Royal Crimson Gradient Card)
     if (isActive && ad != null) {
       return Container(
         width: double.infinity,
@@ -534,7 +363,7 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
+              color: AppColors.primary.withValues(alpha: 0.28),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -547,22 +376,32 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAB308),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF3D088), Color(0xFFD4A017)],
+                    ),
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
                   child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.workspace_premium_rounded, color: Colors.black, size: 14),
+                      Icon(Icons.workspace_premium_rounded,
+                          color: Color(0xFF2E090D), size: 13),
                       SizedBox(width: 4),
                       Text(
-                        'LIVE SPONSORED AD',
+                        'ACTIVE AD CAMPAIGN',
                         style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                          color: Color(0xFF2E090D),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
                         ),
                       ),
                     ],
@@ -571,58 +410,126 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                   ),
-                  child: Text(
-                    '${ad.daysLeft}d Left',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.timer_outlined, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${ad.daysLeft} Day${ad.daysLeft == 1 ? "" : "s"} Left',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
             Text(
-              ad.title ?? 'Active Ad Boost',
+              ad.title ?? 'Sponsored Ad Boost',
               style: GoogleFonts.cormorantGaramond(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
+                letterSpacing: 0.2,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
-              'Duration: ${ad.duration ?? "${ad.durationInDays ?? 3} Days"} • ₹${ad.price?.toInt() ?? 0}',
+              'Duration: ${ad.duration ?? "${ad.durationInDays ?? 3} Days"} • Top Placement Active',
               style: TextStyle(
-                fontSize: 13,
-                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 12.5,
+                color: Colors.white.withValues(alpha: 0.85),
               ),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+            if (ad.hasBanner) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Your profile is currently featured at the top of client search & homepage.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
+                child: Container(
+                  height: 90,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.25),
                   ),
-                ],
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        ad.bannerUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Center(
+                          child: Icon(Icons.broken_image_rounded, color: Colors.white70),
+                        ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 11, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'Live on Home Carousel',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => _openBannerUploadDialog(),
+                icon: Icon(
+                  ad.hasBanner ? Icons.edit_rounded : Icons.add_photo_alternate_outlined,
+                  size: 16,
+                  color: AppColors.primaryDark,
+                ),
+                label: Text(
+                  ad.hasBanner
+                      ? 'Update Homepage Banner'
+                      : 'Upload Homepage Ad Banner',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF3D088),
+                  foregroundColor: AppColors.primaryDark,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
           ],
@@ -630,199 +537,250 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
       );
     }
 
-    // Inactive Ad Teaser Card
+    // 2. INACTIVE CAMPAIGN STATE (Clean, Minimal, Modern Card)
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8DCCF)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE8DCCF),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.campaign_rounded, color: AppColors.primary, size: 24),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.cream,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.15),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            child: const Icon(
+              Icons.campaign_outlined,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    const Text(
+                    Text(
                       'No Active Ad Campaign',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.black,
                       ),
                     ),
-                    Text(
-                      'Get 3x more bookings with a homepage spotlight',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey.withValues(alpha: 0.8),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF59E0B),
+                        shape: BoxShape.circle,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          _buildBenefitRow(Icons.visibility_rounded, 'Top Homepage Banner', 'Showcase directly to active wedding planners'),
-          const SizedBox(height: 8),
-          _buildBenefitRow(Icons.trending_up_rounded, '3x Priority Inquiries', 'Appear above competitor vendor profiles'),
-          const SizedBox(height: 8),
-          _buildBenefitRow(Icons.verified_rounded, 'Sponsored Badge', 'Gold featured ribbon on search listings'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBenefitRow(IconData icon, String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              text: '$title: ',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.black,
-              ),
-              children: [
-                TextSpan(
-                  text: subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                const SizedBox(height: 2),
+                const Text(
+                  'Choose a plan below to get featured on the couple homepage',
+                  style: TextStyle(
+                    fontSize: 11.5,
                     color: AppColors.darkGrey,
+                    height: 1.3,
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildAdPlanCard(AdPlanModel plan) {
     final isSelected = _selectedPlanId == plan.id;
     final isPopular = (plan.durationInDays == 3) || (plan.title?.contains('Spotlight') == true);
+    final days = plan.durationInDays ?? 1;
+
+    final IconData planIcon = days <= 1
+        ? Icons.flash_on_rounded
+        : (days <= 3 ? Icons.stars_rounded : Icons.diamond_rounded);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() => _selectedPlanId = plan.id),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFFFBF5) : AppColors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? AppColors.primary : const Color(0xFFE8DCCF),
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => setState(() => _selectedPlanId = plan.id),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFFFFDF9) : AppColors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.03),
-                blurRadius: isSelected ? 8 : 4,
-                offset: const Offset(0, 2),
+                    ? AppColors.primary
+                    : const Color(0xFFE8DCCF).withValues(alpha: 0.8),
+                width: isSelected ? 2 : 1,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: isSelected ? AppColors.primary : AppColors.grey,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        plan.title ?? 'Ad Plan',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: isSelected ? AppColors.primary : AppColors.black,
+              boxShadow: [
+                BoxShadow(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: isSelected ? 12 : 5,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Plan Icon, Name, and Selected / Popular Pill (NO circles!)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : const Color(0xFFF7EFE6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.25)
+                              : Colors.transparent,
                         ),
                       ),
-                    ],
-                  ),
-                  if (isPopular)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEAB308),
-                        borderRadius: BorderRadius.circular(12),
+                      child: Icon(
+                        planIcon,
+                        color: isSelected ? AppColors.primary : AppColors.goldDark,
+                        size: 22,
                       ),
-                      child: const Text(
-                        'POPULAR',
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        plan.title ?? 'Ad Plan',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: Colors.black,
+                          color: isSelected ? AppColors.primaryDark : AppColors.black,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.only(left: 30),
-                child: Text(
-                  plan.description ?? 'Boost your business visibility on Widoora.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.darkGrey),
+                    const SizedBox(width: 8),
+                    // Selected Pill (with check icon) or Popular Badge
+                    if (isSelected)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded, color: Colors.white, size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              'SELECTED',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isPopular)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFF3D088), Color(0xFFD4A017)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.gold.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'POPULAR',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2E090D),
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.only(left: 30),
-                child: Row(
+                const SizedBox(height: 12),
+                Text(
+                  plan.description ?? 'Boost your business visibility and get top placement.',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.darkGrey,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Bottom Price & Duration Row (without 'Featured Homepage Placement')
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Duration: ${plan.duration ?? "${plan.durationInDays ?? 1} Days"}',
+                        'Duration: ${plan.duration ?? "$days Days"}',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
@@ -831,15 +789,15 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
                     Text(
                       '₹${plan.planPrice}',
                       style: GoogleFonts.cormorantGaramond(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
                         color: AppColors.primaryDark,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -848,34 +806,200 @@ class _VendorAdsScreenState extends State<VendorAdsScreen> {
 
   Widget _buildWhySponsorBanner() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4EDE4),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE8DCCF).withValues(alpha: 0.9),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.goldGradient,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppColors.primaryDark,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'How Sponsored Ads Work',
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryDark,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      Text(
+                        '3 simple steps to 3X your verified wedding bookings',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          color: AppColors.darkGrey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, color: Color(0xFFF0E5D8)),
+
+          // 3-Step Process (Timeline Layout)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              children: [
+                _buildProcessStep(
+                  stepNumber: '1',
+                  icon: Icons.tune_rounded,
+                  title: 'Select Plan & Apply Coupon',
+                  description:
+                      'Pick a 1, 3, or 7-day boost. Use discount coupons at checkout to save up to 100%.',
+                  isLast: false,
+                ),
+                _buildProcessStep(
+                  stepNumber: '2',
+                  icon: Icons.add_photo_alternate_rounded,
+                  title: 'Upload Homepage Banner',
+                  description:
+                      'Upload your high-res photo to display prominently at the very top of user homepage carousels.',
+                  isLast: false,
+                ),
+                _buildProcessStep(
+                  stepNumber: '3',
+                  icon: Icons.rocket_launch_rounded,
+                  title: 'Receive Direct WhatsApp Leads',
+                  description:
+                      'Couples explore your portfolio and reach out directly via call & WhatsApp with zero commission.',
+                  isLast: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessStep({
+    required String stepNumber,
+    required IconData icon,
+    required String title,
+    required String description,
+    required bool isLast,
+  }) {
+    return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.stars_rounded, color: AppColors.primary, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'How Sponsored Ads Work',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
+          // Step Counter & Connecting Line
+          Column(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: AppColors.cream,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    width: 1.5,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Once activated, your business profile gets pinned to the Featured Vendors carousel on the client app. You receive direct phone and WhatsApp inquiry alerts in real time.',
-                  style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.4),
+                child: Center(
+                  child: Text(
+                    stepNumber,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
-              ],
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: const Color(0xFFE8DCCF),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+
+          // Step Details
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(icon, size: 15, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.darkGrey,
+                      height: 1.38,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

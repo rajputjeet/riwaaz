@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 class SubscriptionModel {
   String? id;
   String? title;
@@ -34,6 +36,8 @@ class SubscriptionModel {
   int get planPrice => price?.toInt() ?? 0;
   int? get durationMonth => durationInMonths;
   int? get durationMonths => durationInMonths;
+  int get duration_months => durationMonths ?? 1;
+  int get duration_month => durationMonth ?? 1;
   String get durations => durationLabel;
   String get durationLabel {
     if (duration?.trim().isNotEmpty == true) return duration!.trim();

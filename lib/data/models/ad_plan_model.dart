@@ -60,9 +60,15 @@ class ActiveAdDetailModel {
   final String? duration;
   final int? durationInDays;
   final num? price;
+  final num? originalPrice;
+  final num? discountAmount;
+  final num? finalAmount;
+  final bool? couponApplied;
+  final String? couponCode;
   final String? startDate;
   final String? endDate;
   final String? status;
+  final String? bannerUrl;
 
   ActiveAdDetailModel({
     this.id,
@@ -72,12 +78,19 @@ class ActiveAdDetailModel {
     this.duration,
     this.durationInDays,
     this.price,
+    this.originalPrice,
+    this.discountAmount,
+    this.finalAmount,
+    this.couponApplied,
+    this.couponCode,
     this.startDate,
     this.endDate,
     this.status,
+    this.bannerUrl,
   });
 
   bool get isActive => status?.toLowerCase() == 'active';
+  bool get hasBanner => bannerUrl != null && bannerUrl!.trim().isNotEmpty;
 
   int get daysLeft {
     if (endDate == null) return durationInDays ?? 0;
@@ -92,6 +105,12 @@ class ActiveAdDetailModel {
   }
 
   factory ActiveAdDetailModel.fromJson(Map<String, dynamic> json) {
+    final banner = (json['bannerUrl'] ??
+            json['imageUrl'] ??
+            json['image'] ??
+            (json['adBanner'] is Map ? json['adBanner']['url'] : null))
+        ?.toString();
+
     return ActiveAdDetailModel(
       id: (json['_id'] ?? json['id'])?.toString(),
       vendorId: json['vendorId']?.toString(),
@@ -104,9 +123,21 @@ class ActiveAdDetailModel {
       price: json['price'] is num
           ? json['price']
           : num.tryParse(json['price']?.toString() ?? ''),
+      originalPrice: json['originalPrice'] is num
+          ? json['originalPrice']
+          : num.tryParse(json['originalPrice']?.toString() ?? ''),
+      discountAmount: json['discountAmount'] is num
+          ? json['discountAmount']
+          : num.tryParse(json['discountAmount']?.toString() ?? ''),
+      finalAmount: (json['finalAmount'] ?? json['finalAmountPaid']) is num
+          ? (json['finalAmount'] ?? json['finalAmountPaid'])
+          : num.tryParse((json['finalAmount'] ?? json['finalAmountPaid'])?.toString() ?? ''),
+      couponApplied: json['couponApplied'] == true,
+      couponCode: json['couponCode']?.toString(),
       startDate: json['startDate']?.toString(),
       endDate: json['endDate']?.toString(),
       status: json['status']?.toString() ?? 'Active',
+      bannerUrl: banner,
     );
   }
 
@@ -119,9 +150,15 @@ class ActiveAdDetailModel {
       if (duration != null) 'duration': duration,
       if (durationInDays != null) 'durationInDays': durationInDays,
       if (price != null) 'price': price,
+      if (originalPrice != null) 'originalPrice': originalPrice,
+      if (discountAmount != null) 'discountAmount': discountAmount,
+      if (finalAmount != null) 'finalAmount': finalAmount,
+      if (couponApplied != null) 'couponApplied': couponApplied,
+      if (couponCode != null) 'couponCode': couponCode,
       if (startDate != null) 'startDate': startDate,
       if (endDate != null) 'endDate': endDate,
       if (status != null) 'status': status,
+      if (bannerUrl != null) 'bannerUrl': bannerUrl,
     };
   }
 }

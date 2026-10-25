@@ -513,42 +513,33 @@ class _VendorSubscriptionPlanScreenState
                             ),
                           ],
 
-                          const SizedBox(height: 12),
-
-                          // Action CTA Button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 44,
-                            child: ElevatedButton(
-                              onPressed: () => _showCheckoutSheet(plan),
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(0, 44),
-                                backgroundColor: isCurrent
-                                    ? AppColors.white
-                                    : AppColors.primary,
-                                foregroundColor: isCurrent
-                                    ? AppColors.primary
-                                    : AppColors.white,
-                                elevation: 0,
-                                side: isCurrent
-                                    ? const BorderSide(
-                                        color: AppColors.primary, width: 1.5)
-                                    : BorderSide.none,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                          // Action CTA Button (hidden for current active plan)
+                          if (!isCurrent) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: () => _showCheckoutSheet(plan),
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(0, 44),
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: AppColors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                isCurrent
-                                    ? 'Extend ${plan['name']}'
-                                    : 'Buy ${plan['name']}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                                child: Text(
+                                  'Buy ${plan['name']}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

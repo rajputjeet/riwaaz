@@ -107,13 +107,25 @@ class VendorApiProvider {
 
   // ─── Subscription Plans ────────────────────────────────────────────────────
 
-  // GET /api/users/vendor/plan/active
+  // GET /api/users/vendor/plan/active or /api/user/vendor/plan/active
   Future<DataResponse<ActivePlanModel>> getActivePlan() async {
     try {
-      final response = await _dio.get(
-        ApiConstants.vendorActivePlan,
-        options: Injector.getHeaderToken(),
-      );
+      Response response;
+      try {
+        response = await _dio.get(
+          ApiConstants.vendorActivePlan,
+          options: Injector.getHeaderToken(),
+        );
+      } on DioException catch (de) {
+        if (de.response?.statusCode == 404) {
+          response = await _dio.get(
+            ApiConstants.vendorActivePlanAlt,
+            options: Injector.getHeaderToken(),
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       return DataResponse<ActivePlanModel>.fromJson(
         response.data as Map<String, dynamic>,
@@ -129,7 +141,7 @@ class VendorApiProvider {
     }
   }
 
-  // POST /api/users/vendor/plan/buy
+  // POST /api/users/vendor/plan/buy or /api/user/vendor/plan/buy
   Future<DataResponse<ActivePlanModel>> buyPlan({
     required String subscriptionPlanId,
     String paymentMethod = 'UPI',
@@ -137,18 +149,33 @@ class VendorApiProvider {
     String? couponCode,
   }) async {
     try {
-      final response = await _dio.post(
-        ApiConstants.vendorBuyPlan,
-        data: {
-          'subscriptionPlanId': subscriptionPlanId,
-          'paymentMethod': paymentMethod,
-          if (couponCode != null && couponCode.trim().isNotEmpty)
-            'couponCode': couponCode.trim().toUpperCase(),
-          if (transactionId != null && transactionId.isNotEmpty)
-            'transactionId': transactionId,
-        },
-        options: Injector.getHeaderToken(),
-      );
+      final data = {
+        'subscriptionPlanId': subscriptionPlanId,
+        'paymentMethod': paymentMethod,
+        if (couponCode != null && couponCode.trim().isNotEmpty)
+          'couponCode': couponCode.trim().toUpperCase(),
+        if (transactionId != null && transactionId.isNotEmpty)
+          'transactionId': transactionId,
+      };
+
+      Response response;
+      try {
+        response = await _dio.post(
+          ApiConstants.vendorBuyPlan,
+          data: data,
+          options: Injector.getHeaderToken(),
+        );
+      } on DioException catch (de) {
+        if (de.response?.statusCode == 404) {
+          response = await _dio.post(
+            ApiConstants.vendorBuyPlanAlt,
+            data: data,
+            options: Injector.getHeaderToken(),
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       return DataResponse<ActivePlanModel>.fromJson(
         response.data as Map<String, dynamic>,
@@ -164,19 +191,37 @@ class VendorApiProvider {
     }
   }
 
-  // GET /api/vendor/coupons (optional search query; authenticated for limits)
+  // GET /api/discount/coupons?applicableFor=subscription (fallback to /api/vendor/coupons)
   Future<DataResponse<List<VendorCouponModel>>> getVendorCoupons({
     String? search,
   }) async {
     try {
-      final response = await _dio.get(
-        ApiConstants.vendorCoupons,
-        queryParameters: {
-          if (search != null && search.trim().isNotEmpty)
-            'search': search.trim(),
-        },
-        options: Injector.getHeaderToken(),
-      );
+      Response response;
+      try {
+        response = await _dio.get(
+          ApiConstants.discountCoupons,
+          queryParameters: {
+            'applicableFor': 'subscription',
+            if (search != null && search.trim().isNotEmpty)
+              'search': search.trim(),
+          },
+          options: Injector.getHeaderToken(),
+        );
+      } on DioException catch (de) {
+        if (de.response?.statusCode == 404) {
+          response = await _dio.get(
+            ApiConstants.vendorCoupons,
+            queryParameters: {
+              if (search != null && search.trim().isNotEmpty)
+                'search': search.trim(),
+            },
+            options: Injector.getHeaderToken(),
+          );
+        } else {
+          rethrow;
+        }
+      }
+
       final body = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{'success': true, 'data': response.data};
@@ -188,7 +233,9 @@ class VendorApiProvider {
               ? raw
               : (raw is Map && raw['coupons'] is List
                   ? raw['coupons'] as List
-                  : const <dynamic>[]);
+                  : (raw is Map && raw['data'] is List
+                      ? raw['data'] as List
+                      : const <dynamic>[]));
           return list
               .whereType<Map>()
               .map((item) => VendorCouponModel.fromJson(
@@ -208,20 +255,39 @@ class VendorApiProvider {
     }
   }
 
-  // POST /api/vendor/coupon/apply
+  // POST /api/discount/validate (fallback to /api/vendor/coupon/apply)
   Future<DataResponse<ApplyCouponResultModel>> applyVendorCoupon({
     required String couponCode,
     required String subscriptionPlanId,
   }) async {
     try {
-      final response = await _dio.post(
-        ApiConstants.vendorCouponApply,
-        data: {
-          'couponCode': couponCode.trim().toUpperCase(),
-          'subscriptionPlanId': subscriptionPlanId,
-        },
-        options: Injector.getHeaderToken(),
-      );
+      final payload = {
+        'couponCode': couponCode.trim(),
+        'subscriptionPlanId': subscriptionPlanId,
+      };
+
+      Response response;
+      try {
+        response = await _dio.post(
+          ApiConstants.discountValidate,
+          data: payload,
+          options: Injector.getHeaderToken(),
+        );
+      } on DioException catch (de) {
+        if (de.response?.statusCode == 404) {
+          response = await _dio.post(
+            ApiConstants.vendorCouponApply,
+            data: {
+              'couponCode': couponCode.trim().toUpperCase(),
+              'subscriptionPlanId': subscriptionPlanId,
+            },
+            options: Injector.getHeaderToken(),
+          );
+        } else {
+          rethrow;
+        }
+      }
+
       final body = response.data is Map
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
@@ -232,10 +298,11 @@ class VendorApiProvider {
           if (raw is! Map) {
             throw const FormatException('Invalid coupon response.');
           }
+          final map = Map<String, dynamic>.from(raw);
           return ApplyCouponResultModel.fromJson({
-            ...Map<String, dynamic>.from(raw),
-            'couponCode': raw['couponCode']?.toString().trim().isNotEmpty == true
-                ? raw['couponCode']
+            ...map,
+            'couponCode': map['couponCode']?.toString().trim().isNotEmpty == true
+                ? map['couponCode']
                 : couponCode.trim().toUpperCase(),
           });
         },
