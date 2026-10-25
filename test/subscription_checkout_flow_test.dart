@@ -11,6 +11,9 @@ class _CouponApi implements VendorApiProvider {
   bool empty = false;
   bool reject = false;
   bool rejectVerification = false;
+  bool rejectOrder = false;
+  num paidAmount = 999;
+  int orderRequests = 0;
   int verificationCalls = 0;
   String? requestedPlan;
 
@@ -57,17 +60,26 @@ class _CouponApi implements VendorApiProvider {
     required String type,
     required String planId,
     String? couponCode,
-  }) async => DataResponse(
-    isSuccess: true,
-    data: RazorpayOrderModel.fromJson({
-      'isFree': couponCode == 'FREE100',
-      'orderId': 'order_test',
-      'keyId': 'rzp_test_example',
-      'amount': couponCode == 'FREE100' ? 0 : 999,
-      'amountInPaise': couponCode == 'FREE100' ? 0 : 99900,
-      'couponCode': couponCode,
-    }),
-  );
+  }) async {
+    orderRequests++;
+    if (rejectOrder)
+      return DataResponse(
+        isSuccess: false,
+        message: 'Could not confirm total.',
+      );
+    final amount = couponCode == 'FREE100' ? 0 : paidAmount;
+    return DataResponse(
+      isSuccess: true,
+      data: RazorpayOrderModel.fromJson({
+        'isFree': couponCode == 'FREE100',
+        'orderId': 'order_test',
+        'keyId': 'rzp_test_example',
+        'amount': amount,
+        'amountInPaise': (amount * 100).round(),
+        'couponCode': couponCode,
+      }),
+    );
+  }
 
   @override
   Future<DataResponse<RazorpayVerificationModel>> verifyRazorpayPayment({
@@ -153,6 +165,93 @@ void main() {
           const MethodChannel('razorpay_flutter'),
           null,
         );
+  });
+
+  testWidgets('confirmed coupon total opens Razorpay on the first tap', (
+    tester,
+  ) async {
+    final api = _CouponApi()..paidAmount = 974.50;
+    var opened = 0;
+    var activated = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('razorpay_flutter'), (
+          call,
+        ) async {
+          if (call.method == 'open') {
+            opened++;
+            expect(call.arguments['amount'], 97450);
+            expect(call.arguments['order_id'], 'order_test');
+            return {
+              'type': 0,
+              'data': {
+                'razorpay_payment_id': 'pay_test',
+                'razorpay_order_id': 'order_test',
+                'razorpay_signature': 'signature_test',
+              },
+            };
+          }
+          return null;
+        });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VendorSecureCheckoutScreen(
+          plan: const {'id': 'plan-123', 'name': 'Starter', 'price': 999},
+          coupon: ApplyCouponResultModel(
+            couponCode: 'SAVE',
+            originalPrice: 999,
+            finalPrice: 900,
+          ),
+          api: api,
+          onPay: (_, _, transactionId) async {
+            expect(api.verificationCalls, 1);
+            expect(transactionId, 'transaction_test');
+            activated++;
+            return false;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pay ₹974.50 securely'), findsOneWidget);
+    expect(opened, 0);
+    expect(activated, 0);
+    await tester.tap(find.text('Pay ₹974.50 securely'));
+    await tester.pumpAndSettle();
+    expect(opened, 1);
+    expect(activated, 1);
+    expect(api.orderRequests, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed total confirmation can retry without activating a plan', (
+    tester,
+  ) async {
+    final api = _CouponApi()..rejectOrder = true;
+    var activated = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VendorSecureCheckoutScreen(
+          plan: const {'id': 'plan-123', 'name': 'Starter', 'price': 999},
+          coupon: null,
+          api: api,
+          onPay: (_, _, _) async {
+            activated++;
+            return false;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Could not confirm total.'), findsOneWidget);
+    expect(find.text('Pay ₹999 securely'), findsNothing);
+    expect(activated, 0);
+    api.rejectOrder = false;
+    await tester.tap(find.text('Retry checkout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pay ₹999 securely'), findsOneWidget);
+    expect(activated, 0);
+    expect(api.orderRequests, 2);
+    expect(tester.takeException(), isNull);
   });
 
   test('an incomplete order cannot silently activate a free plan', () {

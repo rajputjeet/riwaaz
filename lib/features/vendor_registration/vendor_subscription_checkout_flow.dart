@@ -716,6 +716,10 @@ class _VendorSecureCheckoutScreenState
   PaymentSuccessResponse? _pendingPayment;
   String? _verifiedTransactionId;
   num? _serverConfirmedPrice;
+  late final VendorApiProvider _paymentApi;
+  RazorpayOrderModel? _checkoutOrder;
+  bool _isPreparingOrder = true;
+  String? _orderError;
   bool _isProcessing = false;
 
   @override
@@ -725,6 +729,8 @@ class _VendorSecureCheckoutScreenState
       ..on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess)
       ..on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentFailure)
       ..on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+    _paymentApi = widget.api ?? VendorApiProvider();
+    _prepareOrder();
   }
 
   @override
@@ -817,9 +823,12 @@ class _VendorSecureCheckoutScreenState
     }
   }
 
-  Future<void> _pay() async {
-    if (_isProcessing) return;
-    setState(() => _isProcessing = true);
+  Future<void> _prepareOrder() async {
+    setState(() {
+      _isPreparingOrder = true;
+      _orderError = null;
+      _checkoutOrder = null;
+    });
     try {
       final planId =
           (widget.plan['serverPlanId'] ?? widget.plan['id'])
@@ -828,7 +837,46 @@ class _VendorSecureCheckoutScreenState
           '';
       if (planId.isEmpty) throw StateError('Plan ID is missing. Please retry.');
       final couponCode = widget.coupon?.couponCode.trim();
-      final paymentApi = widget.api ?? VendorApiProvider();
+      final orderResult = await _paymentApi.createRazorpayOrder(
+        type: widget.isAd ? 'ad' : 'subscription',
+        planId: planId,
+        couponCode: couponCode?.isNotEmpty == true ? couponCode : null,
+      );
+      if (orderResult.isSuccess != true || orderResult.data == null) {
+        throw StateError(
+          orderResult.message ??
+              orderResult.error ??
+              'Could not create a payment order.',
+        );
+      }
+      final order = orderResult.data!;
+      if (couponCode?.isNotEmpty == true &&
+          order.couponCode?.trim().toUpperCase() != couponCode!.toUpperCase()) {
+        throw StateError(
+          'The server did not confirm coupon ${couponCode.toUpperCase()}. Reapply the coupon or try another one.',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _checkoutOrder = order;
+        _serverConfirmedPrice = order.amountInPaise / 100;
+        _isPreparingOrder = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isPreparingOrder = false;
+        _orderError = error.toString().replaceFirst('Bad state: ', '');
+      });
+    }
+  }
+
+  Future<void> _pay() async {
+    if (_isProcessing || _isPreparingOrder || _checkoutOrder == null) return;
+    setState(() => _isProcessing = true);
+    try {
+      final couponCode = widget.coupon?.couponCode.trim();
+      final paymentApi = _paymentApi;
       bool completed;
       if (_verifiedTransactionId != null) {
         completed = await widget.onPay(
@@ -842,26 +890,7 @@ class _VendorSecureCheckoutScreenState
           couponCode: couponCode,
         );
       } else {
-        final orderResult = await paymentApi.createRazorpayOrder(
-          type: widget.isAd ? 'ad' : 'subscription',
-          planId: planId,
-          couponCode: couponCode?.isNotEmpty == true ? couponCode : null,
-        );
-        if (orderResult.isSuccess != true || orderResult.data == null) {
-          throw StateError(
-            orderResult.message ??
-                orderResult.error ??
-                'Could not create a payment order.',
-          );
-        }
-        final order = orderResult.data!;
-        if (couponCode?.isNotEmpty == true &&
-            order.couponCode?.trim().toUpperCase() !=
-                couponCode!.toUpperCase()) {
-          throw StateError(
-            'The server did not confirm coupon ${couponCode.toUpperCase()}. Reapply the coupon or try another one.',
-          );
-        }
+        final order = _checkoutOrder!;
         if (order.isFree) {
           completed = await widget.onPay(
             couponCode?.isNotEmpty == true ? 'Coupon' : 'Free',
@@ -869,20 +898,6 @@ class _VendorSecureCheckoutScreenState
             null,
           );
         } else {
-          final displayedPrice =
-              _serverConfirmedPrice ??
-              widget.coupon?.finalPrice ??
-              (widget.plan['price'] is num
-                  ? widget.plan['price'] as num
-                  : num.tryParse('${widget.plan['price']}') ?? 0);
-          final displayedPriceInPaise = (displayedPrice * 100).round();
-          if (order.amountInPaise != displayedPriceInPaise) {
-            final serverPrice = order.amountInPaise / 100;
-            setState(() => _serverConfirmedPrice = serverPrice);
-            throw StateError(
-              'The server calculated ₹${serverPrice.toStringAsFixed(2)}, but the coupon preview showed ₹${displayedPrice.toStringAsFixed(2)}. The updated total is shown below. Review it and tap Pay again to continue.',
-            );
-          }
           _pendingOrder = order;
           _pendingPayment = await _openRazorpay(
             order: order,
@@ -959,13 +974,12 @@ class _VendorSecureCheckoutScreenState
         ? priceValue.round()
         : int.tryParse('$priceValue') ?? 0;
     final price =
-        _serverConfirmedPrice?.round() ??
-        widget.coupon?.finalPrice.round() ??
-        originalPrice;
+        _serverConfirmedPrice ?? widget.coupon?.finalPrice ?? originalPrice;
+    final priceLabel = price.toStringAsFixed(price % 1 == 0 ? 0 : 2);
     final discountAmount = _serverConfirmedPrice == null
         ? widget.coupon?.discountAmount ?? 0
         : (originalPrice - _serverConfirmedPrice!).clamp(0, originalPrice);
-    final isFree = widget.coupon?.isFree == true;
+    final isFree = _checkoutOrder?.isFree ?? (widget.coupon?.isFree == true);
 
     return PopScope(
       canPop: !_isProcessing,
@@ -1091,6 +1105,13 @@ class _VendorSecureCheckoutScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_orderError != null) ...[
+                Text(
+                  _orderError!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+              ],
               if (!isFree) ...[
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -1126,7 +1147,11 @@ class _VendorSecureCheckoutScreenState
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isProcessing ? null : _pay,
+                  onPressed: _isProcessing || _isPreparingOrder
+                      ? null
+                      : _orderError != null
+                      ? _prepareOrder
+                      : _pay,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(0, 50),
                     backgroundColor: AppColors.primary,
@@ -1136,7 +1161,7 @@ class _VendorSecureCheckoutScreenState
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _isProcessing
+                  child: _isProcessing || _isPreparingOrder
                       ? const SizedBox(
                           height: 20,
                           width: 20,
@@ -1146,9 +1171,11 @@ class _VendorSecureCheckoutScreenState
                           ),
                         )
                       : Text(
-                          isFree
+                          _orderError != null
+                              ? 'Retry checkout'
+                              : isFree
                               ? 'Activate plan for free'
-                              : 'Pay ₹$price securely',
+                              : 'Pay ₹$priceLabel securely',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -1211,7 +1238,7 @@ class _PriceLine extends StatelessWidget {
 class _PlanSummaryCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final int price;
+  final num price;
 
   const _PlanSummaryCard({
     required this.title,
@@ -1265,7 +1292,7 @@ class _PlanSummaryCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '₹$price',
+            '₹${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)}',
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w900,
