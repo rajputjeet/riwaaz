@@ -2980,7 +2980,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Widoora v1.0.4 • Direct Celebrations Marketplace',
+                  'Widoora v1.0.4',
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.grey.withValues(alpha: 0.8),
