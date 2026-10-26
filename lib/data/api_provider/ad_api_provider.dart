@@ -100,10 +100,13 @@ class AdApiProvider {
       final message = map['message']?.toString();
 
       ActiveAdDetailModel? purchase;
-      if (map['data'] != null && map['data'] is Map<String, dynamic>) {
+      if (isSuccess && map['data'] is Map<String, dynamic>) {
         final dataMap = map['data'] as Map<String, dynamic>;
-        if (dataMap['purchase'] != null && dataMap['purchase'] is Map<String, dynamic>) {
-          purchase = ActiveAdDetailModel.fromJson(dataMap['purchase'] as Map<String, dynamic>);
+        if (dataMap['purchase'] != null &&
+            dataMap['purchase'] is Map<String, dynamic>) {
+          purchase = ActiveAdDetailModel.fromJson(
+            dataMap['purchase'] as Map<String, dynamic>,
+          );
         } else {
           purchase = ActiveAdDetailModel.fromJson(dataMap);
         }
@@ -144,23 +147,21 @@ class AdApiProvider {
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{'success': true, 'data': response.data};
 
-      return DataResponse<List<CouponModel>>.fromJson(
-        body,
-        (raw) {
-          final list = raw is List
-              ? raw
-              : (raw is Map && raw['data'] is List
+      return DataResponse<List<CouponModel>>.fromJson(body, (raw) {
+        final list = raw is List
+            ? raw
+            : (raw is Map && raw['data'] is List
                   ? raw['data'] as List
                   : (raw is Map && raw['coupons'] is List
-                      ? raw['coupons'] as List
-                      : const <dynamic>[]));
-          return list
-              .whereType<Map>()
-              .map((item) =>
-                  CouponModel.fromJson(Map<String, dynamic>.from(item)))
-              .toList();
-        },
-      );
+                        ? raw['coupons'] as List
+                        : const <dynamic>[]));
+        return list
+            .whereType<Map>()
+            .map(
+              (item) => CouponModel.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList();
+      });
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<List<CouponModel>>(
@@ -199,21 +200,24 @@ class AdApiProvider {
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
 
-      return DataResponse<CouponValidationResult>.fromJson(
-        body,
-        (raw) {
-          if (raw is! Map) {
-            throw const FormatException('Invalid coupon response.');
-          }
-          final map = Map<String, dynamic>.from(raw);
-          return CouponValidationResult.fromJson({
-            ...map,
-            'couponCode': map['couponCode']?.toString().trim().isNotEmpty == true
-                ? map['couponCode']
-                : couponCode.trim().toUpperCase(),
-          });
-        },
-      );
+      if (body['success'] == false) {
+        return DataResponse<CouponValidationResult>(
+          isSuccess: false,
+          message: body['message']?.toString(),
+        );
+      }
+      return DataResponse<CouponValidationResult>.fromJson(body, (raw) {
+        if (raw is! Map) {
+          throw const FormatException('Invalid coupon response.');
+        }
+        final map = Map<String, dynamic>.from(raw);
+        return CouponValidationResult.fromJson({
+          ...map,
+          'couponCode': map['couponCode']?.toString().trim().isNotEmpty == true
+              ? map['couponCode']
+              : couponCode.trim().toUpperCase(),
+        });
+      });
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
       return DataResponse<CouponValidationResult>(
@@ -281,25 +285,22 @@ class AdApiProvider {
 
       if (response.data is Map<String, dynamic>) {
         final resMap = response.data as Map<String, dynamic>;
-        return DataResponse<List<UserModel>>.fromJson(
-          resMap,
-          (data) {
-            List<dynamic> rawList = [];
-            if (data is List) {
-              rawList = data;
-            } else if (data is Map<String, dynamic>) {
-              if (data['list'] is List) {
-                rawList = data['list'] as List;
-              } else if (data['vendors'] is List) {
-                rawList = data['vendors'] as List;
-              }
+        return DataResponse<List<UserModel>>.fromJson(resMap, (data) {
+          List<dynamic> rawList = [];
+          if (data is List) {
+            rawList = data;
+          } else if (data is Map<String, dynamic>) {
+            if (data['list'] is List) {
+              rawList = data['list'] as List;
+            } else if (data['vendors'] is List) {
+              rawList = data['vendors'] as List;
             }
-            return rawList
-                .whereType<Map<String, dynamic>>()
-                .map((e) => UserModel.fromJson(e))
-                .toList();
-          },
-        );
+          }
+          return rawList
+              .whereType<Map<String, dynamic>>()
+              .map((e) => UserModel.fromJson(e))
+              .toList();
+        });
       } else if (response.data is List) {
         final list = (response.data as List)
             .whereType<Map<String, dynamic>>()
@@ -327,7 +328,9 @@ class AdApiProvider {
   // POST /api/ad/upload-banner
   // Headers: Authorization: Bearer <token>, Content-Type: multipart/form-data
   // Form Field: adBanner (File)
-  Future<DataResponse<ActiveAdDetailModel>> uploadAdBanner(dynamic bannerFile) async {
+  Future<DataResponse<ActiveAdDetailModel>> uploadAdBanner(
+    dynamic bannerFile,
+  ) async {
     try {
       final token = StorageHelper().getAccessToken();
 
@@ -347,10 +350,7 @@ class AdApiProvider {
 
       final fileName = filePath.split(Platform.pathSeparator).last;
       final formData = FormData.fromMap({
-        'adBanner': await MultipartFile.fromFile(
-          filePath,
-          filename: fileName,
-        ),
+        'adBanner': await MultipartFile.fromFile(filePath, filename: fileName),
       });
 
       final response = await _dio.post(
@@ -367,7 +367,8 @@ class AdApiProvider {
 
       final map = response.data as Map<String, dynamic>;
       final isSuccess = map['success'] == true;
-      final message = map['message']?.toString() ??
+      final message =
+          map['message']?.toString() ??
           (isSuccess
               ? 'Ad banner uploaded successfully and attached to your running ad campaign!'
               : 'Failed to upload ad banner.');

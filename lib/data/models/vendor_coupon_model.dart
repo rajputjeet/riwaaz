@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'payment_price_fields.dart';
+
 class VendorCouponModel {
   final String id;
   final String title;
@@ -113,13 +115,8 @@ class ApplyCouponResultModel {
   });
 
   factory ApplyCouponResultModel.fromJson(Map<String, dynamic> json) {
-    final finalPrice = num.tryParse(json['finalPrice']?.toString() ?? '');
-    if (finalPrice == null || !finalPrice.isFinite || finalPrice < 0) {
-      throw const FormatException(
-        'Coupon response has no valid payable amount.',
-      );
-    }
-    final discount = _number(json['discountAmount']);
+    final finalPrice = PaymentPriceFields.payable(json);
+    final discount = PaymentPriceFields.discount(json) ?? 0;
     final int months =
         ((json['durationMonths'] ??
                     json['durationMonth'] ??
@@ -141,7 +138,7 @@ class ApplyCouponResultModel {
       discountType: json['discountType']?.toString() ?? '',
       discountValue: _number(json['discountValue']),
       discountPercentage: _number(json['discountPercentage']),
-      originalPrice: _number(json['originalPrice']),
+      originalPrice: PaymentPriceFields.original(json) ?? finalPrice + discount,
       discountAmount: discount,
       finalPrice: finalPrice,
       isFree: finalPrice == 0,

@@ -8,8 +8,6 @@ import '../../utils/helper/storage_helper.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../shell/main_shell.dart';
 import '../vendor_panel/vendor_shell.dart';
-import '../vendor_registration/vendor_registration_wizard_screen.dart';
-import '../vendor_registration/vendor_verification_tracker_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,10 +38,12 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
 
     // Logo entrance
     _logoController = AnimationController(
@@ -53,9 +53,10 @@ class _SplashScreenState extends State<SplashScreen>
     _logoScale = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.easeOutBack),
     );
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
-    );
+    _logoOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeIn));
 
     // Subtle gentle pulse for emblem halo
     _pulseController = AnimationController(
@@ -71,9 +72,10 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
-    );
+    _textOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
     // Luxury loading bar animation
     _loadingController = AnimationController(
@@ -120,35 +122,6 @@ class _SplashScreenState extends State<SplashScreen>
     if (isLoggedIn == true && token != null && token.isNotEmpty) {
       final roleId = storage.getRoleId();
       if (roleId == 3 || roleId == 4) {
-        final isVerified = storage.getIsVerified();
-        final isOnboardingCompleted = storage.getVendorOnboardingCompleted();
-        final draft = storage.getVendorDraft();
-        final appStatus = storage.getApplicationStatus();
-
-        // 1. If vendor registered but has not completed/submitted onboarding wizard:
-        // Always resume directly from where they left the registration process!
-        if (!isOnboardingCompleted || draft != null) {
-          final draftStep = (draft?['step'] as int?) ?? 1;
-          Navigator.of(context).pushReplacement(
-            FadeScaleRoute(
-              page: VendorRegistrationWizardScreen(initialStep: draftStep),
-            ),
-          );
-          return;
-        }
-
-        // 2. If vendor completed the onboarding wizard but is awaiting admin review:
-        if (!isVerified ||
-            appStatus == 'Under Review' ||
-            appStatus == 'Pending' ||
-            appStatus == 'Submitted') {
-          Navigator.of(context).pushReplacement(
-            FadeScaleRoute(page: const VendorVerificationTrackerScreen()),
-          );
-          return;
-        }
-
-        // 3. Fully verified vendor with active dashboard access
         Navigator.of(context).pushReplacement(
           FadeScaleRoute(page: const VendorShell(initialIndex: 0)),
         );
@@ -160,9 +133,9 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    Navigator.of(context).pushReplacement(
-      FadeScaleRoute(page: const OnboardingScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(FadeScaleRoute(page: const OnboardingScreen()));
   }
 
   @override
@@ -194,9 +167,7 @@ class _SplashScreenState extends State<SplashScreen>
               fit: StackFit.expand,
               children: [
                 // 1. Warm Cream Base Background
-                Container(
-                  color: const Color(0xFFFFFDF8),
-                ),
+                Container(color: const Color(0xFFFFFDF8)),
 
                 // 2. Full Couple Walking Photo (Clear & Unobstructed, no heavy overlay)
                 Positioned(
@@ -227,10 +198,7 @@ class _SplashScreenState extends State<SplashScreen>
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFFFFFDF8),
-                          Color(0x00FFFDF8),
-                        ],
+                        colors: [Color(0xFFFFFDF8), Color(0x00FFFDF8)],
                       ),
                     ),
                   ),
@@ -270,7 +238,10 @@ class _SplashScreenState extends State<SplashScreen>
                         children: [
                           // Top Brand Logo — completely transparent (no yellow halo/glow)
                           AnimatedBuilder(
-                            animation: Listenable.merge([_logoController, _pulseController]),
+                            animation: Listenable.merge([
+                              _logoController,
+                              _pulseController,
+                            ]),
                             builder: (context, child) {
                               return FadeTransition(
                                 opacity: _logoOpacity,
@@ -362,6 +333,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
+
   // Luxury Gold Loading Progress Bar
   Widget _buildLoadingBar() {
     return Container(
@@ -382,11 +354,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      _goldAccent,
-                      _goldProgress,
-                      Colors.white,
-                    ],
+                    colors: [_goldAccent, _goldProgress, Colors.white],
                   ),
                   borderRadius: BorderRadius.circular(2),
                   boxShadow: [

@@ -98,6 +98,10 @@ class VendorRegistrationController extends GetxController {
     String? gstNumber,
     required String categoryId,
     String? categoryName,
+    String? email,
+    String? mobile,
+    String? fullName,
+    Set<String> existingDocuments = const {},
     dynamic aadharFile,
     dynamic aadharFrontFile,
     dynamic aadharBackFile,
@@ -111,150 +115,121 @@ class VendorRegistrationController extends GetxController {
     isSubmitting.value = true;
 
     final actualFront = aadharFrontFile ?? aadharFile;
-    final bool hasAadhar =
-        actualFront is MultipartFile ||
-        (actualFront is String && actualFront.trim().isNotEmpty);
-    final bool hasPan =
-        panFile is MultipartFile ||
-        (panFile is String && panFile.trim().isNotEmpty);
-
-    if (!hasAadhar || !hasPan) {
+    final documents = <String, dynamic>{
+      'aadharFront': actualFront,
+      'aadharBack': aadharBackFile,
+      'liveSelfie': liveSelfieFile,
+      'pan': panFile,
+      'businessCert': businessCertFile,
+      'addressProof': addressProofFile,
+      'gstDoc': gstDocFile,
+    };
+    bool hasDocument(String key) =>
+        existingDocuments.contains(key) ||
+        documents[key] is MultipartFile ||
+        (documents[key] is String &&
+            (documents[key] as String).trim().isNotEmpty &&
+            !(documents[key] as String).startsWith('http'));
+    if (![
+      'aadharFront',
+      'aadharBack',
+      'liveSelfie',
+      'pan',
+    ].every(hasDocument)) {
       isSubmitting.value = false;
-      if (!isPreliminaryUpload) {
-        Utils.showSnackBar(
-          'Aadhaar and PAN Card documents are required to complete registration.',
-          isError: true,
-        );
-      }
       return DataResponse<VendorApplicationModel>(
         isSuccess: false,
         message:
-            'Aadhaar and PAN Card documents are required to complete registration.',
+            'Aadhaar front and back, PAN Card and a live selfie are required.',
       );
     }
+    try {
+      final formDataMap = <String, dynamic>{
+        'ownerName': ownerName.trim(),
+        if (email?.trim().isNotEmpty == true) 'email': email!.trim(),
+        if (mobile?.trim().isNotEmpty == true) 'mobile': mobile!.trim(),
+        if (fullName?.trim().isNotEmpty == true) 'fullName': fullName!.trim(),
+        'businessName': businessName.trim(),
+        'yearsOfExperience': yearsOfExperience.trim(),
+        'businessDescription': businessDescription.trim(),
+        'businessAddress': businessAddress.trim(),
+        'city': city.trim(),
+        if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
+        if (pincode != null && pincode.trim().isNotEmpty)
+          'pincode': pincode.trim(),
+        if (addressUrl != null && addressUrl.trim().isNotEmpty)
+          'addressUrl': addressUrl.trim(),
+        if (gstNumber != null && gstNumber.trim().isNotEmpty)
+          'gstNumber': gstNumber.trim(),
+        'categoryId': categoryId,
+        if (categoryName != null && categoryName.trim().isNotEmpty) ...{
+          'category': categoryName.trim(),
+          'categoryName': categoryName.trim(),
+        },
+      };
 
-    final formDataMap = <String, dynamic>{
-      'ownerName': ownerName.trim(),
-      'businessName': businessName.trim(),
-      'yearsOfExperience': yearsOfExperience.trim(),
-      'businessDescription': businessDescription.trim(),
-      'businessAddress': businessAddress.trim(),
-      'city': city.trim(),
-      if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
-      if (pincode != null && pincode.trim().isNotEmpty)
-        'pincode': pincode.trim(),
-      if (addressUrl != null && addressUrl.trim().isNotEmpty)
-        'addressUrl': addressUrl.trim(),
-      if (gstNumber != null && gstNumber.trim().isNotEmpty)
-        'gstNumber': gstNumber.trim(),
-      'categoryId': categoryId,
-      if (categoryName != null && categoryName.trim().isNotEmpty) ...{
-        'category': categoryName.trim(),
-        'categoryName': categoryName.trim(),
-      },
-    };
-
-    // Convert file paths or MultipartFiles to actual multipart form files
-    Future<MultipartFile> toMultipart(
-      dynamic file,
-      String fallbackFilename,
-    ) async {
-      if (file is MultipartFile) return file.clone();
-      if (file is String && file.trim().isNotEmpty) {
-        try {
-          final fileName = file.split(RegExp(r'[\\/]')).last;
-          return await MultipartFile.fromFile(file, filename: fileName);
-        } catch (_) {}
+      // Existing server documents are retained; upload only newly selected files.
+      for (final entry in documents.entries) {
+        final file = entry.value;
+        if (file is MultipartFile) {
+          formDataMap[entry.key] = file.clone();
+        } else if (file is String &&
+            file.trim().isNotEmpty &&
+            !file.startsWith('http')) {
+          formDataMap[entry.key] = await MultipartFile.fromFile(
+            file,
+            filename: file.split(RegExp(r'[\/]')).last,
+          );
+        }
       }
-      return MultipartFile.fromString(
-        'sample_verification_doc',
-        filename: fallbackFilename,
+
+      final formData = FormData.fromMap(formDataMap);
+
+      final response = await _vendorApiProvider.submitVendorApplication(
+        formData,
       );
-    }
+      isSubmitting.value = false;
 
-    if (actualFront != null) {
-      formDataMap['aadharFront'] = await toMultipart(
-        actualFront,
-        'aadhar_front.jpg',
-      );
-    }
+      if (response.isSuccess == true && response.data != null) {
+        applicationData.value = response.data!;
+        currentStatus.value =
+            response.data!.applicationStatus ?? 'Under Review';
+        isVerified.value = response.data!.isVerified ?? false;
+        isDraftSavedOnServer.value = true;
 
-    if (aadharBackFile != null &&
-        (aadharBackFile is MultipartFile ||
-            (aadharBackFile is String && aadharBackFile.trim().isNotEmpty))) {
-      formDataMap['aadharBack'] = await toMultipart(
-        aadharBackFile,
-        'aadhar_back.jpg',
-      );
-    }
-
-    if (liveSelfieFile != null &&
-        (liveSelfieFile is MultipartFile ||
-            (liveSelfieFile is String && liveSelfieFile.trim().isNotEmpty))) {
-      formDataMap['liveSelfie'] = await toMultipart(
-        liveSelfieFile,
-        'live_selfie.jpg',
-      );
-    }
-
-    formDataMap['pan'] = await toMultipart(panFile, 'pan_card.jpg');
-    if (businessCertFile != null &&
-        (businessCertFile is MultipartFile ||
-            (businessCertFile is String &&
-                businessCertFile.trim().isNotEmpty))) {
-      formDataMap['businessCert'] = await toMultipart(
-        businessCertFile,
-        'business_cert.jpg',
-      );
-    }
-    if (addressProofFile != null &&
-        (addressProofFile is MultipartFile ||
-            (addressProofFile is String &&
-                addressProofFile.trim().isNotEmpty))) {
-      formDataMap['addressProof'] = await toMultipart(
-        addressProofFile,
-        'address_proof.jpg',
-      );
-    }
-    if (gstDocFile != null &&
-        (gstDocFile is MultipartFile ||
-            (gstDocFile is String && gstDocFile.trim().isNotEmpty))) {
-      formDataMap['gstDoc'] = await toMultipart(gstDocFile, 'gst_cert.jpg');
-    }
-
-    final formData = FormData.fromMap(formDataMap);
-
-    final response = await _vendorApiProvider.submitVendorApplication(formData);
-    isSubmitting.value = false;
-
-    if (response.isSuccess == true && response.data != null) {
-      applicationData.value = response.data!;
-      currentStatus.value = response.data!.applicationStatus ?? 'Under Review';
-      isVerified.value = response.data!.isVerified ?? false;
-      isDraftSavedOnServer.value = true;
-
-      await _storageHelper.saveApplicationId(response.data!.applicationId);
-      await _storageHelper.saveApplicationStatus(
-        response.data!.applicationStatus,
-      );
-      await _storageHelper.saveIsVerified(response.data!.isVerified);
-
-      if (!isPreliminaryUpload) {
-        Utils.showSnackBar(
-          response.message ?? 'Application submitted successfully!',
-          isError: false,
+        await _storageHelper.saveApplicationId(response.data!.applicationId);
+        await _storageHelper.saveApplicationStatus(
+          response.data!.applicationStatus,
         );
-      }
-    } else {
-      if (!isPreliminaryUpload) {
-        Utils.showSnackBar(
-          response.message ?? response.error ?? 'Failed to submit application',
-          isError: true,
-        );
-      }
-    }
+        await _storageHelper.saveIsVerified(response.data!.isVerified);
 
-    return response;
+        if (!isPreliminaryUpload) {
+          Utils.showSnackBar(
+            response.message ?? 'Application submitted successfully!',
+            isError: false,
+          );
+        }
+      } else {
+        if (!isPreliminaryUpload) {
+          Utils.showSnackBar(
+            response.message ??
+                response.error ??
+                'Failed to submit application',
+            isError: true,
+          );
+        }
+      }
+
+      return response;
+    } catch (_) {
+      return DataResponse<VendorApplicationModel>(
+        isSuccess: false,
+        message:
+            'Could not submit your documents. Please select the files again and retry.',
+      );
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
   // ── Draft Helpers ──────────────────────────────────────────────────────────

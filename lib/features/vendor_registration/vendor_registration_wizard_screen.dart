@@ -1,3 +1,6 @@
+import '../../data/models/user_model.dart';
+import '../../data/api_provider/user_api_provider.dart';
+import 'vendor_access_guard.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +23,7 @@ import 'vendor_submitted_screen.dart';
 import 'vendor_subscription_checkout_flow.dart';
 
 class VendorRegistrationWizardScreen extends StatefulWidget {
+  final UserModel? initialProfile;
   final int initialStep;
   final String? initialCategory;
   final String? initialBusinessName;
@@ -31,6 +35,7 @@ class VendorRegistrationWizardScreen extends StatefulWidget {
   const VendorRegistrationWizardScreen({
     super.key,
     this.initialStep = 1,
+    this.initialProfile,
     this.initialCategory,
     this.initialBusinessName,
     this.initialOwnerName,
@@ -92,6 +97,7 @@ class _VendorRegistrationWizardScreenState
   // Step 5 State: Subscription Plans (fetched dynamically from /api/subscription/list)
   String _selectedPlan = '6_months'; // will hold selected plan _id
   bool _isSubscriptionPaid = false;
+  UserModel? _latestProfile;
 
   List<Map<String, dynamic>> get _availablePlans {
     if (_vendorController.subscriptionPlans.isNotEmpty) {
@@ -177,30 +183,58 @@ class _VendorRegistrationWizardScreenState
   bool _showDocValidationErrors = false;
   final ImagePicker _imagePicker = ImagePicker();
 
-  List<String> _getMissingRequiredDocs() {
-    final List<String> missing = [];
-    if (_liveSelfiePath == null || _liveSelfiePath!.trim().isEmpty) {
-      missing.add('Live Selfie');
+  Set<String> get _existingDocuments {
+    final profile = _latestProfile;
+    if (profile?.profileCompletion?.steps['documents'] == true ||
+        (profile != null &&
+            VendorRegistrationProgress(profile).profileComplete)) {
+      return {'aadharFront', 'aadharBack', 'pan', 'liveSelfie'};
     }
-    if (_aadharPath == null || _aadharPath!.trim().isEmpty) {
-      missing.add('Aadhaar Card (Front)');
-    }
-    if (_aadharBackPath == null || _aadharBackPath!.trim().isEmpty) {
-      missing.add('Aadhaar Card (Back)');
-    }
-    if (_panPath == null || _panPath!.trim().isEmpty) {
-      missing.add('PAN Card');
-    }
-    return missing;
+    final vp = profile?.vendorProfile;
+    return {
+      if ((vp?.aadharFrontUrl ?? profile?.aadharFrontUrl)?.isNotEmpty == true)
+        'aadharFront',
+      if ((vp?.aadharBackUrl ?? profile?.aadharBackUrl)?.isNotEmpty == true)
+        'aadharBack',
+      if (vp?.panUrl?.isNotEmpty == true) 'pan',
+      if ((vp?.liveSelfieUrl ?? profile?.liveSelfieUrl)?.isNotEmpty == true)
+        'liveSelfie',
+    };
   }
 
-  int _getUploadedRequiredDocsCount() {
-    int count = 0;
-    if (_liveSelfiePath != null && _liveSelfiePath!.trim().isNotEmpty) count++;
-    if (_aadharPath != null && _aadharPath!.trim().isNotEmpty) count++;
-    if (_aadharBackPath != null && _aadharBackPath!.trim().isNotEmpty) count++;
-    if (_panPath != null && _panPath!.trim().isNotEmpty) count++;
-    return count;
+  bool _hasDocument(String key, String? path) =>
+      _existingDocuments.contains(key) ||
+      (path != null &&
+          path.isNotEmpty &&
+          !path.startsWith('http') &&
+          File(path).existsSync());
+
+  List<String> _getMissingRequiredDocs() => [
+    if (!_hasDocument('liveSelfie', _liveSelfiePath)) 'Live Selfie',
+    if (!_hasDocument('aadharFront', _aadharPath)) 'Aadhaar Card (Front)',
+    if (!_hasDocument('aadharBack', _aadharBackPath)) 'Aadhaar Card (Back)',
+    if (!_hasDocument('pan', _panPath)) 'PAN Card',
+  ];
+
+  int _getUploadedRequiredDocsCount() => 4 - _getMissingRequiredDocs().length;
+
+  Future<bool> _confirmProfileCompletion() async {
+    final result = await UserApiProvider().getProfile();
+    if (!mounted) return false;
+    if (result.isSuccess != true || result.data == null) {
+      Utils.showError('Could not confirm your profile. Please try again.');
+      return false;
+    }
+    _latestProfile = result.data;
+    final progress = VendorRegistrationProgress(result.data!);
+    if (!progress.profileComplete) {
+      setState(() => _currentStep = progress.resumeStep);
+      Utils.showError(
+        'Please complete the remaining required profile details.',
+      );
+      return false;
+    }
+    return true;
   }
 
   Future<void> _captureLiveSelfie() async {
@@ -469,7 +503,7 @@ class _VendorRegistrationWizardScreenState
     });
   }
 
-  Future<void> _uploadVendorDetailsToServer() async {
+  Future<bool> _uploadVendorDetailsToServer() async {
     final missing = _getMissingRequiredDocs();
     if (missing.isNotEmpty) {
       setState(() {
@@ -479,7 +513,7 @@ class _VendorRegistrationWizardScreenState
       Utils.showError(
         'Cannot save details: Required verification documents missing (${missing.join(', ')}).',
       );
-      return;
+      return false;
     }
 
     final categoryId = _resolveCategoryId();
@@ -516,6 +550,10 @@ class _VendorRegistrationWizardScreenState
       gstNumber: _gstController.text.trim(),
       categoryId: categoryId,
       categoryName: _selectedCategory,
+      email: _emailController.text.trim(),
+      mobile: _mobileController.text.trim(),
+      fullName: _ownerNameController.text.trim(),
+      existingDocuments: _existingDocuments,
       aadharFile: _aadharPath,
       aadharFrontFile: _aadharPath,
       aadharBackFile: _aadharBackPath,
@@ -527,11 +565,16 @@ class _VendorRegistrationWizardScreenState
       isPreliminaryUpload: true,
     );
 
-    if (!mounted) return;
+    if (!mounted) return false;
 
     if (res.isSuccess == true) {
       Utils.showSuccess('Your profile details and documents were saved.');
+      return _confirmProfileCompletion();
     }
+    Utils.showError(
+      res.message ?? res.error ?? 'Could not save your details. Please retry.',
+    );
+    return false;
   }
 
   @override
@@ -543,6 +586,12 @@ class _VendorRegistrationWizardScreenState
 
     _vendorController.fetchCategories().then((_) {
       if (mounted) {
+        final categoryId = _latestProfile?.vendorProfile?.categoryId;
+        final category = _vendorController.categories.firstWhereOrNull(
+          (c) => c.id == categoryId,
+        );
+        if (category?.name?.isNotEmpty == true)
+          _selectedCategory = category!.name!;
         _syncCategory(_selectedCategory);
         setState(() {});
       }
@@ -668,6 +717,61 @@ class _VendorRegistrationWizardScreenState
       }
     }
 
+    _latestProfile = widget.initialProfile;
+    if (_latestProfile != null) {
+      final profile = _latestProfile!;
+      final vp = profile.vendorProfile;
+      void fill(TextEditingController controller, String? value) {
+        if (draft == null) {
+          controller.text = value?.trim() ?? '';
+        } else if (controller.text.trim().isEmpty &&
+            value?.trim().isNotEmpty == true) {
+          controller.text = value!.trim();
+        }
+      }
+
+      fill(_ownerNameController, vp?.ownerName ?? profile.fullName);
+      fill(_businessNameController, vp?.businessName);
+      fill(_mobileController, profile.mobile);
+      fill(_emailController, profile.email);
+      fill(_addressController, vp?.businessAddress ?? profile.address);
+      fill(_cityController, vp?.city ?? profile.city);
+      fill(_stateController, vp?.state ?? profile.state);
+      fill(_pincodeController, vp?.pincode ?? profile.pincode);
+      fill(_descriptionController, vp?.businessDescription ?? profile.about);
+      fill(_addressUrlController, vp?.addressUrl);
+      if (draft == null && vp?.categoryId?.isNotEmpty != true) {
+        _selectedCategory = '';
+        _vendorController.selectedCategoryId.value = '';
+      }
+      if (vp?.categoryName?.isNotEmpty == true) {
+        _selectedCategory = vp!.categoryName!;
+      }
+      if (vp?.categoryId?.isNotEmpty == true)
+        _vendorController.selectedCategoryId.value = vp!.categoryId!;
+      String? restoredDoc(String? local, String? remote) =>
+          local != null && !local.startsWith('http') && File(local).existsSync()
+          ? local
+          : remote;
+      _aadharPath = restoredDoc(
+        _aadharPath,
+        vp?.aadharFrontUrl ?? profile.aadharFrontUrl,
+      );
+      _aadharBackPath = restoredDoc(
+        _aadharBackPath,
+        vp?.aadharBackUrl ?? profile.aadharBackUrl,
+      );
+      _liveSelfiePath = restoredDoc(
+        _liveSelfiePath,
+        vp?.liveSelfieUrl ?? profile.liveSelfieUrl,
+      );
+      _panPath = restoredDoc(_panPath, vp?.panUrl);
+      final progress = VendorRegistrationProgress(profile);
+      _isSubscriptionPaid = progress.hasPurchasedPlan;
+      _currentStep = progress.resumeStep;
+    }
+    _currentStep = _currentStep.clamp(1, _totalSteps);
+
     // Auto-save draft on any text keystroke
     for (final c in [
       _businessNameController,
@@ -742,6 +846,15 @@ class _VendorRegistrationWizardScreenState
         missingFields.add('Owner Full Name (min 2 chars)');
       if (businessName.length < 2)
         missingFields.add('Business / Studio Name (min 2 chars)');
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty && (!email.contains('@') || !email.contains('.'))) {
+        Utils.showError(
+          'Please enter a valid email address or leave it blank.',
+        );
+        return;
+      }
+      if (_mobileController.text.replaceAll(RegExp(r'[^0-9]'), '').length < 10)
+        missingFields.add('Mobile Number');
       if (_experience.trim().isEmpty) missingFields.add('Years of Experience');
       if (desc.length < 10)
         missingFields.add('Business Description (min 10 chars)');
@@ -799,8 +912,8 @@ class _VendorRegistrationWizardScreenState
         );
         return;
       }
-      await _uploadVendorDetailsToServer();
-      if (!mounted) return;
+      final saved = await _uploadVendorDetailsToServer();
+      if (!mounted || !saved) return;
       setState(() => _currentStep = 5);
       _persistCurrentDraft();
       return;
@@ -891,6 +1004,10 @@ class _VendorRegistrationWizardScreenState
         gstNumber: _gstController.text.trim(),
         categoryId: categoryId,
         categoryName: _selectedCategory,
+        email: _emailController.text.trim(),
+        mobile: _mobileController.text.trim(),
+        fullName: _ownerNameController.text.trim(),
+        existingDocuments: _existingDocuments,
         aadharFile: _aadharPath,
         aadharFrontFile: _aadharPath,
         aadharBackFile: _aadharBackPath,
@@ -904,8 +1021,8 @@ class _VendorRegistrationWizardScreenState
 
       if (!mounted) return;
 
-      if (res.isSuccess == true ||
-          _vendorController.isDraftSavedOnServer.value) {
+      if (res.isSuccess == true) {
+        if (!await _confirmProfileCompletion() || !mounted) return;
         final nav = Navigator.of(context);
         // Clear local draft upon final submission
         await StorageHelper().clearVendorDraft();
@@ -1402,6 +1519,25 @@ class _VendorRegistrationWizardScreenState
         ),
         const SizedBox(height: 16),
 
+        _buildFormField(
+          label: 'Email Address (Optional)',
+          hint: 'Enter your email address',
+          controller: _emailController,
+          icon: Icons.email_outlined,
+          isRequired: false,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        _buildFormField(
+          label: 'Mobile Number',
+          hint: 'Enter your mobile number',
+          controller: _mobileController,
+          icon: Icons.phone_outlined,
+          isRequired: true,
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 16),
+
         // 2. Business / Studio Name
         _buildFormField(
           label: 'Business / Studio Name',
@@ -1693,8 +1829,10 @@ class _VendorRegistrationWizardScreenState
                         child: SizedBox(
                           width: 54,
                           height: 54,
-                          child: Image.file(
-                            File(filePath),
+                          child: Image(
+                            image: filePath.startsWith('http')
+                                ? NetworkImage(filePath)
+                                : FileImage(File(filePath)) as ImageProvider,
                             fit: BoxFit.cover,
                             errorBuilder: (c, e, s) => Container(
                               color: AppColors.success.withValues(alpha: 0.08),
@@ -1985,8 +2123,10 @@ class _VendorRegistrationWizardScreenState
                     border: Border.all(color: AppColors.success, width: 2),
                   ),
                   child: ClipOval(
-                    child: Image.file(
-                      File(_liveSelfiePath!),
+                    child: Image(
+                      image: _liveSelfiePath!.startsWith('http')
+                          ? NetworkImage(_liveSelfiePath!)
+                          : FileImage(File(_liveSelfiePath!)) as ImageProvider,
                       width: 56,
                       height: 56,
                       fit: BoxFit.cover,

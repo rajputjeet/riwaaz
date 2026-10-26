@@ -1,3 +1,5 @@
+import '../vendor_registration/vendor_access_guard.dart';
+import '../vendor_registration/vendor_registration_wizard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -15,15 +17,31 @@ import 'vendor_profile_screen.dart';
 import 'vendor_notifications_screen.dart';
 import 'vendor_verification_screen.dart';
 
-class VendorShell extends StatefulWidget {
+class VendorShell extends StatelessWidget {
   final int initialIndex;
   const VendorShell({super.key, this.initialIndex = 0});
 
   @override
-  State<VendorShell> createState() => _VendorShellState();
+  Widget build(BuildContext context) => VendorAccessGuard(
+    completedBuilder: (_, profile) =>
+        _VendorShellContent(initialIndex: initialIndex),
+    incompleteBuilder: (_, profile) => VendorRegistrationWizardScreen(
+      initialProfile: profile,
+      initialStep: VendorRegistrationProgress(profile).resumeStep,
+    ),
+  );
 }
 
-class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
+class _VendorShellContent extends StatefulWidget {
+  final int initialIndex;
+  const _VendorShellContent({this.initialIndex = 0});
+
+  @override
+  State<_VendorShellContent> createState() => _VendorShellState();
+}
+
+class _VendorShellState extends State<_VendorShellContent>
+    with WidgetsBindingObserver {
   late int _currentIndex;
   bool _showApprovalWarning = true;
   final _dashboardKey = GlobalKey<VendorDashboardTabState>();
@@ -76,12 +94,14 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: AppColors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: AppColors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -116,9 +136,7 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
                     ),
                     onPressed: () {
                       Navigator.of(context).push(
-                        FadeScaleRoute(
-                          page: const VendorNotificationsScreen(),
-                        ),
+                        FadeScaleRoute(page: const VendorNotificationsScreen()),
                       );
                     },
                   ),
@@ -245,11 +263,14 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
 
     return Obx(() {
       final appStatus = _regController.currentStatus.value.trim();
-      final isVerified = _regController.isVerified.value || StorageHelper().getIsVerified();
+      final isVerified =
+          _regController.isVerified.value || StorageHelper().getIsVerified();
       final normalized = appStatus.toLowerCase();
-      final isApproved = isVerified || normalized == 'approved' || normalized == 'active';
+      final isApproved =
+          isVerified || normalized == 'approved' || normalized == 'active';
       final isRejected = normalized == 'rejected' || normalized == 'declined';
-      final isUnderReview = normalized == 'under review' ||
+      final isUnderReview =
+          normalized == 'under review' ||
           normalized == 'under_review' ||
           normalized == 'in verification' ||
           normalized == 'submitted';
@@ -292,7 +313,8 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
         titleColor = const Color(0xFFFDE68A);
         title = 'Profile Under Review';
         badgeText = 'IN REVIEW';
-        subtitle = 'Documents are being verified by admin. Features unlock upon approval.';
+        subtitle =
+            'Documents are being verified by admin. Features unlock upon approval.';
         iconData = Icons.hourglass_top_rounded;
         gradientColors = const [Color(0xFF26180B), Color(0xFF1A1108)];
       } else {
@@ -304,7 +326,8 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
         titleColor = const Color(0xFFFDE68A);
         title = 'Verification Incomplete';
         badgeText = 'PENDING';
-        subtitle = 'Please upload all 4 KYC documents to unlock your vendor account.';
+        subtitle =
+            'Please upload all 4 KYC documents to unlock your vendor account.';
         iconData = Icons.pending_actions_rounded;
         gradientColors = const [Color(0xFF26180B), Color(0xFF1A1108)];
       }
@@ -318,10 +341,7 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
             colors: gradientColors,
           ),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: borderColor,
-            width: 1.2,
-          ),
+          border: Border.all(color: borderColor, width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.28),
@@ -335,9 +355,9 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () {
-              Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorVerificationScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(FadeScaleRoute(page: const VendorVerificationScreen()));
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -350,17 +370,10 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
                     decoration: BoxDecoration(
                       color: iconBgColor,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: borderColor,
-                        width: 1,
-                      ),
+                      border: Border.all(color: borderColor, width: 1),
                     ),
                     child: Center(
-                      child: Icon(
-                        iconData,
-                        color: iconColor,
-                        size: 20,
-                      ),
+                      child: Icon(iconData, color: iconColor, size: 20),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -385,7 +398,9 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1.5),
+                                horizontal: 6,
+                                vertical: 1.5,
+                              ),
                               decoration: BoxDecoration(
                                 color: badgeBgColor,
                                 borderRadius: BorderRadius.circular(6),
@@ -446,4 +461,3 @@ class _VendorShellState extends State<VendorShell> with WidgetsBindingObserver {
     });
   }
 }
-

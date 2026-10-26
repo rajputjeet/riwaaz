@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import '../data/models/payment_price_fields.dart';
+
 class SubscriptionPlanModel {
   final String id;
   final String title;
@@ -29,14 +31,23 @@ class SubscriptionPlanModel {
   });
 
   factory SubscriptionPlanModel.fromJson(Map<String, dynamic> json) {
-    final int months = ((json['durationInMonths'] ??
-            json['durationMonths'] ??
-            json['durationMonth'] ??
-            json['duration_months'] ??
-            json['duration_month'] ??
-            (json['type'] == '1 Year' ? 12 : json['type'] == '6 Months' ? 6 : json['type'] == '3 Months' ? 3 : 1)) as num)
-        .toInt();
-    final String durStr = json['duration']?.toString() ??
+    final int months =
+        ((json['durationInMonths'] ??
+                    json['durationMonths'] ??
+                    json['durationMonth'] ??
+                    json['duration_months'] ??
+                    json['duration_month'] ??
+                    (json['type'] == '1 Year'
+                        ? 12
+                        : json['type'] == '6 Months'
+                        ? 6
+                        : json['type'] == '3 Months'
+                        ? 3
+                        : 1))
+                as num)
+            .toInt();
+    final String durStr =
+        json['duration']?.toString() ??
         json['durations']?.toString() ??
         '$months Month${months > 1 ? "s" : ""}';
     return SubscriptionPlanModel(
@@ -96,7 +107,9 @@ class CouponModel {
       usageLimit: json['usageLimit'] ?? 0,
       usageLimitPerUser: json['usageLimitPerUser'] ?? 0,
       usedCount: json['usedCount'] ?? 0,
-      validUntil: json['validUntil'] != null ? DateTime.tryParse(json['validUntil'].toString()) : null,
+      validUntil: json['validUntil'] != null
+          ? DateTime.tryParse(json['validUntil'].toString())
+          : null,
     );
   }
 }
@@ -134,18 +147,23 @@ class CouponValidationResult {
   });
 
   factory CouponValidationResult.fromJson(Map<String, dynamic> json) {
+    final finalPrice = PaymentPriceFields.payable(json);
+    final discount = PaymentPriceFields.discount(json) ?? 0;
     final subPlan = json['subscriptionPlan'] != null
         ? SubscriptionPlanModel.fromJson(json['subscriptionPlan'])
         : null;
-    final int months = ((json['durationMonths'] ??
-            json['durationMonth'] ??
-            json['durationInMonths'] ??
-            json['duration_months'] ??
-            json['duration_month'] ??
-            subPlan?.durationInMonths ??
-            1) as num)
-        .toInt();
-    final String durStr = json['duration']?.toString() ??
+    final int months =
+        ((json['durationMonths'] ??
+                    json['durationMonth'] ??
+                    json['durationInMonths'] ??
+                    json['duration_months'] ??
+                    json['duration_month'] ??
+                    subPlan?.durationInMonths ??
+                    1)
+                as num)
+            .toInt();
+    final String durStr =
+        json['duration']?.toString() ??
         json['durations']?.toString() ??
         subPlan?.duration ??
         '$months Month${months > 1 ? "s" : ""}';
@@ -153,10 +171,10 @@ class CouponValidationResult {
     return CouponValidationResult(
       couponCode: json['couponCode']?.toString() ?? '',
       discountType: json['discountType']?.toString() ?? 'percentage',
-      originalPrice: json['originalPrice'] ?? 0,
-      discountAmount: json['discountAmount'] ?? 0,
-      finalPrice: json['finalPrice'] ?? 0,
-      isFree: json['isFree'] ?? false,
+      originalPrice: PaymentPriceFields.original(json) ?? finalPrice + discount,
+      discountAmount: discount,
+      finalPrice: finalPrice,
+      isFree: finalPrice == 0,
       durationInMonths: months,
       durationMonths: months,
       durationMonth: months,
@@ -219,15 +237,18 @@ class VendorActivePlanModel {
     final subPlan = json['subscriptionPlan'] != null
         ? SubscriptionPlanModel.fromJson(json['subscriptionPlan'])
         : null;
-    final int months = ((json['durationMonths'] ??
-            json['durationMonth'] ??
-            json['durationInMonths'] ??
-            json['duration_months'] ??
-            json['duration_month'] ??
-            subPlan?.durationInMonths ??
-            1) as num)
-        .toInt();
-    final String durStr = json['duration']?.toString() ??
+    final int months =
+        ((json['durationMonths'] ??
+                    json['durationMonth'] ??
+                    json['durationInMonths'] ??
+                    json['duration_months'] ??
+                    json['duration_month'] ??
+                    subPlan?.durationInMonths ??
+                    1)
+                as num)
+            .toInt();
+    final String durStr =
+        json['duration']?.toString() ??
         json['durations']?.toString() ??
         subPlan?.duration ??
         '$months Month${months > 1 ? "s" : ""}';
@@ -304,20 +325,23 @@ class SubscriptionHistoryItem {
   });
 
   factory SubscriptionHistoryItem.fromJson(Map<String, dynamic> json) {
-    final int months = ((json['durationMonths'] ??
-            json['durationMonth'] ??
-            json['durationInMonths'] ??
-            json['duration_months'] ??
-            json['duration_month'] ??
-            (json['planType'] == '1 Year'
-                ? 12
-                : json['planType'] == '6 Months'
-                    ? 6
-                    : json['planType'] == '3 Months'
+    final int months =
+        ((json['durationMonths'] ??
+                    json['durationMonth'] ??
+                    json['durationInMonths'] ??
+                    json['duration_months'] ??
+                    json['duration_month'] ??
+                    (json['planType'] == '1 Year'
+                        ? 12
+                        : json['planType'] == '6 Months'
+                        ? 6
+                        : json['planType'] == '3 Months'
                         ? 3
-                        : 1)) as num)
-        .toInt();
-    final String durStr = json['duration']?.toString() ??
+                        : 1))
+                as num)
+            .toInt();
+    final String durStr =
+        json['duration']?.toString() ??
         json['durations']?.toString() ??
         '$months Month${months > 1 ? "s" : ""}';
 
@@ -336,8 +360,12 @@ class SubscriptionHistoryItem {
       couponCode: json['couponCode'],
       paymentMethod: json['paymentMethod'] ?? 'In-App',
       transactionId: json['transactionId'] ?? '',
-      purchasedAt: json['purchasedAt'] != null ? DateTime.tryParse(json['purchasedAt']) : null,
-      endDate: json['endDate'] != null ? DateTime.tryParse(json['endDate']) : null,
+      purchasedAt: json['purchasedAt'] != null
+          ? DateTime.tryParse(json['purchasedAt'])
+          : null,
+      endDate: json['endDate'] != null
+          ? DateTime.tryParse(json['endDate'])
+          : null,
     );
   }
 }

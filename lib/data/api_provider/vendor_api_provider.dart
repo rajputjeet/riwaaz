@@ -158,8 +158,15 @@ class VendorApiProvider {
         },
         options: Injector.getHeaderToken(),
       );
+      final body = Map<String, dynamic>.from(response.data as Map);
+      if (body['success'] != true) {
+        return DataResponse<RazorpayOrderModel>(
+          isSuccess: false,
+          message: body['message']?.toString() ?? 'Could not prepare checkout.',
+        );
+      }
       return DataResponse<RazorpayOrderModel>.fromJson(
-        Map<String, dynamic>.from(response.data as Map),
+        body,
         (raw) =>
             RazorpayOrderModel.fromJson(Map<String, dynamic>.from(raw as Map)),
       );
@@ -377,6 +384,12 @@ class VendorApiProvider {
           ? Map<String, dynamic>.from(response.data as Map)
           : <String, dynamic>{};
 
+      if (body['success'] == false) {
+        return DataResponse<ApplyCouponResultModel>(
+          isSuccess: false,
+          message: body['message']?.toString(),
+        );
+      }
       return DataResponse<ApplyCouponResultModel>.fromJson(body, (raw) {
         if (raw is! Map) {
           throw const FormatException('Invalid coupon response.');

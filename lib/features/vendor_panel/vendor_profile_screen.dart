@@ -656,7 +656,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                             _buildMenuItem(
                               icon: Icons.campaign_rounded,
                               iconColor: const Color(0xFFEAB308),
-                              title: 'Sponsored Ads & Spotlight',
+                              title: 'Sponsored Ads',
                               subtitle: 'Boost profile visibility to brides & grooms',
                               onTap: () => Navigator.of(context).push(
                                 FadeScaleRoute(page: const VendorAdsScreen()),

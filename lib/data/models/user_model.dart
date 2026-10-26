@@ -1,3 +1,5 @@
+import 'profile_completion_model.dart';
+
 class ImageModel {
   String? url;
   String? publicId;
@@ -24,6 +26,8 @@ class ImageModel {
 }
 
 class VendorProfileModel {
+  bool? isProfileCompleted;
+  String? panUrl;
   String? applicationId;
   String? applicationStatus;
   String? businessName;
@@ -77,6 +81,8 @@ class VendorProfileModel {
   String? adBadge;
 
   VendorProfileModel({
+    this.isProfileCompleted,
+    this.panUrl,
     this.applicationId,
     this.applicationStatus,
     this.businessName,
@@ -137,6 +143,8 @@ class VendorProfileModel {
     }
 
     return VendorProfileModel(
+      isProfileCompleted: json['isProfileCompleted'] as bool?,
+      panUrl: extractDocUrl(docs?['pan'] ?? json['pan']),
       applicationId: json['applicationId']?.toString(),
       applicationStatus: json['applicationStatus']?.toString(),
       businessName: json['businessName']?.toString(),
@@ -159,7 +167,9 @@ class VendorProfileModel {
       pincode: json['pincode']?.toString(),
       addressUrl: json['addressUrl']?.toString(),
       yearsOfExperience: json['yearsOfExperience']?.toString(),
-      categoryId: json['categoryId']?.toString(),
+      categoryId: json['categoryId'] is Map
+          ? (json['categoryId']['_id'] ?? json['categoryId']['id'])?.toString()
+          : json['categoryId']?.toString(),
       aadharFrontUrl: extractDocUrl(
         docs?['aadharFront'] ?? json['aadharFront'],
       ),
@@ -216,6 +226,8 @@ class VendorProfileModel {
 
   Map<String, dynamic> toJson() {
     return {
+      if (isProfileCompleted != null) 'isProfileCompleted': isProfileCompleted,
+      if (panUrl != null) 'pan': {'url': panUrl},
       if (applicationId != null) 'applicationId': applicationId,
       if (applicationStatus != null) 'applicationStatus': applicationStatus,
       if (businessName != null) 'businessName': businessName,
@@ -295,6 +307,8 @@ class UserModel {
 
   int? roleId; // 2 = Customer, 3 = Vendor Partner
   bool? isVerified;
+  bool? isProfileCompleted;
+  ProfileCompletionModel? profileCompletion;
   int? otp;
 
   // Geographic / Address details
@@ -331,6 +345,8 @@ class UserModel {
     this.bannerImgId,
     this.roleId,
     this.isVerified,
+    this.isProfileCompleted,
+    this.profileCompletion,
     this.otp,
     this.address,
     this.city,
@@ -394,6 +410,22 @@ class UserModel {
         vpMap?['bannerImg'] ??
         vpMap?['banner'];
 
+    final completion = json['profileCompletion'] is Map
+        ? ProfileCompletionModel.fromJson(
+            Map<String, dynamic>.from(json['profileCompletion']),
+          )
+        : null;
+    final completionFlags = [
+      json['isProfileCompleted'],
+      completion?.isProfileCompleted,
+      vpMap?['isProfileCompleted'],
+    ];
+    final completed = completionFlags.contains(false)
+        ? false
+        : completionFlags.contains(true)
+        ? true
+        : null;
+
     return UserModel(
       id: (json['_id'] ?? json['userId'] ?? json['id'])?.toString(),
       fullName:
@@ -414,6 +446,8 @@ class UserModel {
           ? json['roleId']
           : int.tryParse(json['roleId']?.toString() ?? ''),
       isVerified: json['isVerified'] ?? false,
+      isProfileCompleted: completed,
+      profileCompletion: completion,
       otp: json['otp'] is int
           ? json['otp']
           : int.tryParse(json['otp']?.toString() ?? ''),
@@ -459,6 +493,9 @@ class UserModel {
       if (password != null) 'password': password,
       if (roleId != null) 'roleId': roleId,
       if (isVerified != null) 'isVerified': isVerified,
+      if (isProfileCompleted != null) 'isProfileCompleted': isProfileCompleted,
+      if (profileCompletion != null)
+        'profileCompletion': profileCompletion!.toJson(),
       if (otp != null) 'otp': otp,
       if (address != null) 'address': address,
       if (city != null) 'city': city,

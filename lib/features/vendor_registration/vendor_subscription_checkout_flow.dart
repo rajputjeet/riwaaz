@@ -892,11 +892,7 @@ class _VendorSecureCheckoutScreenState
       } else {
         final order = _checkoutOrder!;
         if (order.isFree) {
-          completed = await widget.onPay(
-            couponCode?.isNotEmpty == true ? 'Coupon' : 'Free',
-            couponCode,
-            null,
-          );
+          completed = await widget.onPay('Coupon', couponCode, null);
         } else {
           _pendingOrder = order;
           _pendingPayment = await _openRazorpay(
@@ -970,15 +966,14 @@ class _VendorSecureCheckoutScreenState
     final planName = widget.plan['name']?.toString() ?? 'Subscription Plan';
     final duration = widget.plan['duration']?.toString() ?? '';
     final priceValue = widget.plan['price'];
-    final originalPrice = priceValue is num
-        ? priceValue.round()
-        : int.tryParse('$priceValue') ?? 0;
+    final originalPrice =
+        _checkoutOrder?.originalPrice ??
+        (priceValue is num ? priceValue : num.tryParse('$priceValue') ?? 0);
     final price =
         _serverConfirmedPrice ?? widget.coupon?.finalPrice ?? originalPrice;
     final priceLabel = price.toStringAsFixed(price % 1 == 0 ? 0 : 2);
-    final discountAmount = _serverConfirmedPrice == null
-        ? widget.coupon?.discountAmount ?? 0
-        : (originalPrice - _serverConfirmedPrice!).clamp(0, originalPrice);
+    final discountAmount =
+        _checkoutOrder?.discountAmount ?? widget.coupon?.discountAmount ?? 0;
     final isFree = _checkoutOrder?.isFree ?? (widget.coupon?.isFree == true);
 
     return PopScope(
