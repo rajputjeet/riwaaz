@@ -653,33 +653,40 @@ class _AdBannerUploadDialogState extends State<AdBannerUploadDialog> {
           ),
           const SizedBox(height: 8),
           _buildSpecRow(
-            '📐 Format',
-            '16:9 Landscape (Recommended 1200 × 600 px)',
+            Icons.aspect_ratio_rounded,
+            'Size',
+            'Landscape 16:9 · recommended 1200 × 675 px',
           ),
           _buildSpecRow(
-            '📸 Content',
+            Icons.center_focus_strong_rounded,
+            'Photo',
             'High-res wedding photo with key subjects centered',
           ),
-          _buildSpecRow('⚡ Formats', 'JPG, PNG, or WEBP up to 10MB'),
+          _buildSpecRow(
+            Icons.file_upload_outlined,
+            'File',
+            'JPG, PNG, or WEBP · up to 10 MB',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSpecRow(String label, String detail) {
+  Widget _buildSpecRow(IconData icon, String label, String detail) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.only(bottom: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, size: 15, color: AppColors.primary),
+          const SizedBox(width: 8),
           SizedBox(
-            width: 78,
+            width: 42,
             child: Text(
               label,
-              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 10.5,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: AppColors.darkGrey,
               ),
             ),
@@ -687,7 +694,11 @@ class _AdBannerUploadDialogState extends State<AdBannerUploadDialog> {
           Expanded(
             child: Text(
               detail,
-              style: const TextStyle(fontSize: 10.5, color: AppColors.darkGrey),
+              style: const TextStyle(
+                fontSize: 10.5,
+                color: AppColors.darkGrey,
+                height: 1.3,
+              ),
             ),
           ),
         ],

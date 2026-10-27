@@ -595,7 +595,9 @@ class _DashboardBodyState extends State<DashboardBody> {
                               color: Colors.black.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
+                                color: const Color(
+                                  0xFFD4AF37,
+                                ).withValues(alpha: 0.6),
                                 width: 0.8,
                               ),
                             ),
@@ -675,7 +677,9 @@ class _DashboardBodyState extends State<DashboardBody> {
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -1300,8 +1304,6 @@ class _DashboardBodyState extends State<DashboardBody> {
   }
 }
 
-
-
 class _FeaturedVendorItem {
   final String id;
   final String name;
@@ -1337,7 +1339,11 @@ class _FeaturedVendorItem {
             .where((part) => part.isNotEmpty)
             .toSet()
             .join(', ');
-    final img = u.vendorCardImageUrl ?? '';
+    // Lead with the wide business banner on Home; keep existing fallbacks
+    // for vendors who have not uploaded one.
+    final img = u.bannerImgUrl?.trim().isNotEmpty == true
+        ? u.bannerImgUrl!.trim()
+        : (u.vendorCardImageUrl ?? '');
 
     return _FeaturedVendorItem(
       id: u.id ?? '',

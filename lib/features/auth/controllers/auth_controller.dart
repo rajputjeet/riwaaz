@@ -477,6 +477,11 @@ class AuthController extends GetxController {
     try {
       await _authApiProvider.logOut();
     } catch (_) {}
+    await clearLocalSession();
+  }
+
+  /// Clears auth and booking state locally when the backend revokes an account.
+  Future<void> clearLocalSession() async {
     await _storageHelper.clearAllData();
     currentUser.value = null;
     generatedOtp.value = null;

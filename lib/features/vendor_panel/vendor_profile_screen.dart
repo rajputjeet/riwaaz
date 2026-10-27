@@ -17,6 +17,7 @@ import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/app_confirmation_dialog.dart';
+import '../../shared/screens/account_deletion_request_screen.dart';
 import '../../utils/helper/storage_helper.dart';
 import '../../utils/utils.dart';
 import '../auth/controllers/auth_controller.dart';
@@ -1134,70 +1135,40 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    AppConfirmationDialog.show(
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    String? requestMessage;
+    final submitted = await AccountDeletionRequestScreen.show(
       context: context,
-      icon: Icons.warning_amber_rounded,
-      iconColor: AppColors.error,
-      iconBackgroundColor: AppColors.error.withValues(alpha: 0.1),
-      isDestructive: true,
-      title: 'Delete Vendor Account?',
-      message:
-          'This action is permanent and cannot be undone. All your vendor data will be permanently erased.',
-      confirmLabel: 'Delete Permanently',
-      cancelLabel: 'Keep Account',
-      customContent: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.18)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Row(
-              children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
-                SizedBox(width: 6),
-                Text(
-                  'The following will be deleted:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.error,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            Text('• Business profile, verified badge & reviews',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
-            SizedBox(height: 4),
-            Text('• Portfolio photos, media & service packages',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
-            SizedBox(height: 4),
-            Text('• Active vendor subscription plan & remaining days',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
-            SizedBox(height: 4),
-            Text('• Client booking records & incoming requests',
-                style: TextStyle(fontSize: 12, color: AppColors.darkGrey, height: 1.35)),
-          ],
-        ),
-      ),
-      onConfirm: () async {
-        if (Get.isRegistered<AuthController>()) {
-          await Get.find<AuthController>().logout();
-        } else {
-          await StorageHelper().clearAllData();
-        }
-        Utils.showSuccess('Your vendor account has been deleted successfully.');
-        if (!context.mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          FadeScaleRoute(page: const LoginScreen()),
-          (route) => false,
+      isVendor: true,
+      onSubmit: (reason, description) async {
+        final response = await _userApi.deleteAccount(
+          reason: reason,
+          description: description,
         );
+        if (response.isSuccess == true) {
+          requestMessage = response.message;
+          return null;
+        }
+        return response.message ??
+            response.error ??
+            'Unable to submit your deletion request. Please try again.';
       },
+    );
+    if (submitted != true) return;
+    if (Get.isRegistered<AuthController>()) {
+      await Get.find<AuthController>().logout();
+    } else {
+      await StorageHelper().clearAllData();
+    }
+    if (!context.mounted) return;
+    Utils.showSuccess(
+      requestMessage?.trim().isNotEmpty == true
+          ? requestMessage!.trim()
+          : 'Your account deletion request has been submitted.',
+    );
+    Navigator.of(context).pushAndRemoveUntil(
+      FadeScaleRoute(page: const LoginScreen()),
+      (route) => false,
     );
   }
 

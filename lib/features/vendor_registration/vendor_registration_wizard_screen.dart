@@ -475,8 +475,8 @@ class _VendorRegistrationWizardScreenState
     return '';
   }
 
-  void _persistCurrentDraft() {
-    StorageHelper().saveVendorDraft({
+  Future<void> _persistCurrentDraft() {
+    return StorageHelper().saveVendorDraft({
       'step': _currentStep,
       'category': _selectedCategory,
       'categoryId': _vendorController.selectedCategoryId.value,
@@ -569,7 +569,11 @@ class _VendorRegistrationWizardScreenState
 
     if (res.isSuccess == true) {
       Utils.showSuccess('Your profile details and documents were saved.');
-      return _confirmProfileCompletion();
+      // This is a preliminary save before the vendor buys a plan and submits
+      // the application. The backend may correctly keep isProfileCompleted
+      // false until those later steps, so do not send the vendor back to
+      // Business Details based on the full-profile completion flag here.
+      return true;
     }
     Utils.showError(
       res.message ?? res.error ?? 'Could not save your details. Please retry.',
@@ -823,7 +827,7 @@ class _VendorRegistrationWizardScreenState
   }
 
   void _nextStep() async {
-    _persistCurrentDraft();
+    await _persistCurrentDraft();
 
     if (_currentStep == 1) {
       if (_selectedCategory.trim().isEmpty) {
@@ -915,7 +919,7 @@ class _VendorRegistrationWizardScreenState
       final saved = await _uploadVendorDetailsToServer();
       if (!mounted || !saved) return;
       setState(() => _currentStep = 5);
-      _persistCurrentDraft();
+      await _persistCurrentDraft();
       return;
     }
 
@@ -930,18 +934,18 @@ class _VendorRegistrationWizardScreenState
 
     if (_currentStep < _totalSteps) {
       setState(() => _currentStep++);
-      _persistCurrentDraft();
+      await _persistCurrentDraft();
     } else {
       _submitRegistration();
     }
   }
 
-  void _prevStep() {
+  void _prevStep() async {
     if (_currentStep > 1) {
       setState(() => _currentStep--);
-      _persistCurrentDraft();
+      await _persistCurrentDraft();
     } else {
-      _persistCurrentDraft();
+      await _persistCurrentDraft();
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {

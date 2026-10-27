@@ -797,6 +797,15 @@ class _VendorSecureCheckoutScreenState
                 'contact': storage.getUserMobile()!.trim(),
             },
             'theme': {'color': '#790D16'},
+            // Keep Razorpay's standard payment methods and hide wallets.
+            'config': {
+              'display': {
+                'hide': [
+                  {'method': 'wallet'},
+                ],
+                'preferences': {'show_default_blocks': true},
+              },
+            },
           });
         },
         (error, stackTrace) {

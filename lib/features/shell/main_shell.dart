@@ -27,7 +27,7 @@ import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/app_html_content_view.dart';
 import '../../shared/widgets/app_support_sheet.dart';
 import '../../shared/widgets/app_confirmation_dialog.dart';
-import '../../shared/widgets/delete_account_dialog.dart';
+import '../../shared/screens/account_deletion_request_screen.dart';
 
 /// The main navigation shell — holds all customer tabs in an [IndexedStack]
 class MainShell extends StatefulWidget {
@@ -1005,9 +1005,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
 
   Future<void> _cancelConfirmedBooking(Map<String, dynamic> booking) async {
     final bookingId =
-        ((booking['id'] as String?) ??
-                (booking['bookingId'] as String?) ??
-                '')
+        ((booking['id'] as String?) ?? (booking['bookingId'] as String?) ?? '')
             .trim();
     if (bookingId.isEmpty || _cancellingBookingId != null) return;
 
@@ -1042,8 +1040,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
     final name = (b['name'] as String?) ?? '';
     final vendorEmail = (b['vendorEmail'] as String?)?.trim() ?? '';
     final vendorPhone =
-        ((b['vendorPhone'] as String?) ?? (b['phone'] as String?) ?? '')
-            .trim();
+        ((b['vendorPhone'] as String?) ?? (b['phone'] as String?) ?? '').trim();
     final status = (b['status'] as String?) ?? 'Pending';
     final package = (b['package'] as String?) ?? '';
     final date = (b['date'] as String?) ?? '';
@@ -1440,26 +1437,48 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                 )
               else if (bookings.isEmpty)
                 Container(
-                  padding: const EdgeInsets.all(32),
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 220),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(24),
                   margin: const EdgeInsets.symmetric(vertical: 20),
                   decoration: BoxDecoration(
                     color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: AppColors.grey.withValues(alpha: 0.2),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.04),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.event_busy_rounded,
-                        size: 56,
-                        color: AppColors.grey,
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.event_busy_rounded,
+                          size: 30,
+                          color: AppColors.primary,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       const Text(
                         'No Bookings Found',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -1478,6 +1497,8 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                                   ? 'completed'
                                   : 'cancelled'} bookings found.",
                         textAlign: TextAlign.center,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.darkGrey,
@@ -1507,8 +1528,7 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                   final String eventDate = rawEventDate.isEmpty
                       ? 'Event Day'
                       : _formatCustomerEventDate(rawEventDate);
-                  final String eventTime =
-                      (v['time'] as String?)?.trim() ?? '';
+                  final String eventTime = (v['time'] as String?)?.trim() ?? '';
                   final String displayBookingId =
                       ((v['bookingId'] as String?) ??
                               (v['id'] as String?) ??
@@ -1525,208 +1545,135 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                       '';
 
                   return Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: statusColor.withValues(alpha: 0.22),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: statusColor.withValues(alpha: 0.06),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.22),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    CachedImageView(
-                                      imageUrl: vendorProfileImg,
-                                      width: 46,
-                                      height: 46,
-                                      isCircle: true,
-                                      backgroundColor: AppColors.primary
-                                          .withValues(alpha: 0.08),
-                                      fallbackIcon: Icons.storefront_rounded,
-                                      iconColor: AppColors.primary,
-                                      iconSize: 22,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          if (displayBookingId.isNotEmpty)
-                                            Text(
-                                              displayBookingId,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.grey,
-                                              ),
-                                            ),
-                                          const SizedBox(height: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: statusColor.withValues(alpha: 0.06),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  CachedImageView(
+                                    imageUrl: vendorProfileImg,
+                                    width: 46,
+                                    height: 46,
+                                    isCircle: true,
+                                    backgroundColor: AppColors.primary
+                                        .withValues(alpha: 0.08),
+                                    fallbackIcon: Icons.storefront_rounded,
+                                    iconColor: AppColors.primary,
+                                    iconSize: 22,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (displayBookingId.isNotEmpty)
                                           Text(
-                                            vendorName,
+                                            displayBookingId,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppColors.black,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.grey,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          vendorName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.black,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: statusColor.withValues(alpha: 0.18),
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: statusColor.withValues(alpha: 0.18),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    bookingStatusIcon(status),
+                                    size: 14,
+                                    color: statusColor,
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      bookingStatusIcon(status),
-                                      size: 14,
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    status,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
                                       color: statusColor,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      status,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: statusColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.045),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 16,
-                                  color: AppColors.goldDark,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    package.isEmpty ? 'Service / Package' : package,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.darkGrey,
-                                      fontWeight: FontWeight.w600,
-                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Divider(
-                            height: 1,
-                            color: statusColor.withValues(alpha: 0.12),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                size: 16,
-                                color: AppColors.primary,
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                eventDate,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (eventTime.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.schedule_rounded,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    eventTime,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.darkGrey,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
-                          const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.045),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
                             children: [
                               const Icon(
-                                Icons.location_on_outlined,
+                                Icons.inventory_2_outlined,
                                 size: 16,
-                                color: AppColors.grey,
+                                color: AppColors.goldDark,
                               ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  (v['venue'] as String?)?.trim().isNotEmpty ==
-                                          true
-                                      ? (v['venue'] as String).trim()
-                                      : 'N/A',
-                                  maxLines: 2,
+                                  package.isEmpty
+                                      ? 'Service / Package'
+                                      : package,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 12,
@@ -1737,186 +1684,254 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                        ),
+                        const SizedBox(height: 10),
+                        Divider(
+                          height: 1,
+                          color: statusColor.withValues(alpha: 0.12),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 16,
+                              color: AppColors.primary,
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.07),
-                              borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 6),
+                            Text(
+                              eventDate,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  'Booking total',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.darkGrey,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  total.isEmpty ? 'N/A' : total,
+                          ],
+                        ),
+                        if (eventTime.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule_rounded,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  eventTime,
                                   style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.success,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (isAccepted) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 46,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () =>
-                                          _callVendor(vendorPhone),
-                                      icon: const Icon(
-                                        Icons.call_rounded,
-                                        size: 14,
-                                      ),
-                                      label: const Text('Call Vendor'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.primary,
-                                        side: const BorderSide(
-                                          color: AppColors.primary,
-                                          width: 1,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 46,
-                                    child: ElevatedButton(
-                                      onPressed: () =>
-                                          _openVendorWhatsApp(vendorPhone),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF25D366),
-                                        foregroundColor: AppColors.white,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                      ),
-                                      child: const Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.phone_android_rounded,
-                                            size: 14,
-                                          ),
-                                          SizedBox(width: 6),
-                                          Flexible(
-                                            child: Text(
-                                              'WhatsApp',
-                                              maxLines: 1,
-                                              softWrap: false,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 42,
-                              child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _showBookingDetailsSheet(context, v),
-                                icon: const Icon(
-                                  Icons.receipt_long_outlined,
-                                  size: 16,
-                                ),
-                                label: const Text('View booking details'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: BorderSide(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.45,
-                                    ),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: AppColors.darkGrey,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: AppColors.grey,
                             ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 42,
-                              child: OutlinedButton.icon(
-                                onPressed: _cancellingBookingId == null
-                                    ? () => _cancelConfirmedBooking(v)
-                                    : null,
-                                icon: _cancellingBookingId == bookingId
-                                    ? const SizedBox(
-                                        width: 15,
-                                        height: 15,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.cancel_outlined,
-                                        size: 16,
-                                      ),
-                                label: Text(
-                                  _cancellingBookingId == bookingId
-                                      ? 'Cancelling…'
-                                      : 'Cancel booking',
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFFE11D48),
-                                  side: const BorderSide(
-                                    color: Color(0xFFE11D48),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                (v['venue'] as String?)?.trim().isNotEmpty ==
+                                        true
+                                    ? (v['venue'] as String).trim()
+                                    : 'N/A',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.darkGrey,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Text(
+                                'Booking total',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.darkGrey,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                total.isEmpty ? 'N/A' : total,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isAccepted) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: 46,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _callVendor(vendorPhone),
+                                    icon: const Icon(
+                                      Icons.call_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text('Call Vendor'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primary,
+                                      side: const BorderSide(
+                                        color: AppColors.primary,
+                                        width: 1,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: SizedBox(
+                                  height: 46,
+                                  child: ElevatedButton(
+                                    onPressed: () =>
+                                        _openVendorWhatsApp(vendorPhone),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF25D366),
+                                      foregroundColor: AppColors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.phone_android_rounded,
+                                          size: 14,
+                                        ),
+                                        SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            'WhatsApp',
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 42,
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _showBookingDetailsSheet(context, v),
+                              icon: const Icon(
+                                Icons.receipt_long_outlined,
+                                size: 16,
+                              ),
+                              label: const Text('View booking details'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: BorderSide(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.45,
+                                  ),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 42,
+                            child: OutlinedButton.icon(
+                              onPressed: _cancellingBookingId == null
+                                  ? () => _cancelConfirmedBooking(v)
+                                  : null,
+                              icon: _cancellingBookingId == bookingId
+                                  ? const SizedBox(
+                                      width: 15,
+                                      height: 15,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.cancel_outlined, size: 16),
+                              label: Text(
+                                _cancellingBookingId == bookingId
+                                    ? 'Cancelling…'
+                                    : 'Cancel booking',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFE11D48),
+                                side: const BorderSide(
+                                  color: Color(0xFFE11D48),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                      ),
-                    );
+                      ],
+                    ),
+                  );
                 }),
 
               const SizedBox(height: 28),
@@ -1988,9 +2003,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       setState(() {
         if (_profile == null) {
           _isNoInternet = isNet;
-          _errorMsg = isNet
-              ? null
-              : 'Something went wrong. Please try again.';
+          _errorMsg = isNet ? null : 'Something went wrong. Please try again.';
         }
         _isLoading = false;
       });
@@ -2626,13 +2639,22 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
   }
 
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
-    final deleted = await DeleteAccountDialog.show(
+    String? requestMessage;
+    final deleted = await AccountDeletionRequestScreen.show(
       context: context,
       isVendor: false,
-      onDelete: (reason) async {
-        final response = await _userApi.deleteAccount(reason: reason);
-        if (response.isSuccess == true) return null;
-        return response.message ?? response.error ?? 'Unable to delete your account. Please try again.';
+      onSubmit: (reason, description) async {
+        final response = await _userApi.deleteAccount(
+          reason: reason,
+          description: description,
+        );
+        if (response.isSuccess == true) {
+          requestMessage = response.message;
+          return null;
+        }
+        return response.message ??
+            response.error ??
+            'Unable to submit your deletion request. Please try again.';
       },
     );
     if (deleted != true) return;
@@ -2642,12 +2664,17 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       await StorageHelper().clearAllData();
     }
     if (!context.mounted) return;
-    Utils.showSuccess('Your account has been permanently deleted.');
+    Utils.showSuccess(
+      requestMessage?.trim().isNotEmpty == true
+          ? requestMessage!.trim()
+          : 'Your account deletion request has been submitted.',
+    );
     Navigator.of(context).pushAndRemoveUntil(
       FadeScaleRoute(page: const LoginScreen()),
       (route) => false,
     );
   }
+
   @override
   Widget build(BuildContext context) {
     if (_isNoInternet) {

@@ -1,4 +1,4 @@
-package com.example.shaadi_hub
+package com.widoora.app
 
 import io.flutter.embedding.android.FlutterActivity
 

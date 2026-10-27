@@ -1027,7 +1027,11 @@ class _VendorData {
         ? '$rawExperience years'
         : rawExperience;
 
-    final img = user.vendorCardImageUrl ?? '';
+    // Use banner images for Explore/all-vendor cards, with the existing
+    // profile/portfolio fallback when a banner is unavailable.
+    final img = user.bannerImgUrl?.trim().isNotEmpty == true
+        ? user.bannerImgUrl!.trim()
+        : (user.vendorCardImageUrl ?? '');
 
     final services = profile?.services;
     final categoryStr = (services != null && services.isNotEmpty)

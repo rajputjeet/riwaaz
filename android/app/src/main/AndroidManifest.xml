@@ -44,6 +44,13 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Allow Razorpay Checkout to discover installed UPI payment apps
+             on Android 11+ without requesting broad package visibility. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" android:host="pay" />
+        </intent>
+
         <!-- Web browsers (https & http) -->
         <intent>
             <action android:name="android.intent.action.VIEW" />

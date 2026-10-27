@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +7,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
-    namespace = "com.example.shaadi_hub"
+    namespace = "com.widoora.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.shaadi_hub"
+        applicationId = "com.widoora.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 35
         versionCode = flutter.versionCode
@@ -28,15 +36,19 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            enableV1Signing = true
-            enableV2Signing = true
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let {
+                rootProject.file(it as String)
+            }
+            storePassword = keystoreProperties["storePassword"] as String?
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

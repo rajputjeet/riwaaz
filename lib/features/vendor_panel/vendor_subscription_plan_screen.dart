@@ -136,7 +136,47 @@ class _VendorSubscriptionPlanScreenState
     }).toList();
   }
 
+  bool _isPlanActive(ActivePlanModel? plan) {
+    if (plan?.isSubscriptionActive != true || plan?.isExpired == true) {
+      return false;
+    }
+    final endDate = plan?.endDate;
+    return endDate == null || endDate.isAfter(DateTime.now());
+  }
+
+  bool _isCheckingActivePlan = false;
+
   Future<void> _showCheckoutSheet(Map<String, dynamic> plan) async {
+    if (_isCheckingActivePlan) return;
+    setState(() => _isCheckingActivePlan = true);
+    try {
+      // Recheck at the purchase boundary to prevent a stale screen from
+      // allowing a second plan while the current one is still active.
+      final latest = await VendorApiProvider().getActivePlan();
+      if (!mounted) return;
+      if (latest.isSuccess != true) {
+        Utils.showError(
+          latest.message ?? 'Could not verify your current plan. Please retry.',
+        );
+        return;
+      }
+      _activePlan = latest.data;
+      if (_isPlanActive(_activePlan)) {
+        setState(() {});
+        Utils.showError(
+          'Your current plan is active. You can purchase another plan after it expires.',
+        );
+        return;
+      }
+    } catch (_) {
+      if (mounted) {
+        Utils.showError('Could not verify your current plan. Please retry.');
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _isCheckingActivePlan = false);
+    }
+
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => VendorSubscriptionCouponScreen(
@@ -352,9 +392,9 @@ class _VendorSubscriptionPlanScreenState
 
             // Plan Cards
             ...plansToDisplay.map((plan) {
+              final hasActivePlan = _isPlanActive(_activePlan);
               final isCurrent =
-                  (_activePlan?.isSubscriptionActive == true &&
-                      _activePlan?.isExpired != true) &&
+                  hasActivePlan &&
                   (plan['id'] == _activePlanId ||
                       plan['serverPlanId'] == _activePlanServerId);
               final isPopular = plan['isPopular'] == true;
@@ -557,18 +597,27 @@ class _VendorSubscriptionPlanScreenState
                               width: double.infinity,
                               height: 44,
                               child: ElevatedButton(
-                                onPressed: () => _showCheckoutSheet(plan),
+                                onPressed:
+                                    hasActivePlan || _isCheckingActivePlan
+                                    ? null
+                                    : () => _showCheckoutSheet(plan),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size(0, 44),
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: AppColors.white,
+                                  disabledBackgroundColor: AppColors.grey,
+                                  disabledForegroundColor: AppColors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                                 child: Text(
-                                  'Buy ${plan['name']}',
+                                  hasActivePlan
+                                      ? 'Available after expiry'
+                                      : (_isCheckingActivePlan
+                                            ? 'Checking plan…'
+                                            : 'Buy ${plan['name']}'),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -618,8 +667,7 @@ class _VendorSubscriptionPlanScreenState
 
   Widget _buildCurrentPlanBanner() {
     final active = _activePlan;
-    final isActive =
-        active?.isSubscriptionActive == true && active?.isExpired != true;
+    final isActive = _isPlanActive(active);
     final isExpired = active?.isExpired == true;
 
     if (!isActive && !isExpired) {

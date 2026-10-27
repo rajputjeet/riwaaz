@@ -93,18 +93,19 @@ class UserApiProvider {
     }
   }
 
-  // DELETE /api/users/delete-account
+  // POST /api/users/delete-account
   Future<DataResponse<dynamic>> deleteAccount({
-    String? reason,
+    required String reason,
     String? description,
   }) async {
     try {
-      final response = await _dio.delete(
+      final body = <String, dynamic>{'reason': reason};
+      if (description != null && description.trim().isNotEmpty) {
+        body['description'] = description.trim();
+      }
+      final response = await _dio.post(
         ApiConstants.deleteAccount,
-        data: {
-          'reason': reason,
-          'description': description,
-        },
+        data: body,
         options: Injector.getHeaderToken(),
       );
 

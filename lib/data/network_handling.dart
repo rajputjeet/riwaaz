@@ -8,12 +8,12 @@ class NetworkHandling {
     if (error is Exception) {
       try {
         if (error is DioException) {
-          if (error.response?.data != null &&
-              error.response?.data is Map<String, dynamic>) {
-            messageData = error.response?.data['message'] ??
-                error.response?.data['error'] ??
-                "";
-            if (messageData.isNotEmpty) {
+          final responseData = error.response?.data;
+          if (responseData is Map) {
+            final serverMessage =
+                responseData['message'] ?? responseData['error'];
+            if (serverMessage != null && serverMessage.toString().isNotEmpty) {
+              messageData = serverMessage.toString();
               return messageData;
             }
           }
