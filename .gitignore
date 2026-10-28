@@ -48,3 +48,12 @@ app.*.map.json
 /android/key.properties
 /android/upload-keystore.jks
 CATEGORY_API_DOCS.md
+
+
+# Firebase & Google Services configuration files
+**/google-services.json
+**/GoogleService-Info.plist
+firebase.json
+lib/firebase_options.dart
+.firebase_backup/
+*.env*
