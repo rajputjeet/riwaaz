@@ -84,19 +84,24 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
             StorageHelper().saveVendorBannerImg(b);
           }
         }
-        if (planRes.isSuccess == true) _activePlan = planRes.data as ActivePlanModel?;
-        if (statsRes.isSuccess == true) _stats = statsRes.data as DashboardStatsModel?;
+        if (planRes.isSuccess == true)
+          _activePlan = planRes.data as ActivePlanModel?;
+        if (statsRes.isSuccess == true)
+          _stats = statsRes.data as DashboardStatsModel?;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      final isNet = e.toString().toLowerCase().contains('socket') ||
+      final isNet =
+          e.toString().toLowerCase().contains('socket') ||
           e.toString().toLowerCase().contains('connection') ||
           e.toString().toLowerCase().contains('network');
       setState(() {
         if (_profile == null) {
           _isNoInternet = isNet;
-          _errorMsg = isNet ? null : 'Could not load profile. Please try again.';
+          _errorMsg = isNet
+              ? null
+              : 'Could not load profile. Please try again.';
         }
         _isLoading = false;
       });
@@ -113,19 +118,24 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   String get _displayName {
     final biz = _profile?.vendorProfile?.businessName;
     if (biz != null && biz.trim().isNotEmpty) return biz.trim();
-    if (_profile?.fullName?.trim().isNotEmpty == true) return _profile!.fullName!.trim();
+    if (_profile?.fullName?.trim().isNotEmpty == true)
+      return _profile!.fullName!.trim();
     final stored = StorageHelper().getUserName();
     if (stored?.trim().isNotEmpty == true) return stored!.trim();
     return 'Vendor Partner';
   }
 
-  String get _displayEmail => _profile?.email ?? StorageHelper().getUserEmail() ?? '';
-  String get _displayMobile => _profile?.mobile ?? StorageHelper().getUserMobile() ?? '';
+  String get _displayEmail =>
+      _profile?.email ?? StorageHelper().getUserEmail() ?? '';
+  String get _displayMobile =>
+      _profile?.mobile ?? StorageHelper().getUserMobile() ?? '';
 
   String get _appStatus {
-    final s = _stats?.applicationStatus ??
+    final s =
+        _stats?.applicationStatus ??
         _profile?.vendorProfile?.applicationStatus ??
-        StorageHelper().getApplicationStatus() ?? '';
+        StorageHelper().getApplicationStatus() ??
+        '';
     return s.isEmpty ? 'Pending' : s;
   }
 
@@ -143,7 +153,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     final s = _appStatus.toLowerCase().trim();
     if (s == 'approved' || s == 'active') {
       return 'Documents approved ✓';
-    } else if (s == 'under review' || s == 'under_review' || s == 'in verification' || s == 'submitted') {
+    } else if (s == 'under review' ||
+        s == 'under_review' ||
+        s == 'in verification' ||
+        s == 'submitted') {
       return 'Under admin review...';
     } else if (s == 'rejected' || s == 'declined') {
       return 'Application rejected — resubmit';
@@ -161,18 +174,22 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
               backgroundColor: AppColors.white,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: AppColors.primary, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                  ),
                   onPressed: () async {
                     final updated = await Navigator.of(context).push<bool>(
-                      FadeScaleRoute(
-                        page: const VendorEditProfileScreen(),
-                      ),
+                      FadeScaleRoute(page: const VendorEditProfileScreen()),
                     );
                     if (updated == true || mounted) {
                       _loadAll();
@@ -187,616 +204,741 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
         child: _isLoading
             ? const AppLoadingState(message: 'Loading your profile...')
             : _isNoInternet
-                ? SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.75,
-                      child: AppNoInternetState(onRetry: _loadAll),
-                    ),
-                  )
-                : _errorMsg != null
-                    ? SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.75,
-                          child: AppErrorState(message: _errorMsg!, onRetry: _loadAll),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        child: Column(
-                          children: [
-                            // ── Vendor Profile Header Card ──────────────────
-                            Builder(
-                              builder: (context) {
-                                final bannerUrl = _bannerUrl;
-                                final bool hasBanner = bannerUrl != null && bannerUrl.isNotEmpty;
+            ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  child: AppNoInternetState(onRetry: _loadAll),
+                ),
+              )
+            : _errorMsg != null
+            ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  child: AppErrorState(message: _errorMsg!, onRetry: _loadAll),
+                ),
+              )
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  children: [
+                    // ── Vendor Profile Header Card ──────────────────
+                    Builder(
+                      builder: (context) {
+                        final bannerUrl = _bannerUrl;
+                        final bool hasBanner =
+                            bannerUrl != null && bannerUrl.isNotEmpty;
 
-                                return Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: hasBanner
-                                          ? AppColors.gold.withValues(alpha: 0.5)
-                                          : AppColors.gold.withValues(alpha: 0.3),
-                                      width: hasBanner ? 1.5 : 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: hasBanner ? 0.08 : 0.04),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
+                        return Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: hasBanner
+                                  ? AppColors.gold.withValues(alpha: 0.5)
+                                  : AppColors.gold.withValues(alpha: 0.3),
+                              width: hasBanner ? 1.5 : 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: hasBanner ? 0.08 : 0.04,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: [
+                              // Background Banner
+                              if (hasBanner) ...[
+                                Positioned.fill(
+                                  child: CachedImageView(
+                                    imageUrl: bannerUrl,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
                                   ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Stack(
-                                    alignment: Alignment.topCenter,
-                                    children: [
-                                      // Background Banner
-                                      if (hasBanner) ...[
-                                        Positioned.fill(
-                                          child: CachedImageView(
-                                            imageUrl: bannerUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
+                                ),
+                                // Dark gradient overlay for text readability
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.35),
+                                          Colors.black.withValues(alpha: 0.82),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              // Edit / Change Banner button at top right
+                              Positioned(
+                                top: 14,
+                                right: 14,
+                                child: InkWell(
+                                  onTap: () async {
+                                    final updated = await Navigator.of(context)
+                                        .push<bool>(
+                                          FadeScaleRoute(
+                                            page:
+                                                const VendorEditProfileScreen(),
                                           ),
-                                        ),
-                                        // Dark gradient overlay for text readability
-                                        Positioned.fill(
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  Colors.black.withValues(alpha: 0.35),
-                                                  Colors.black.withValues(alpha: 0.82),
-                                                ],
+                                        );
+                                    if (updated == true || mounted) {
+                                      _loadAll();
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: hasBanner
+                                          ? Colors.black.withValues(alpha: 0.55)
+                                          : AppColors.background,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: hasBanner
+                                            ? Colors.white.withValues(
+                                                alpha: 0.4,
+                                              )
+                                            : AppColors.gold.withValues(
+                                                alpha: 0.4,
                                               ),
-                                            ),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 13,
+                                          color: hasBanner
+                                              ? AppColors.white
+                                              : AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          hasBanner
+                                              ? 'Edit Banner'
+                                              : 'Add Banner',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
                                           ),
                                         ),
                                       ],
+                                    ),
+                                  ),
+                                ),
+                              ),
 
-                                      // Edit / Change Banner button at top right
-                                      Positioned(
-                                        top: 14,
-                                        right: 14,
-                                        child: InkWell(
-                                          onTap: () async {
-                                            final updated = await Navigator.of(context).push<bool>(
-                                              FadeScaleRoute(page: const VendorEditProfileScreen()),
-                                            );
+                              // Details Card Content (Centered)
+                              SizedBox(
+                                width: double.infinity,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    24,
+                                    20,
+                                    20,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Avatar
+                                      Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Container(
+                                            width: 80,
+                                            height: 80,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: AppColors.gold,
+                                                width: 2.5,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.15),
+                                                  blurRadius: 8,
+                                                ),
+                                              ],
+                                            ),
+                                            child: ClipOval(
+                                              child:
+                                                  ((_profile?.profileImgUrl !=
+                                                              null &&
+                                                          _profile!
+                                                              .profileImgUrl!
+                                                              .isNotEmpty) ||
+                                                      (StorageHelper()
+                                                                  .getUserProfileImg() !=
+                                                              null &&
+                                                          StorageHelper()
+                                                              .getUserProfileImg()!
+                                                              .isNotEmpty))
+                                                  ? CachedImageView(
+                                                      imageUrl:
+                                                          StorageHelper()
+                                                              .getUserProfileImg() ??
+                                                          _profile
+                                                              ?.profileImgUrl ??
+                                                          '',
+                                                      fit: BoxFit.cover,
+                                                      width: 80,
+                                                      height: 80,
+                                                      isCircle: true,
+                                                      fallbackIcon: Icons
+                                                          .storefront_rounded,
+                                                    )
+                                                  : CircleAvatar(
+                                                      radius: 40,
+                                                      backgroundColor:
+                                                          AppColors.primary,
+                                                      child: Text(
+                                                        _displayName.isNotEmpty
+                                                            ? _displayName[0]
+                                                                  .toUpperCase()
+                                                            : 'V',
+                                                        style: const TextStyle(
+                                                          fontSize: 30,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          color:
+                                                              AppColors.white,
+                                                        ),
+                                                      ),
+                                                    ),
+                                            ),
+                                          ),
+                                          if (_isVerifiedVendor)
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: AppColors.success,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.verified_rounded,
+                                                  color: AppColors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        _displayName,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w800,
+                                          color: hasBanner
+                                              ? AppColors.white
+                                              : AppColors.black,
+                                          shadows: hasBanner
+                                              ? const [
+                                                  Shadow(
+                                                    color: Colors.black54,
+                                                    blurRadius: 6,
+                                                    offset: Offset(0, 1),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                      ),
+                                      if (_displayEmail.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _displayEmail,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: hasBanner
+                                                ? FontWeight.w500
+                                                : FontWeight.w400,
+                                            color: hasBanner
+                                                ? AppColors.white.withValues(
+                                                    alpha: 0.90,
+                                                  )
+                                                : AppColors.darkGrey,
+                                          ),
+                                        ),
+                                      ],
+                                      if (_displayMobile.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _displayMobile,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: hasBanner
+                                                ? AppColors.white.withValues(
+                                                    alpha: 0.80,
+                                                  )
+                                                : AppColors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 12),
+                                      Center(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () async {
+                                            final updated =
+                                                await Navigator.of(
+                                                  context,
+                                                ).push<bool>(
+                                                  FadeScaleRoute(
+                                                    page:
+                                                        const VendorEditProfileScreen(),
+                                                  ),
+                                                );
                                             if (updated == true || mounted) {
                                               _loadAll();
                                             }
                                           },
-                                          borderRadius: BorderRadius.circular(20),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                            decoration: BoxDecoration(
+                                          icon: Icon(
+                                            Icons.edit_rounded,
+                                            size: 14,
+                                            color: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
+                                          ),
+                                          label: Text(
+                                            'Edit Profile',
+                                            style: TextStyle(
                                               color: hasBanner
-                                                  ? Colors.black.withValues(alpha: 0.55)
-                                                  : AppColors.background,
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: hasBanner
-                                                    ? Colors.white.withValues(alpha: 0.4)
-                                                    : AppColors.gold.withValues(alpha: 0.4),
-                                                width: 1,
-                                              ),
+                                                  ? AppColors.white
+                                                  : AppColors.primary,
                                             ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.camera_alt_outlined,
-                                                  size: 13,
-                                                  color: hasBanner ? AppColors.white : AppColors.primary,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  hasBanner ? 'Edit Banner' : 'Add Banner',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: hasBanner ? AppColors.white : AppColors.primary,
-                                                  ),
-                                                ),
-                                              ],
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: hasBanner
+                                                ? AppColors.white
+                                                : AppColors.primary,
+                                            backgroundColor: hasBanner
+                                                ? Colors.black.withValues(
+                                                    alpha: 0.35,
+                                                  )
+                                                : Colors.transparent,
+                                            side: BorderSide(
+                                              color: hasBanner
+                                                  ? Colors.white.withValues(
+                                                      alpha: 0.5,
+                                                    )
+                                                  : AppColors.primary
+                                                        .withValues(alpha: 0.4),
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 6,
+                                            ),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            textStyle: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                         ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
 
-                                      // Details Card Content (Centered)
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(height: 18),
+
+                    // ── Subscription Expiry Reminder Banner ─────────
+                    Builder(
+                      builder: (context) {
+                        final vp = _profile?.vendorProfile;
+                        final expiring =
+                            vp?.isExpiringSoon == true ||
+                            (vp?.daysLeft != null && vp!.daysLeft! <= 7) ||
+                            (vp?.daysRemaining != null &&
+                                vp!.daysRemaining! <= 7);
+                        if (!expiring) return const SizedBox.shrink();
+
+                        final days = vp?.daysLeft ?? vp?.daysRemaining ?? 0;
+                        final msg =
+                            vp?.expiringMessage ??
+                            'Your subscription is expiring in $days day${days == 1 ? '' : 's'}!';
+                        final status =
+                            vp?.subscriptionStatus ?? 'Expiring Soon';
+                        final isCritical = days <= 2;
+                        final bannerColor = isCritical
+                            ? const Color(0xFFFFECEC)
+                            : const Color(0xFFFFF8E1);
+                        final borderColor = isCritical
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFFF9A825);
+                        final iconColor = isCritical
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFFF57F17);
+                        final textColor = isCritical
+                            ? const Color(0xFFB71C1C)
+                            : const Color(0xFF5D4037);
+
+                        return Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.of(context).push(
+                                FadeScaleRoute(
+                                  page: const VendorSubscriptionPlanScreen(),
+                                ),
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: bannerColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: borderColor,
+                                    width: 1.4,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: borderColor.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: borderColor.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isCritical
+                                            ? Icons.warning_rounded
+                                            : Icons.access_time_rounded,
+                                        color: iconColor,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
                                             children: [
-                                              // Avatar
-                                              Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  Container(
-                                                    width: 80,
-                                                    height: 80,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                        color: AppColors.gold,
-                                                        width: 2.5,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withValues(alpha: 0.15),
-                                                          blurRadius: 8,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: ClipOval(
-                                                      child: ((_profile?.profileImgUrl != null && _profile!.profileImgUrl!.isNotEmpty) ||
-                                                              (StorageHelper().getUserProfileImg() != null && StorageHelper().getUserProfileImg()!.isNotEmpty))
-                                                          ? CachedImageView(
-                                                              imageUrl: StorageHelper().getUserProfileImg() ?? _profile?.profileImgUrl ?? '',
-                                                              fit: BoxFit.cover,
-                                                              width: 80,
-                                                              height: 80,
-                                                              isCircle: true,
-                                                              fallbackIcon: Icons.storefront_rounded,
-                                                            )
-                                                          : CircleAvatar(
-                                                              radius: 40,
-                                                              backgroundColor: AppColors.primary,
-                                                              child: Text(
-                                                                _displayName.isNotEmpty
-                                                                    ? _displayName[0].toUpperCase()
-                                                                    : 'V',
-                                                                style: const TextStyle(
-                                                                  fontSize: 30,
-                                                                  fontWeight: FontWeight.w800,
-                                                                  color: AppColors.white,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                    ),
-                                                  ),
-                                                  if (_isVerifiedVendor)
-                                                    Positioned(
-                                                      bottom: 0,
-                                                      right: 0,
-                                                      child: Container(
-                                                        padding: const EdgeInsets.all(4),
-                                                        decoration: const BoxDecoration(
-                                                          color: AppColors.success,
-                                                          shape: BoxShape.circle,
-                                                        ),
-                                                        child: const Icon(
-                                                            Icons.verified_rounded,
-                                                            color: AppColors.white,
-                                                            size: 16),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 12),
                                               Text(
-                                                _displayName,
-                                                textAlign: TextAlign.center,
+                                                status,
                                                 style: TextStyle(
-                                                  fontSize: 20,
+                                                  fontSize: 12,
                                                   fontWeight: FontWeight.w800,
-                                                  color: hasBanner ? AppColors.white : AppColors.black,
-                                                  shadows: hasBanner
-                                                      ? const [
-                                                          Shadow(
-                                                            color: Colors.black54,
-                                                            blurRadius: 6,
-                                                            offset: Offset(0, 1),
-                                                          ),
-                                                        ]
-                                                      : null,
+                                                  color: iconColor,
+                                                  letterSpacing: 0.3,
                                                 ),
                                               ),
-                                              if (_displayEmail.isNotEmpty) ...[
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  _displayEmail,
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: hasBanner ? FontWeight.w500 : FontWeight.w400,
-                                                    color: hasBanner
-                                                        ? AppColors.white.withValues(alpha: 0.90)
-                                                        : AppColors.darkGrey,
-                                                  ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 7,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: borderColor,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
                                                 ),
-                                              ],
-                                              if (_displayMobile.isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _displayMobile,
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: hasBanner
-                                                        ? AppColors.white.withValues(alpha: 0.80)
-                                                        : AppColors.grey,
-                                                  ),
-                                                ),
-                                              ],
-                                              const SizedBox(height: 12),
-                                              Center(
-                                                child: OutlinedButton.icon(
-                                                  onPressed: () async {
-                                                    final updated = await Navigator.of(context).push<bool>(
-                                                      FadeScaleRoute(page: const VendorEditProfileScreen()),
-                                                    );
-                                                    if (updated == true || mounted) {
-                                                      _loadAll();
-                                                    }
-                                                  },
-                                                  icon: Icon(
-                                                    Icons.edit_rounded,
-                                                    size: 14,
-                                                    color: hasBanner ? AppColors.white : AppColors.primary,
-                                                  ),
-                                                  label: Text(
-                                                    'Edit Profile',
-                                                    style: TextStyle(
-                                                      color: hasBanner ? AppColors.white : AppColors.primary,
-                                                    ),
-                                                  ),
-                                                  style: OutlinedButton.styleFrom(
-                                                    foregroundColor: hasBanner ? AppColors.white : AppColors.primary,
-                                                    backgroundColor: hasBanner
-                                                        ? Colors.black.withValues(alpha: 0.35)
-                                                        : Colors.transparent,
-                                                    side: BorderSide(
-                                                      color: hasBanner
-                                                          ? Colors.white.withValues(alpha: 0.5)
-                                                          : AppColors.primary.withValues(alpha: 0.4),
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(20),
-                                                    ),
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                                    visualDensity: VisualDensity.compact,
-                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                                child: Text(
+                                                  '$days day${days == 1 ? '' : 's'} left',
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.white,
                                                   ),
                                                 ),
                                               ),
                                             ],
                                           ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            msg,
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              color: textColor,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: borderColor,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Renew',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            // ── Subscription Expiry Reminder Banner ─────────
-                            Builder(builder: (context) {
-                              final vp = _profile?.vendorProfile;
-                              final expiring = vp?.isExpiringSoon == true ||
-                                  (vp?.daysLeft != null && vp!.daysLeft! <= 7) ||
-                                  (vp?.daysRemaining != null && vp!.daysRemaining! <= 7);
-                              if (!expiring) return const SizedBox.shrink();
-
-                              final days = vp?.daysLeft ?? vp?.daysRemaining ?? 0;
-                              final msg = vp?.expiringMessage ??
-                                  'Your subscription is expiring in $days day${days == 1 ? '' : 's'}!';
-                              final status = vp?.subscriptionStatus ?? 'Expiring Soon';
-                              final isCritical = days <= 2;
-                              final bannerColor = isCritical
-                                  ? const Color(0xFFFFECEC)
-                                  : const Color(0xFFFFF8E1);
-                              final borderColor = isCritical
-                                  ? const Color(0xFFE53935)
-                                  : const Color(0xFFF9A825);
-                              final iconColor = isCritical
-                                  ? const Color(0xFFE53935)
-                                  : const Color(0xFFF57F17);
-                              final textColor = isCritical
-                                  ? const Color(0xFFB71C1C)
-                                  : const Color(0xFF5D4037);
-
-                              return Column(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => Navigator.of(context).push(
-                                      FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
                                     ),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                      decoration: BoxDecoration(
-                                        color: bannerColor,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: borderColor, width: 1.4),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: borderColor.withValues(alpha: 0.15),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 40,
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              color: borderColor.withValues(alpha: 0.12),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              isCritical
-                                                  ? Icons.warning_rounded
-                                                  : Icons.access_time_rounded,
-                                              color: iconColor,
-                                              size: 20,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      status,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w800,
-                                                        color: iconColor,
-                                                        letterSpacing: 0.3,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: borderColor,
-                                                        borderRadius: BorderRadius.circular(20),
-                                                      ),
-                                                      child: Text(
-                                                        '$days day${days == 1 ? '' : 's'} left',
-                                                        style: const TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 3),
-                                                Text(
-                                                  msg,
-                                                  style: TextStyle(
-                                                    fontSize: 12.5,
-                                                    color: textColor,
-                                                    height: 1.4,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color: borderColor,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: const Text(
-                                              'Renew',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 18),
-                                ],
-                              );
-                            }),
-
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'BUSINESS MANAGEMENT',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  color: AppColors.darkGrey,
+                                  ],
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            _buildMenuItem(
-                              icon: Icons.verified_user_outlined,
-                              title: 'Verification Status',
-                              subtitle: _verificationSubtitle,
-                              onTap: () => Navigator.of(context).push(
-                                FadeScaleRoute(page: const VendorVerificationScreen()),
-                              ),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.workspace_premium_rounded,
-                              iconColor: AppColors.goldDark,
-                              title: 'Subscription Plans',
-                              subtitle: _planSubtitle,
-                              onTap: () => Navigator.of(context).push(
-                                FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
-                              ),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.campaign_rounded,
-                              iconColor: const Color(0xFFEAB308),
-                              title: 'Sponsored Ads',
-                              subtitle: 'Boost profile visibility to brides & grooms',
-                              onTap: () => Navigator.of(context).push(
-                                FadeScaleRoute(page: const VendorAdsScreen()),
                               ),
                             ),
                             const SizedBox(height: 18),
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'SECURITY & ACCOUNT',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  color: AppColors.darkGrey,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            _buildMenuItem(
-                              icon: Icons.lock_reset_rounded,
-                              title: 'Change Password',
-                              subtitle: 'Update your vendor account password',
-                              onTap: () => _openChangePasswordScreen(context),
-                            ),
-
-                            const SizedBox(height: 18),
-                            const Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'LEGAL & POLICIES',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  color: AppColors.darkGrey,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            _buildMenuItem(
-                              icon: Icons.privacy_tip_outlined,
-                              title: 'Privacy Policy',
-                              subtitle: 'Platform privacy & data protection',
-                              onTap: () => _showPrivacyPolicySheet(context),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.assignment_return_outlined,
-                              title: 'Cancellation Policy',
-                              subtitle: 'Booking cancellation & refund guidelines',
-                              onTap: () => _showCancellationPolicySheet(context),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.gavel_rounded,
-                              title: 'Terms of Service',
-                              subtitle: 'Platform terms & service agreement',
-                              onTap: () => _showTermsOfServiceSheet(context),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.help_outline_rounded,
-                              title: 'FAQs',
-                              subtitle: 'Frequently asked questions & help',
-                              onTap: () => _showVendorFaqSheet(context),
-                            ),
-                            _buildMenuItem(
-                              icon: Icons.headset_mic_rounded,
-                              title: 'Help & Support',
-                              subtitle: 'Direct Call & WhatsApp assistance',
-                              onTap: () => _showSupportSheet(context),
-                            ),
-
-                            const SizedBox(height: 28),
-
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _showLogoutDialog(context),
-                                icon: const Icon(Icons.logout_rounded,
-                                    color: AppColors.primary, size: 18),
-                                label: const Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.primary, width: 1.2),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            Center(
-                              child: TextButton.icon(
-                                onPressed: () => _showDeleteAccountDialog(context),
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    color: Colors.red, size: 16),
-                                label: const Text(
-                                  'Delete Account',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-                            Center(
-                              child: Text(
-                                'Widoora Vendor Partner v1.0.4',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.grey.withValues(alpha: 0.8),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
                           ],
+                        );
+                      },
+                    ),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'BUSINESS MANAGEMENT',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: AppColors.darkGrey,
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    _buildMenuItem(
+                      icon: Icons.verified_user_outlined,
+                      title: 'Verification Status',
+                      subtitle: _verificationSubtitle,
+                      onTap: () => Navigator.of(context).push(
+                        FadeScaleRoute(page: const VendorVerificationScreen()),
+                      ),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.workspace_premium_rounded,
+                      iconColor: AppColors.goldDark,
+                      title: 'Subscription Plans',
+                      subtitle: _planSubtitle,
+                      onTap: () => Navigator.of(context).push(
+                        FadeScaleRoute(
+                          page: const VendorSubscriptionPlanScreen(),
+                        ),
+                      ),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.campaign_rounded,
+                      iconColor: const Color(0xFFEAB308),
+                      title: 'Sponsored Ads',
+                      subtitle: 'Boost profile visibility to brides & grooms',
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(FadeScaleRoute(page: const VendorAdsScreen())),
+                    ),
+                    const SizedBox(height: 18),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'SECURITY & ACCOUNT',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: AppColors.darkGrey,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    _buildMenuItem(
+                      icon: Icons.lock_reset_rounded,
+                      title: 'Change Password',
+                      subtitle: 'Update your vendor account password',
+                      onTap: () => _openChangePasswordScreen(context),
+                    ),
+
+                    const SizedBox(height: 18),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'LEGAL & POLICIES',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: AppColors.darkGrey,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    _buildMenuItem(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Privacy Policy',
+                      subtitle: 'Platform privacy & data protection',
+                      onTap: () => _showPrivacyPolicySheet(context),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.assignment_return_outlined,
+                      title: 'Cancellation Policy',
+                      subtitle: 'Booking cancellation & refund guidelines',
+                      onTap: () => _showCancellationPolicySheet(context),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.gavel_rounded,
+                      title: 'Terms of Service',
+                      subtitle: 'Platform terms & service agreement',
+                      onTap: () => _showTermsOfServiceSheet(context),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.help_outline_rounded,
+                      title: 'FAQs',
+                      subtitle: 'Frequently asked questions & help',
+                      onTap: () => _showVendorFaqSheet(context),
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.headset_mic_rounded,
+                      title: 'Help & Support',
+                      subtitle: 'Direct Call & WhatsApp assistance',
+                      onTap: () => _showSupportSheet(context),
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showLogoutDialog(context),
+                        icon: const Icon(
+                          Icons.logout_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.primary,
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => _showDeleteAccountDialog(context),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.red,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Delete Account',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        'Widoora Vendor Partner v1.0.4',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.grey.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
       ),
     );
   }
-
-
 
   void _showPrivacyPolicySheet(BuildContext context) {
     showModalBottomSheet(
@@ -830,8 +972,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.privacy_tip_rounded,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.privacy_tip_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -849,7 +994,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -863,7 +1011,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 future: _cmsApi.getCmsData('privacy'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Privacy Policy...');
+                    return const AppLoadingState(
+                      message: 'Loading Privacy Policy...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -875,7 +1025,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Privacy Policy.',
+                      message:
+                          response?.message ?? 'Could not load Privacy Policy.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -883,7 +1034,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                     return const AppEmptyState(
                       icon: Icons.privacy_tip_outlined,
                       title: 'Privacy Policy Pending',
-                      subtitle: 'The privacy terms will appear here once published by admin.',
+                      subtitle:
+                          'The privacy terms will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -928,8 +1080,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.gavel_rounded,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.gavel_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -947,7 +1102,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -961,7 +1119,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 future: _cmsApi.getCmsData('terms'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Terms of Service...');
+                    return const AppLoadingState(
+                      message: 'Loading Terms of Service...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -973,7 +1133,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Terms of Service.',
+                      message:
+                          response?.message ??
+                          'Could not load Terms of Service.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -981,7 +1143,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                     return const AppEmptyState(
                       icon: Icons.gavel_rounded,
                       title: 'Terms of Service Pending',
-                      subtitle: 'The terms and conditions will appear here once published by admin.',
+                      subtitle:
+                          'The terms and conditions will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -1026,8 +1189,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 Expanded(
                   child: Row(
                     children: const [
-                      Icon(Icons.assignment_return_outlined,
-                          color: AppColors.primary, size: 24),
+                      Icon(
+                        Icons.assignment_return_outlined,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                       SizedBox(width: 10),
                       Flexible(
                         child: Text(
@@ -1045,7 +1211,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -1059,7 +1228,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 future: _cmsApi.getCmsData('refund'),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingState(message: 'Loading Cancellation Policy...');
+                    return const AppLoadingState(
+                      message: 'Loading Cancellation Policy...',
+                    );
                   }
                   if (snapshot.hasError) {
                     return AppErrorState(
@@ -1071,7 +1242,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final content = response?.data?.description ?? '';
                   if (response?.isSuccess != true && content.isEmpty) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load Cancellation Policy.',
+                      message:
+                          response?.message ??
+                          'Could not load Cancellation Policy.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -1079,7 +1252,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                     return const AppEmptyState(
                       icon: Icons.assignment_return_outlined,
                       title: 'Cancellation Policy Pending',
-                      subtitle: 'The cancellation policy will appear here once published by admin.',
+                      subtitle:
+                          'The cancellation policy will appear here once published by admin.',
                     );
                   }
                   return AppHtmlContentView(htmlContent: content);
@@ -1101,11 +1275,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
   }
 
   void _openChangePasswordScreen(BuildContext context) {
-    Navigator.of(context).push(
-      FadeScaleRoute(
-        page: const ChangePasswordScreen(isVendor: true),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(FadeScaleRoute(page: const ChangePasswordScreen(isVendor: true)));
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -1185,9 +1357,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.grey.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
       ),
       child: ListTile(
         onTap: onTap,
@@ -1212,8 +1382,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
           subtitle,
           style: const TextStyle(fontSize: 11, color: AppColors.grey),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded,
-            size: 14, color: AppColors.grey),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 14,
+          color: AppColors.grey,
+        ),
       ),
     );
   }
@@ -1249,7 +1422,11 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
               children: [
                 Row(
                   children: const [
-                    Icon(Icons.help_rounded, color: AppColors.primary, size: 24),
+                    Icon(
+                      Icons.help_rounded,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                     SizedBox(width: 10),
                     Text(
                       'FAQs',
@@ -1263,7 +1440,10 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: AppColors.darkGrey),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ],
             ),
@@ -1288,7 +1468,9 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                   final response = snapshot.data;
                   if (response == null || response.isSuccess != true) {
                     return AppErrorState(
-                      message: response?.message ?? 'Could not load FAQs from server.',
+                      message:
+                          response?.message ??
+                          'Could not load FAQs from server.',
                       onRetry: () => Navigator.pop(ctx),
                     );
                   }
@@ -1297,7 +1479,8 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
                     return const AppEmptyState(
                       icon: Icons.help_outline_rounded,
                       title: 'No FAQs Available',
-                      subtitle: 'Frequently asked questions will appear here shortly.',
+                      subtitle:
+                          'Frequently asked questions will appear here shortly.',
                     );
                   }
                   return ListView.builder(
@@ -1335,9 +1518,7 @@ class _VendorFaqTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.offWhite,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.grey.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.15)),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

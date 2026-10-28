@@ -27,7 +27,11 @@ class UserApiProvider {
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
-      return DataResponse<UserModel>(isSuccess: false, message: msg, error: msg);
+      return DataResponse<UserModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
     }
   }
 
@@ -63,7 +67,11 @@ class UserApiProvider {
       );
     } catch (e) {
       final msg = NetworkHandling.getDioException(e);
-      return DataResponse<UserModel>(isSuccess: false, message: msg, error: msg);
+      return DataResponse<UserModel>(
+        isSuccess: false,
+        message: msg,
+        error: msg,
+      );
     }
   }
 

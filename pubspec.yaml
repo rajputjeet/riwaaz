@@ -2,7 +2,7 @@ name: shaadi_hub
 description: "ShaadiHub - Shaadi Ki Har Zaroorat, Ek Hi Jagah."
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.0+4
 
 environment:
   sdk: ^3.11.0
