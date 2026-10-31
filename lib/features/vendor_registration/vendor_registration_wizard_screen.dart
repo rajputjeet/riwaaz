@@ -83,8 +83,9 @@ class _VendorRegistrationWizardScreenState
   final _addressUrlController = TextEditingController();
 
   // Step 3 State: Business Details
-  String _experience = '5+ Years';
+  String _experience = '';
   final List<String> _experienceOptions = [
+    '0-1 Years',
     '1-2 Years',
     '3-5 Years',
     '5+ Years',
@@ -654,7 +655,12 @@ class _VendorRegistrationWizardScreenState
           ? (draft['pincode'] as String).trim()
           : (storage.getUserPincode() ?? '');
       _addressUrlController.text = (draft['addressUrl'] as String?) ?? '';
-      _experience = (draft['experience'] as String?) ?? '5+ Years';
+      final savedExperience = draft['experience'] as String?;
+      // Older drafts stored the old preselected value even when the vendor
+      // never chose an experience, so require an explicit selection there too.
+      _experience = savedExperience == '5+ Years'
+          ? ''
+          : (savedExperience ?? '');
       _descriptionController.text = (draft['description'] as String?) ?? '';
       _gstController.text = (draft['gstNumber'] as String?) ?? '';
       _aadharPath = draft['aadharPath'] as String?;

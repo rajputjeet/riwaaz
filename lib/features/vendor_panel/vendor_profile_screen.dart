@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/fcm_notification_service.dart';
 import '../../core/utils/app_animations.dart';
 import '../../data/api_provider/user_api_provider.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
@@ -1296,6 +1297,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
         if (Get.isRegistered<AuthController>()) {
           await Get.find<AuthController>().logout();
         } else {
+          await FcmNotificationService.instance.removeTokenFromServer();
           await StorageHelper().clearAllData();
         }
         if (!context.mounted) return;
@@ -1330,6 +1332,7 @@ class VendorProfileScreenState extends State<VendorProfileScreen> {
     if (Get.isRegistered<AuthController>()) {
       await Get.find<AuthController>().logout();
     } else {
+      await FcmNotificationService.instance.removeTokenFromServer();
       await StorageHelper().clearAllData();
     }
     if (!context.mounted) return;

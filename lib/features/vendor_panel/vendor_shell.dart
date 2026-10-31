@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/booking_service.dart';
+import '../../core/services/fcm_notification_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/app_animations.dart';
 import '../../utils/helper/storage_helper.dart';
@@ -56,6 +57,12 @@ class _VendorShellState extends State<_VendorShellContent>
     WidgetsBinding.instance.addObserver(this);
     _currentIndex = widget.initialIndex;
     NotificationService.instance.refresh();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_currentIndex == 0) {
+        FcmNotificationService.instance.requestPermissionAndGetToken();
+      }
+      FcmNotificationService.instance.handleInitialMessageAfterShellReady();
+    });
     _regController = Get.isRegistered<VendorRegistrationController>()
         ? Get.find<VendorRegistrationController>()
         : Get.put(VendorRegistrationController());
@@ -88,6 +95,7 @@ class _VendorShellState extends State<_VendorShellContent>
     } else if (index == 4) {
       _profileKey.currentState?.loadAll(silent: true);
     } else if (index == 0) {
+      FcmNotificationService.instance.requestPermissionAndGetToken();
       _dashboardKey.currentState?.refreshPlanStatus();
     }
   }

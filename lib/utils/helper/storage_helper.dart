@@ -5,37 +5,39 @@ import '../../data/models/setting_model.dart';
 class StorageHelper {
   static SharedPreferences? _prefsInstance;
 
-  static const String _accessToken      = "accessToken";
-  static const String _refreshToken     = "refreshToken";
-  static const String _userId           = "userId";
-  static const String _roleId           = "roleId";
-  static const String _isVerified       = "isVerified";
-  static const String _isLoggedIn       = "isLoggedIn";
-  static const String _userEmail        = "userEmail";
-  static const String _userMobile       = "userMobile";
-  static const String _userName         = "userName";
-  static const String _userProfileImg   = "userProfileImg";
-  static const String _vendorBannerImg  = "vendorBannerImg";
-  static const String _applicationId    = "applicationId";
-  static const String _applicationStatus= "applicationStatus";
-  static const String _userModel        = "userModel";
-  static const String _vendorDraft      = "vendorDraft";
-  static const String _weddingDate      = "weddingDate";
-  static const String _weddingLocation  = "weddingLocation";
-  static const String _weddingEvents    = "weddingEvents";
-  static const String _userAddress      = "userAddress";
-  static const String _userCity         = "userCity";
-  static const String _userState        = "userState";
-  static const String _userPincode      = "userPincode";
-  static const String _userAbout        = "userAbout";
-  static const String _appSettings      = "appSettings";
-  static const String _contactEmail     = "setting_contactEmail";
-  static const String _contactPhone     = "setting_contactPhone";
-  static const String _instagramUrl     = "setting_instagram";
-  static const String _googleUrl        = "setting_google";
-  static const String _facebookUrl      = "setting_facebook";
-  static const String _copyrightText    = "setting_copyright";
+  static const String _accessToken = "accessToken";
+  static const String _refreshToken = "refreshToken";
+  static const String _userId = "userId";
+  static const String _roleId = "roleId";
+  static const String _isVerified = "isVerified";
+  static const String _isLoggedIn = "isLoggedIn";
+  static const String _userEmail = "userEmail";
+  static const String _userMobile = "userMobile";
+  static const String _userName = "userName";
+  static const String _userProfileImg = "userProfileImg";
+  static const String _vendorBannerImg = "vendorBannerImg";
+  static const String _applicationId = "applicationId";
+  static const String _applicationStatus = "applicationStatus";
+  static const String _userModel = "userModel";
+  static const String _vendorDraft = "vendorDraft";
+  static const String _weddingDate = "weddingDate";
+  static const String _weddingLocation = "weddingLocation";
+  static const String _weddingEvents = "weddingEvents";
+  static const String _userAddress = "userAddress";
+  static const String _userCity = "userCity";
+  static const String _userState = "userState";
+  static const String _userPincode = "userPincode";
+  static const String _userAbout = "userAbout";
+  static const String _appSettings = "appSettings";
+  static const String _contactEmail = "setting_contactEmail";
+  static const String _contactPhone = "setting_contactPhone";
+  static const String _instagramUrl = "setting_instagram";
+  static const String _googleUrl = "setting_google";
+  static const String _facebookUrl = "setting_facebook";
+  static const String _copyrightText = "setting_copyright";
   static const String _vendorOnboardingCompleted = "vendorOnboardingCompleted";
+  static const String _fcmToken = "fcmToken";
+  static const String _fcmDeviceId = "fcmDeviceId";
 
   static final StorageHelper _singleton = StorageHelper._internal();
 
@@ -101,6 +103,13 @@ class StorageHelper {
       _savePref(_isLoggedIn, loggedIn);
   bool getIsLoggedIn() => _prefsInstance?.getBool(_isLoggedIn) ?? false;
 
+  Future<void> saveFcmToken(String? token) async => _savePref(_fcmToken, token);
+  String? getFcmToken() => _prefsInstance?.getString(_fcmToken);
+
+  Future<void> saveFcmDeviceId(String? deviceId) async =>
+      _savePref(_fcmDeviceId, deviceId);
+  String? getFcmDeviceId() => _prefsInstance?.getString(_fcmDeviceId);
+
   // ── Profile ────────────────────────────────────────────────────────────────
 
   Future<void> saveUserEmail(String? email) async =>
@@ -114,15 +123,19 @@ class StorageHelper {
   Future<void> saveUserName(String? name) async => _savePref(_userName, name);
   String? getUserName() => _prefsInstance?.getString(_userName);
 
-  Future<void> saveUserProfileImg(String? img) async =>
-      _savePref(_userProfileImg, (img != null && img.trim().isNotEmpty) ? img.trim() : null);
+  Future<void> saveUserProfileImg(String? img) async => _savePref(
+    _userProfileImg,
+    (img != null && img.trim().isNotEmpty) ? img.trim() : null,
+  );
   String? getUserProfileImg() {
     final img = _prefsInstance?.getString(_userProfileImg);
     return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
   }
 
-  Future<void> saveVendorBannerImg(String? img) async =>
-      _savePref(_vendorBannerImg, (img != null && img.trim().isNotEmpty) ? img.trim() : null);
+  Future<void> saveVendorBannerImg(String? img) async => _savePref(
+    _vendorBannerImg,
+    (img != null && img.trim().isNotEmpty) ? img.trim() : null,
+  );
   String? getVendorBannerImg() {
     final img = _prefsInstance?.getString(_vendorBannerImg);
     return (img != null && img.trim().isNotEmpty) ? img.trim() : null;
@@ -132,8 +145,7 @@ class StorageHelper {
       _savePref(_userAddress, address);
   String? getUserAddress() => _prefsInstance?.getString(_userAddress);
 
-  Future<void> saveUserCity(String? city) async =>
-      _savePref(_userCity, city);
+  Future<void> saveUserCity(String? city) async => _savePref(_userCity, city);
   String? getUserCity() => _prefsInstance?.getString(_userCity);
 
   Future<void> saveUserState(String? state) async =>
@@ -224,10 +236,12 @@ class StorageHelper {
   }
 
   // ── Wedding Details ────────────────────────────────────────────────────────
-  Future<void> saveWeddingDate(String? date) async => _savePref(_weddingDate, date);
+  Future<void> saveWeddingDate(String? date) async =>
+      _savePref(_weddingDate, date);
   String? getWeddingDate() => _prefsInstance?.getString(_weddingDate);
 
-  Future<void> saveWeddingLocation(String? loc) async => _savePref(_weddingLocation, loc);
+  Future<void> saveWeddingLocation(String? loc) async =>
+      _savePref(_weddingLocation, loc);
   String? getWeddingLocation() => _prefsInstance?.getString(_weddingLocation);
 
   Future<void> saveWeddingEvents(List<Map<String, dynamic>>? events) async {
@@ -323,7 +337,8 @@ class StorageHelper {
   String getFacebookUrl() => getSettings().displayFacebook;
   String getGoogleUrl() => getSettings().displayWebsite;
   String getCopyright() => getSettings().displayCopyright;
-  String getHappyCustomersCount() => getSettings().happyCustomersCount ?? '200+';
+  String getHappyCustomersCount() =>
+      getSettings().happyCustomersCount ?? '200+';
   String getLocationsCount() => getSettings().locationsCount ?? '50+';
   String getEventVendorsCount() => getSettings().eventVendorsCount ?? '100+';
   String getEventServicesCount() => getSettings().eventServicesCount ?? '50+';

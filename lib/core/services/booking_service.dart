@@ -165,7 +165,8 @@ class BookingRecord {
           'BK_${DateTime.now().millisecondsSinceEpoch}',
       bookingId: model.bookingId,
       vendorName: model.vendorName ?? vendorNameFallback ?? 'Vendor',
-      vendorProfileImg: model.vendorProfileImg ?? vendorProfileImgFallback ?? '',
+      vendorProfileImg:
+          model.vendorProfileImg ?? vendorProfileImgFallback ?? '',
       vendorEmail: model.vendorEmail ?? vendorEmailFallback ?? '',
       clientName: (model.customerName != null && model.customerName!.isNotEmpty)
           ? model.customerName!
@@ -240,6 +241,7 @@ class AppBookingService extends ChangeNotifier {
   factory AppBookingService() => instance;
 
   final List<BookingRecord> _bookings = [];
+  List<BookingModel> _vendorBookings = const [];
 
   AppBookingService._internal() {
     if (!kIsWeb) {
@@ -253,10 +255,19 @@ class AppBookingService extends ChangeNotifier {
 
   void clearAll() {
     _bookings.clear();
+    _vendorBookings = const [];
     notifyListeners();
   }
 
   List<BookingRecord> get bookings => List.unmodifiable(_bookings);
+
+  /// Latest server bookings shared by the vendor dashboard and bookings tab.
+  List<BookingModel> get vendorBookings => List.unmodifiable(_vendorBookings);
+
+  void setVendorBookings(List<BookingModel> bookings) {
+    _vendorBookings = List<BookingModel>.unmodifiable(bookings);
+    notifyListeners();
+  }
 
   List<Map<String, dynamic>> get allBookingsAsMaps =>
       _bookings.map((b) => b.toMap()).toList();
@@ -473,8 +484,7 @@ class AppBookingService extends ChangeNotifier {
     );
     if (response.isSuccess == true) {
       final index = _bookings.indexWhere(
-        (booking) =>
-            booking.id == bookingId || booking.bookingId == bookingId,
+        (booking) => booking.id == bookingId || booking.bookingId == bookingId,
       );
       if (index >= 0) {
         _bookings[index].status = response.data?.status ?? 'Cancelled';

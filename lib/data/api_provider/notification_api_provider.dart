@@ -9,6 +9,35 @@ import 'api_constant.dart';
 class NotificationApiProvider {
   final Dio _dio = Injector().getDio();
 
+  Future<DataResponse<bool>> registerDeviceToken({
+    required String token,
+    required String deviceId,
+    required String platform,
+    required String appVersion,
+  }) => _mutate(
+    () => _dio.post(
+      ApiConstants.notificationRegisterToken,
+      data: {
+        'token': token,
+        'deviceId': deviceId,
+        'platform': platform,
+        'appVersion': appVersion,
+      },
+      options: Injector.getHeaderToken(),
+    ),
+  );
+
+  Future<DataResponse<bool>> removeDeviceToken({
+    required String token,
+    required String deviceId,
+  }) => _mutate(
+    () => _dio.post(
+      ApiConstants.notificationRemoveToken,
+      data: {'token': token, 'deviceId': deviceId},
+      options: Injector.getHeaderToken(),
+    ),
+  );
+
   Future<DataResponse<NotificationPage>> getNotifications({
     int page = 1,
     int limit = 20,
@@ -32,7 +61,8 @@ class NotificationApiProvider {
       if (body['success'] != true || rawData is! Map) {
         return DataResponse<NotificationPage>(
           isSuccess: false,
-          message: body['message']?.toString() ?? 'Unable to load notifications.',
+          message:
+              body['message']?.toString() ?? 'Unable to load notifications.',
         );
       }
 
@@ -100,15 +130,14 @@ class NotificationApiProvider {
     ),
   );
 
-  Future<DataResponse<bool>> deleteMultipleNotifications(
-    List<String> ids,
-  ) => _mutate(
-    () => _dio.post(
-      ApiConstants.notificationsDeleteMultiple,
-      data: {'ids': ids},
-      options: Injector.getHeaderToken(),
-    ),
-  );
+  Future<DataResponse<bool>> deleteMultipleNotifications(List<String> ids) =>
+      _mutate(
+        () => _dio.post(
+          ApiConstants.notificationsDeleteMultiple,
+          data: {'ids': ids},
+          options: Injector.getHeaderToken(),
+        ),
+      );
 
   Future<DataResponse<bool>> deleteAllNotifications() => _mutate(
     () => _dio.delete(

@@ -6,7 +6,6 @@ import '../../core/utils/app_animations.dart';
 import '../../core/services/wishlist_service.dart';
 import '../../data/api_provider/vendor_api_provider.dart';
 import '../../data/models/user_model.dart';
-import '../../shared/widgets/bottom_nav_bar.dart';
 import '../../core/services/booking_service.dart';
 import '../../shared/widgets/cached_image_view.dart';
 import '../../shared/widgets/portfolio_video_player.dart';
@@ -36,7 +35,6 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     with TickerProviderStateMixin {
   final VendorApiProvider _vendorApi = VendorApiProvider();
   late UserModel? _vendorModel;
-  final int _navIndex = 1;
   int _selectedTab = 0; // 0=About, 1=Services, 2=Packages, 3=Portfolio
   int? _selectedPackageIndex;
   int? _selectedServiceIndex;
@@ -238,18 +236,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             bottom: 0,
             left: 0,
             right: 0,
-            child: _buildBottomActionBar(),
+            child: SafeArea(top: false, child: _buildBottomActionBar()),
           ),
         ],
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: _navIndex,
-        onTap: (i) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => MainShell(initialIndex: i)),
-            (route) => false,
-          );
-        },
       ),
     );
   }
@@ -524,7 +513,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       return _buildEmptyProfileSection(
         icon: Icons.inventory_2_outlined,
         title: 'Packages coming soon',
-        message: "This vendor hasn't added any packages yet. Please check back later.",
+        message:
+            "This vendor hasn't added any packages yet. Please check back later.",
       );
     }
     return Padding(
@@ -563,7 +553,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       return _buildEmptyProfileSection(
         icon: Icons.auto_awesome_outlined,
         title: 'Services coming soon',
-        message: "This vendor hasn't listed any services yet. Please check back later.",
+        message:
+            "This vendor hasn't listed any services yet. Please check back later.",
       );
     }
 
@@ -1188,9 +1179,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     );
     if (submitted == true && mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const MainShell(initialIndex: 3),
-        ),
+        MaterialPageRoute(builder: (_) => const MainShell(initialIndex: 3)),
         (route) => false,
       );
     }

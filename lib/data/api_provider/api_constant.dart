@@ -42,7 +42,8 @@ abstract class ApiConstants {
   static const String vendorActivePlanAlt = "/api/user/vendor/plan/active";
   static const String vendorBuyPlan = "/api/user/vendor/plan/buy";
   static const String vendorBuyPlanAlt = "/api/users/vendor/plan/buy";
-  static const String razorpayCreateOrder = "/api/payment/razorpay/create-order";
+  static const String razorpayCreateOrder =
+      "/api/payment/razorpay/create-order";
   static const String razorpayVerifyPayment = "/api/payment/razorpay/verify";
   static const String vendorCoupons = "/api/vendor/coupons";
   static const String vendorCouponApply = "/api/vendor/coupon/apply";
@@ -118,6 +119,10 @@ abstract class ApiConstants {
 
   // 16. Customer & Vendor Notifications APIs
   static const String notificationsList = "/api/notifications/list";
+  static const String notificationRegisterToken =
+      "/api/notifications/register-token";
+  static const String notificationRemoveToken =
+      "/api/notifications/remove-token";
   static String notificationView(String id) => "/api/notifications/view/$id";
   static String notificationRead(String id) => "/api/notifications/read/$id";
   static const String notificationsReadAll = "/api/notifications/read-all";

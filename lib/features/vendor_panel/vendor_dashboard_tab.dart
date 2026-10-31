@@ -73,6 +73,10 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
         }
         if (bookingsResult.isSuccess == true && bookingsResult.data != null) {
           _recentBookings = bookingsResult.data!.bookings;
+          if (_recentBookings.isNotEmpty ||
+              AppBookingService.instance.vendorBookings.isEmpty) {
+            AppBookingService.instance.setVendorBookings(_recentBookings);
+          }
         }
         _isLoading = false;
         _isNoInternet = false;
@@ -81,7 +85,8 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
       _maybeShowPlanExpiryReminder();
     } catch (e) {
       if (!mounted) return;
-      final isNet = e.toString().toLowerCase().contains('socket') ||
+      final isNet =
+          e.toString().toLowerCase().contains('socket') ||
           e.toString().toLowerCase().contains('connection') ||
           e.toString().toLowerCase().contains('network');
       setState(() {
@@ -118,12 +123,12 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
   void _maybeShowPlanExpiryReminder() {
     if (_hasShownExpiryReminder) return;
     final activePlan = _activePlan;
-    final isActive = activePlan?.isSubscriptionActive ??
+    final isActive =
+        activePlan?.isSubscriptionActive ??
         _stats?.subscription?.isSubscriptionActive ??
         false;
-    final daysRemaining = activePlan?.daysRemaining ??
-        _stats?.subscription?.daysRemaining ??
-        -1;
+    final daysRemaining =
+        activePlan?.daysRemaining ?? _stats?.subscription?.daysRemaining ?? -1;
     if (!isActive || daysRemaining < 0 || daysRemaining > 7) return;
 
     _hasShownExpiryReminder = true;
@@ -191,11 +196,31 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
       animation: AppBookingService.instance,
       builder: (context, _) {
         final bookingService = AppBookingService.instance;
+        final dashboardBookings = bookingService.vendorBookings.isNotEmpty
+            ? bookingService.vendorBookings
+            : _recentBookings;
+        final vendorBookings = bookingService.vendorBookings;
         // Use live API stats when available, fallback to local service
-        final pendingCount = _stats?.bookingsCount.pending ?? bookingService.pendingCount;
-        final confirmedCount = _stats?.bookingsCount.upcoming ?? bookingService.confirmedCount;
-        final completedCount = _stats?.bookingsCount.completed ?? bookingService.completedCount;
-        final totalCount = _stats?.bookingsCount.all ?? bookingService.totalCount;
+        final pendingCount =
+            _stats?.bookingsCount.pending ??
+            (vendorBookings.isNotEmpty
+                ? vendorBookings.where((booking) => booking.isPending).length
+                : bookingService.pendingCount);
+        final confirmedCount =
+            _stats?.bookingsCount.upcoming ??
+            (vendorBookings.isNotEmpty
+                ? vendorBookings.where((booking) => booking.isConfirmed).length
+                : bookingService.confirmedCount);
+        final completedCount =
+            _stats?.bookingsCount.completed ??
+            (vendorBookings.isNotEmpty
+                ? vendorBookings.where((booking) => booking.isCompleted).length
+                : bookingService.completedCount);
+        final totalCount =
+            _stats?.bookingsCount.all ??
+            (vendorBookings.isNotEmpty
+                ? vendorBookings.length
+                : bookingService.totalCount);
 
         return RefreshIndicator(
           color: AppColors.primary,
@@ -206,255 +231,273 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // Greeting & Subtitle
-              Text(
-                'Hello, ${_vendorDisplayName()}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.black,
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                "Here's your real-time business & bookings overview",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Pending Requests Alert Banner (if any)
-              if (pendingCount > 0) ...[
-                InkWell(
-                  onTap: () => onNavigateTab?.call(1),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFD97706).withValues(alpha: 0.5),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.notifications_active_rounded,
-                            color: Color(0xFFD97706), size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$pendingCount New Booking Request${pendingCount > 1 ? 's' : ''} Awaiting Acceptance',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF92400E),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Tap to review and accept/decline now',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFFB45309),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD97706),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Review',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                // Greeting & Subtitle
+                Text(
+                  'Hello, ${_vendorDisplayName()}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.black,
                   ),
                 ),
-                const SizedBox(height: 14),
-              ],
-
-              // Booking counts are arranged in a compact, readable 2x2 grid.
-              Row(
-                children: [
-                  _buildStatCard(
-                    title: 'All',
-                    value: '$totalCount',
-                    icon: Icons.calendar_month_rounded,
-                    accentColor: AppColors.goldDark,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildStatCard(
-                    title: 'Pending',
-                    value: '$pendingCount',
-                    icon: Icons.schedule_rounded,
-                    accentColor: const Color(0xFFD97706),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _buildStatCard(
-                    title: 'Upcoming',
-                    value: '$confirmedCount',
-                    icon: Icons.event_available_rounded,
-                    accentColor: AppColors.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildStatCard(
-                    title: 'Completed',
-                    value: '$completedCount',
-                    icon: Icons.task_alt_rounded,
-                    accentColor: AppColors.success,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-          // Vendor Membership Status Banner (3M, 6M, 1Y)
-          _buildMembershipBanner(context),
-
-          const SizedBox(height: 12),
-
-          // Sponsored Ad / Boost Banner
-          _buildSponsoredAdBanner(context),
-
-          const SizedBox(height: 14),
-
-          // Earnings Summary Card with Visual Mini Chart
-          _buildEarningsCard(context),
-
-          const SizedBox(height: 20),
-
-          // Recent Booking Requests Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recent Booking Requests',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.black,
-                ),
-              ),
-              TextButton(
-                onPressed: () => onNavigateTab?.call(1), // go to bookings
-                child: const Text(
-                  'View All',
+                const SizedBox(height: 2),
+                const Text(
+                  "Here's your real-time business & bookings overview",
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+                    color: AppColors.grey,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 6),
+                const SizedBox(height: 16),
 
-          Builder(
-            builder: (_) {
-              if (_recentBookings.isNotEmpty) {
-                return Column(
-                  children: _recentBookings.take(3).map((booking) {
-                    final location = [
-                      booking.eventLocation,
-                      booking.venueLocation,
-                    ].map((value) => value?.trim() ?? '').firstWhere(
-                      (value) => value.isNotEmpty,
-                      orElse: () => 'N/A',
-                    );
-                    final price = booking.totalAmount;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _buildRecentEnquiryCard(
-                        clientName: booking.customerName ?? 'Client',
-                        event: booking.serviceName ?? 'Package',
-                        budget: price == null
-                            ? 'Custom'
-                            : '₹${AppBookingService.formatIndianCurrency(price.toInt())}',
-                        date: _formatRecentBookingDate(booking.eventDate),
-                        venue: location,
-                        timeAgo: booking.status,
+                // Pending Requests Alert Banner (if any)
+                if (pendingCount > 0) ...[
+                  InkWell(
+                    onTap: () => onNavigateTab?.call(1),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
                       ),
-                    );
-                  }).toList(),
-                );
-              }
-              if (bookingService.bookings.isNotEmpty) {
-                return Column(
-                  children: bookingService.bookings.take(3).map(
-                        (b) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _buildRecentEnquiryCard(
-                            clientName: b.clientName,
-                            event: '${b.eventType} • ${b.package}',
-                            budget: b.total,
-                            date: _formatRecentBookingDate(b.date),
-                            venue: b.venue,
-                            timeAgo: b.status,
-                          ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.5),
+                          width: 1.2,
                         ),
-                      ).toList(),
-                );
-              }
-              final serverRecent = _stats?.recentBookings ?? [];
-              if (serverRecent.isNotEmpty) {
-                return Column(
-                  children: serverRecent.take(3).map(
-                        (rb) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _buildRecentEnquiryCard(
-                            clientName: rb.customerName ?? 'Client',
-                            event: rb.serviceName ?? 'Package',
-                            budget: rb.totalAmount != null ? '₹${rb.totalAmount}' : 'Custom',
-                            date: _formatRecentBookingDate(rb.eventDate),
-                            venue: rb.eventLocation?.trim().isNotEmpty == true
-                                ? rb.eventLocation!.trim()
-                                : 'N/A',
-                            timeAgo: rb.status ?? 'Pending',
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.notifications_active_rounded,
+                            color: Color(0xFFD97706),
+                            size: 20,
                           ),
-                        ),
-                      ).toList(),
-                );
-              }
-              return const AppEmptyState(
-                icon: Icons.calendar_today_outlined,
-                title: 'No Recent Bookings',
-                subtitle: 'Incoming customer booking requests will appear here.',
-              );
-            },
-          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$pendingCount New Booking Request${pendingCount > 1 ? 's' : ''} Awaiting Acceptance',
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Tap to review and accept/decline now',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Review',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
 
-          const SizedBox(height: 20),
-            ],
+                // Booking counts are arranged in a compact, readable 2x2 grid.
+                Row(
+                  children: [
+                    _buildStatCard(
+                      title: 'All',
+                      value: '$totalCount',
+                      icon: Icons.calendar_month_rounded,
+                      accentColor: AppColors.goldDark,
+                    ),
+                    const SizedBox(width: 10),
+                    _buildStatCard(
+                      title: 'Pending',
+                      value: '$pendingCount',
+                      icon: Icons.schedule_rounded,
+                      accentColor: const Color(0xFFD97706),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildStatCard(
+                      title: 'Upcoming',
+                      value: '$confirmedCount',
+                      icon: Icons.event_available_rounded,
+                      accentColor: AppColors.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    _buildStatCard(
+                      title: 'Completed',
+                      value: '$completedCount',
+                      icon: Icons.task_alt_rounded,
+                      accentColor: AppColors.success,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Vendor Membership Status Banner (3M, 6M, 1Y)
+                _buildMembershipBanner(context),
+
+                const SizedBox(height: 12),
+
+                // Sponsored Ad / Boost Banner
+                _buildSponsoredAdBanner(context),
+
+                const SizedBox(height: 14),
+
+                // Earnings Summary Card with Visual Mini Chart
+                _buildEarningsCard(context),
+
+                const SizedBox(height: 20),
+
+                // Recent Booking Requests Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recent Booking Requests',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => onNavigateTab?.call(1), // go to bookings
+                      child: const Text(
+                        'View All',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 6),
+
+                Builder(
+                  builder: (_) {
+                    if (dashboardBookings.isNotEmpty) {
+                      return Column(
+                        children: dashboardBookings.take(3).map((booking) {
+                          final location =
+                              [booking.eventLocation, booking.venueLocation]
+                                  .map((value) => value?.trim() ?? '')
+                                  .firstWhere(
+                                    (value) => value.isNotEmpty,
+                                    orElse: () => 'N/A',
+                                  );
+                          final price = booking.totalAmount;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _buildRecentEnquiryCard(
+                              clientName: booking.customerName ?? 'Client',
+                              event: booking.serviceName ?? 'Package',
+                              budget: price == null
+                                  ? 'Custom'
+                                  : '₹${AppBookingService.formatIndianCurrency(price.toInt())}',
+                              date: _formatRecentBookingDate(booking.eventDate),
+                              venue: location,
+                              timeAgo: booking.status,
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    }
+                    if (bookingService.bookings.isNotEmpty) {
+                      return Column(
+                        children: bookingService.bookings
+                            .take(3)
+                            .map(
+                              (b) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _buildRecentEnquiryCard(
+                                  clientName: b.clientName,
+                                  event: '${b.eventType} • ${b.package}',
+                                  budget: b.total,
+                                  date: _formatRecentBookingDate(b.date),
+                                  venue: b.venue,
+                                  timeAgo: b.status,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    }
+                    final serverRecent = _stats?.recentBookings ?? [];
+                    if (serverRecent.isNotEmpty) {
+                      return Column(
+                        children: serverRecent
+                            .take(3)
+                            .map(
+                              (rb) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _buildRecentEnquiryCard(
+                                  clientName: rb.customerName ?? 'Client',
+                                  event: rb.serviceName ?? 'Package',
+                                  budget: rb.totalAmount != null
+                                      ? '₹${rb.totalAmount}'
+                                      : 'Custom',
+                                  date: _formatRecentBookingDate(rb.eventDate),
+                                  venue:
+                                      rb.eventLocation?.trim().isNotEmpty ==
+                                          true
+                                      ? rb.eventLocation!.trim()
+                                      : 'N/A',
+                                  timeAgo: rb.status ?? 'Pending',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                    }
+                    return const AppEmptyState(
+                      icon: Icons.calendar_today_outlined,
+                      title: 'No Recent Bookings',
+                      subtitle:
+                          'Incoming customer booking requests will appear here.',
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }
@@ -496,9 +539,7 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: accentColor.withValues(alpha: 0.18)),
           boxShadow: [
             BoxShadow(
               color: accentColor.withValues(alpha: 0.06),
@@ -556,24 +597,28 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
   Widget _buildMembershipBanner(BuildContext context) {
     // Use live active plan data when available
     final plan = _activePlan;
-    final planTitle = plan?.subscriptionPlan?.title ??
-        _stats?.subscription?.planTitle ?? '—';
+    final planTitle =
+        plan?.subscriptionPlan?.title ?? _stats?.subscription?.planTitle ?? '—';
     final isActive =
-        plan?.isSubscriptionActive ?? _stats?.subscription?.isSubscriptionActive ?? false;
+        plan?.isSubscriptionActive ??
+        _stats?.subscription?.isSubscriptionActive ??
+        false;
     final daysRemaining =
         plan?.daysRemaining ?? _stats?.subscription?.daysRemaining ?? 0;
     final isExpired =
         plan?.isExpired ?? _stats?.subscription?.isExpired ?? true;
 
-    final statusLabel = isActive ? 'Active' : (isExpired ? 'Expired' : 'Inactive');
+    final statusLabel = isActive
+        ? 'Active'
+        : (isExpired ? 'Expired' : 'Inactive');
     final statusColor = isActive
         ? const Color(0xFF81C784)
         : (isExpired ? const Color(0xFFEF5350) : const Color(0xFFFFB74D));
     final statusBg = isActive
         ? AppColors.success.withValues(alpha: 0.25)
         : (isExpired
-            ? const Color(0xFFEF5350).withValues(alpha: 0.2)
-            : const Color(0xFFFFB74D).withValues(alpha: 0.2));
+              ? const Color(0xFFEF5350).withValues(alpha: 0.2)
+              : const Color(0xFFFFB74D).withValues(alpha: 0.2));
 
     return Container(
       width: double.infinity,
@@ -623,7 +668,9 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                     if (!_isLoading)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 1),
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: statusBg,
                           borderRadius: BorderRadius.circular(4),
@@ -644,27 +691,23 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                   _isLoading
                       ? 'Fetching plan info...'
                       : (isActive
-                          ? 'Active Subscription • $daysRemaining Days Remaining'
-                          : (isExpired
-                              ? 'Plan expired — choose a plan to continue'
-                              : 'No active plan')),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.cream,
-                  ),
+                            ? 'Active Subscription • $daysRemaining Days Remaining'
+                            : (isExpired
+                                  ? 'Plan expired — choose a plan to continue'
+                                  : 'No active plan')),
+                  style: const TextStyle(fontSize: 11, color: AppColors.cream),
                 ),
               ],
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(FadeScaleRoute(page: const VendorSubscriptionPlanScreen())),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
@@ -697,7 +740,9 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEAB308).withValues(alpha: 0.35)),
+        border: Border.all(
+          color: const Color(0xFFEAB308).withValues(alpha: 0.35),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -736,18 +781,15 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                 SizedBox(height: 2),
                 Text(
                   'Get featured on user app top banner & search',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFFCBD5E1),
-                  ),
+                  style: TextStyle(fontSize: 11, color: Color(0xFFCBD5E1)),
                 ),
               ],
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorAdsScreen()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(FadeScaleRoute(page: const VendorAdsScreen())),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.white,
@@ -779,9 +821,7 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -812,8 +852,11 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.arrow_upward_rounded,
-                        size: 11, color: AppColors.success),
+                    Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 11,
+                      color: AppColors.success,
+                    ),
                     SizedBox(width: 2),
                     Text(
                       '+28.5%',
@@ -855,9 +898,7 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
               SizedBox(
                 width: 120,
                 height: 40,
-                child: CustomPaint(
-                  painter: _EarningsSparklinePainter(),
-                ),
+                child: CustomPaint(painter: _EarningsSparklinePainter()),
               ),
             ],
           ),
@@ -874,37 +915,33 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
         'My Profile',
         () => onNavigateTab != null
             ? onNavigateTab!(4)
-            : Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorProfileScreen()),
-              )
+            : Navigator.of(
+                context,
+              ).push(FadeScaleRoute(page: const VendorProfileScreen())),
       ),
       (
         Icons.inventory_2_outlined,
         'Services',
         () => onNavigateTab != null
             ? onNavigateTab!(3)
-            : Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorPackagesScreen()),
-              )
+            : Navigator.of(
+                context,
+              ).push(FadeScaleRoute(page: const VendorPackagesScreen())),
       ),
-      (
-        Icons.calendar_month_outlined,
-        'Bookings',
-        () => onNavigateTab?.call(1)
-      ),
+      (Icons.calendar_month_outlined, 'Bookings', () => onNavigateTab?.call(1)),
       (
         Icons.card_membership_rounded,
         'Plans',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorSubscriptionPlanScreen()),
-            )
+        () => Navigator.of(
+          context,
+        ).push(FadeScaleRoute(page: const VendorSubscriptionPlanScreen())),
       ),
       (
         Icons.campaign_rounded,
         'Boost Ads',
-        () => Navigator.of(context).push(
-              FadeScaleRoute(page: const VendorAdsScreen()),
-            )
+        () => Navigator.of(
+          context,
+        ).push(FadeScaleRoute(page: const VendorAdsScreen())),
       ),
       (
         Icons.access_time_rounded,
@@ -916,15 +953,11 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
         'Portfolio',
         () => onNavigateTab != null
             ? onNavigateTab!(2)
-            : Navigator.of(context).push(
-                FadeScaleRoute(page: const VendorPortfolioScreen()),
-              )
+            : Navigator.of(
+                context,
+              ).push(FadeScaleRoute(page: const VendorPortfolioScreen())),
       ),
-      (
-        Icons.star_outline_rounded,
-        'Reviews',
-        () => _showReviewsSheet(context),
-      ),
+      (Icons.star_outline_rounded, 'Reviews', () => _showReviewsSheet(context)),
       (
         Icons.handshake_outlined,
         'Settlements',
@@ -966,11 +999,7 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                     ),
                   ],
                 ),
-                child: Icon(
-                  item.$1,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
+                child: Icon(item.$1, color: AppColors.primary, size: 20),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1002,9 +1031,7 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1019,8 +1046,11 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                   color: AppColors.primary.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.favorite_rounded,
-                    color: AppColors.primary, size: 16),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.primary,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1064,24 +1094,32 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 12, color: AppColors.grey),
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 12,
+                color: AppColors.grey,
+              ),
               const SizedBox(width: 4),
               Text(
                 date,
                 style: const TextStyle(fontSize: 11, color: AppColors.darkGrey),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.location_on_outlined,
-                  size: 16, color: AppColors.grey),
+              const Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: AppColors.grey,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   venue,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(fontSize: 11, color: AppColors.darkGrey),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.darkGrey,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1091,8 +1129,8 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                   color: timeAgo == 'Confirmed' || timeAgo == 'Accepted'
                       ? AppColors.successLight
                       : timeAgo == 'Pending'
-                          ? const Color(0xFFFEF3C7)
-                          : AppColors.offWhite,
+                      ? const Color(0xFFFEF3C7)
+                      : AppColors.offWhite,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1103,8 +1141,8 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                     color: timeAgo == 'Confirmed' || timeAgo == 'Accepted'
                         ? AppColors.success
                         : timeAgo == 'Pending'
-                            ? const Color(0xFFD97706)
-                            : AppColors.darkGrey,
+                        ? const Color(0xFFD97706)
+                        : AppColors.darkGrey,
                   ),
                 ),
               ),
@@ -1149,8 +1187,11 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                     color: AppColors.successLight,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.handshake_rounded,
-                      color: AppColors.success, size: 24),
+                  child: const Icon(
+                    Icons.handshake_rounded,
+                    color: AppColors.success,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -1181,39 +1222,42 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                 color: AppColors.offWhite,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                    color: AppColors.grey.withValues(alpha: 0.2)),
+                  color: AppColors.grey.withValues(alpha: 0.2),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Text(
                     'Direct Settlement Policy:',
-                    style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 8),
                   Text(
                     '• Direct Transactions: Customers pay you directly in cash, UPI, or bank transfer on event day.',
                     style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                      height: 1.4,
+                    ),
                   ),
                   SizedBox(height: 6),
                   Text(
                     '• No Bank Payout Delays: Widoora does not hold escrow or bank payouts. 100% of the client amount is yours.',
                     style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                      height: 1.4,
+                    ),
                   ),
                   SizedBox(height: 6),
                   Text(
                     '• Flat Subscription Model: You keep every rupee you earn from clients.',
                     style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.darkGrey,
-                        height: 1.4),
+                      fontSize: 12,
+                      color: AppColors.darkGrey,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -1279,8 +1323,10 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.successLight,
                     borderRadius: BorderRadius.circular(12),
@@ -1346,8 +1392,11 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.event_busy_rounded,
-                                  color: AppColors.primary, size: 20),
+                              child: const Icon(
+                                Icons.event_busy_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -1365,15 +1414,18 @@ class VendorDashboardTabState extends State<VendorDashboardTab> {
                                   Text(
                                     '${b.clientName} • ${b.eventName}',
                                     style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.darkGrey),
+                                      fontSize: 12,
+                                      color: AppColors.darkGrey,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.warningLight,
                                 borderRadius: BorderRadius.circular(8),

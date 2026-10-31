@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../../../core/services/booking_service.dart';
+import '../../../core/services/fcm_notification_service.dart';
 import '../../vendor_registration/controllers/vendor_registration_controller.dart';
 import '../../../data/api_provider/auth_api_provider.dart';
 import '../../../data/models/user_model.dart';
@@ -15,7 +16,8 @@ class AuthController extends GetxController {
 
   final RxBool isLoading = false.obs;
   final Rxn<UserModel> currentUser = Rxn<UserModel>();
-  final RxnInt generatedOtp = RxnInt(); // OTP returned by server, used to auto-fill
+  final RxnInt generatedOtp =
+      RxnInt(); // OTP returned by server, used to auto-fill
 
   @override
   void onInit() {
@@ -50,7 +52,17 @@ class AuthController extends GetxController {
   }) async {
     isLoading.value = true;
 
-    final bool hasFiles = aadharFront != null ||
+    final fcmToken = await FcmNotificationService.instance
+        .getTokenIfPermissionGranted();
+    final fcmFields = fcmToken == null
+        ? <String, dynamic>{}
+        : <String, dynamic>{
+            'fcmToken': fcmToken,
+            'platform': Platform.isIOS ? 'ios' : 'android',
+          };
+
+    final bool hasFiles =
+        aadharFront != null ||
         aadharBack != null ||
         liveSelfie != null ||
         profileImg != null;
@@ -68,13 +80,15 @@ class AuthController extends GetxController {
         'mobile': phone.trim(),
         'password': password,
         'roleId': roleId,
+        ...fcmFields,
         if (address != null && address.trim().isNotEmpty) ...{
           'address': address.trim(),
           'businessAddress': address.trim(),
         },
         if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
         if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
-        if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
+        if (pincode != null && pincode.trim().isNotEmpty)
+          'pincode': pincode.trim(),
         if (categoryId != null && categoryId.trim().isNotEmpty)
           'categoryId': categoryId.trim(),
       };
@@ -119,13 +133,15 @@ class AuthController extends GetxController {
         'phone': phone.trim(),
         'password': password,
         'roleId': roleId,
+        ...fcmFields,
         if (address != null && address.trim().isNotEmpty) ...{
           'address': address.trim(),
           'businessAddress': address.trim(),
         },
         if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
         if (state != null && state.trim().isNotEmpty) 'state': state.trim(),
-        if (pincode != null && pincode.trim().isNotEmpty) 'pincode': pincode.trim(),
+        if (pincode != null && pincode.trim().isNotEmpty)
+          'pincode': pincode.trim(),
       };
     }
 
@@ -184,14 +200,20 @@ class AuthController extends GetxController {
         await _storageHelper.saveUserMobile(verifiedUser.mobile ?? user.mobile);
         await _storageHelper.saveUserName(verifiedUser.fullName ?? fullName);
         await _storageHelper.saveRoleId(verifiedUser.roleId ?? roleId);
-        await _storageHelper.saveIsVerified(verifiedUser.isVerified ?? (roleId == 2));
+        await _storageHelper.saveIsVerified(
+          verifiedUser.isVerified ?? (roleId == 2),
+        );
         await _storageHelper.saveIsLoggedIn(true);
         await _storageHelper.saveUserModel(verifiedUser.toJson());
         await persistLocationDetails();
 
         if (verifiedUser.vendorProfile != null) {
-          await _storageHelper.saveApplicationId(verifiedUser.vendorProfile?.applicationId);
-          await _storageHelper.saveApplicationStatus(verifiedUser.vendorProfile?.applicationStatus ?? 'Pending');
+          await _storageHelper.saveApplicationId(
+            verifiedUser.vendorProfile?.applicationId,
+          );
+          await _storageHelper.saveApplicationStatus(
+            verifiedUser.vendorProfile?.applicationStatus ?? 'Pending',
+          );
         }
 
         isLoading.value = false;
@@ -217,8 +239,12 @@ class AuthController extends GetxController {
       await persistLocationDetails();
 
       if (user.vendorProfile != null) {
-        await _storageHelper.saveApplicationId(user.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(user.vendorProfile?.applicationStatus ?? 'Pending');
+        await _storageHelper.saveApplicationId(
+          user.vendorProfile?.applicationId,
+        );
+        await _storageHelper.saveApplicationStatus(
+          user.vendorProfile?.applicationStatus ?? 'Pending',
+        );
       }
 
       isLoading.value = false;
@@ -229,6 +255,8 @@ class AuthController extends GetxController {
     final loginRes = await _authApiProvider.logIn(
       identifier: identifier,
       password: password,
+      fcmToken: fcmToken,
+      platform: fcmToken == null ? null : (Platform.isIOS ? 'ios' : 'android'),
     );
 
     isLoading.value = false;
@@ -248,14 +276,20 @@ class AuthController extends GetxController {
       await _storageHelper.saveUserMobile(loggedInUser.mobile ?? user.mobile);
       await _storageHelper.saveUserName(loggedInUser.fullName ?? fullName);
       await _storageHelper.saveRoleId(loggedInUser.roleId ?? roleId);
-      await _storageHelper.saveIsVerified(loggedInUser.isVerified ?? (roleId == 2));
+      await _storageHelper.saveIsVerified(
+        loggedInUser.isVerified ?? (roleId == 2),
+      );
       await _storageHelper.saveIsLoggedIn(true);
       await _storageHelper.saveUserModel(loggedInUser.toJson());
       await persistLocationDetails();
 
       if (loggedInUser.vendorProfile != null) {
-        await _storageHelper.saveApplicationId(loggedInUser.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(loggedInUser.vendorProfile?.applicationStatus ?? 'Pending');
+        await _storageHelper.saveApplicationId(
+          loggedInUser.vendorProfile?.applicationId,
+        );
+        await _storageHelper.saveApplicationStatus(
+          loggedInUser.vendorProfile?.applicationStatus ?? 'Pending',
+        );
       }
 
       return loginRes;
@@ -286,12 +320,22 @@ class AuthController extends GetxController {
   }) async {
     isLoading.value = true;
 
+    final fcmToken = await FcmNotificationService.instance
+        .getTokenIfPermissionGranted();
+    final fcmFields = fcmToken == null
+        ? <String, dynamic>{}
+        : <String, dynamic>{
+            'fcmToken': fcmToken,
+            'platform': Platform.isIOS ? 'ios' : 'android',
+          };
+
     final requestBody = {
       'fullName': fullName.trim(),
       'email': email.trim().toLowerCase(),
       'phone': phone.trim(),
       'password': password,
       'roleId': roleId,
+      ...fcmFields,
     };
 
     final response = await _authApiProvider.signUp(requestBody);
@@ -355,8 +399,12 @@ class AuthController extends GetxController {
       await _storageHelper.saveUserModel(user.toJson());
 
       if (user.vendorProfile != null) {
-        await _storageHelper.saveApplicationId(user.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(user.vendorProfile?.applicationStatus);
+        await _storageHelper.saveApplicationId(
+          user.vendorProfile?.applicationId,
+        );
+        await _storageHelper.saveApplicationStatus(
+          user.vendorProfile?.applicationStatus,
+        );
       }
     } else {
       Utils.showSnackBar(
@@ -373,7 +421,9 @@ class AuthController extends GetxController {
     required String identifier,
   }) async {
     isLoading.value = true;
-    final response = await _authApiProvider.resendOtp(identifier: identifier.trim());
+    final response = await _authApiProvider.resendOtp(
+      identifier: identifier.trim(),
+    );
     isLoading.value = false;
 
     if (response.isSuccess == true) {
@@ -400,9 +450,14 @@ class AuthController extends GetxController {
   }) async {
     isLoading.value = true;
 
+    final fcmToken = await FcmNotificationService.instance
+        .getTokenIfPermissionGranted();
+
     final response = await _authApiProvider.logIn(
       identifier: identifier.trim(),
       password: password,
+      fcmToken: fcmToken,
+      platform: fcmToken == null ? null : (Platform.isIOS ? 'ios' : 'android'),
     );
 
     isLoading.value = false;
@@ -440,12 +495,18 @@ class AuthController extends GetxController {
       }
 
       if (user.vendorProfile != null) {
-        await _storageHelper.saveApplicationId(user.vendorProfile?.applicationId);
-        await _storageHelper.saveApplicationStatus(user.vendorProfile?.applicationStatus);
+        await _storageHelper.saveApplicationId(
+          user.vendorProfile?.applicationId,
+        );
+        await _storageHelper.saveApplicationStatus(
+          user.vendorProfile?.applicationStatus,
+        );
       }
     } else {
       Utils.showSnackBar(
-        response.message ?? response.error ?? 'Login failed. Please check credentials.',
+        response.message ??
+            response.error ??
+            'Login failed. Please check credentials.',
         isError: true,
       );
     }
@@ -466,14 +527,21 @@ class AuthController extends GetxController {
     isLoading.value = false;
 
     if (res.isSuccess == true) {
-      Utils.showSnackBar(res.message ?? 'Password reset successfully', isError: false);
+      Utils.showSnackBar(
+        res.message ?? 'Password reset successfully',
+        isError: false,
+      );
     } else {
-      Utils.showSnackBar(res.message ?? res.error ?? 'Failed to reset password', isError: true);
+      Utils.showSnackBar(
+        res.message ?? res.error ?? 'Failed to reset password',
+        isError: true,
+      );
     }
     return res;
   }
 
   Future<void> logout() async {
+    await FcmNotificationService.instance.removeTokenFromServer();
     try {
       await _authApiProvider.logOut();
     } catch (_) {}

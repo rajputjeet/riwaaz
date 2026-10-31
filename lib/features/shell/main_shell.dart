@@ -10,8 +10,8 @@ import '../auth/controllers/auth_controller.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../explore/explore_screen.dart';
 import '../auth/login_screen.dart';
-import '../wedding_details/wedding_details_screen.dart';
 import '../../core/services/booking_service.dart';
+import '../../core/services/fcm_notification_service.dart';
 import '../profile/customer_edit_profile_screen.dart';
 import '../profile/change_password_screen.dart';
 import '../profile/saved_vendors_screen.dart';
@@ -48,12 +48,20 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_currentIndex == 0) {
+        FcmNotificationService.instance.requestPermissionAndGetToken();
+      }
+      FcmNotificationService.instance.handleInitialMessageAfterShellReady();
+    });
   }
 
   void _onTabTap(int index) {
     if (index == _currentIndex) return;
     setState(() => _currentIndex = index);
-    if (index == 3) {
+    if (index == 0) {
+      FcmNotificationService.instance.requestPermissionAndGetToken();
+    } else if (index == 3) {
       AppBookingService.instance.fetchCustomerBookings(silent: true);
     } else if (index == 4) {
       _customerProfileKey.currentState?.loadProfile(silent: true);
@@ -266,11 +274,68 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
     });
   }
 
-  void _saveEvents() {
-    StorageHelper().saveWeddingEvents(_events);
+  Future<void> _saveEvents() => StorageHelper().saveWeddingEvents(_events);
+
+  DateTime? _eventDateTime(Map<String, dynamic> event) {
+    final rawDate = event['date']?.toString().trim() ?? '';
+    DateTime? date = DateTime.tryParse(rawDate);
+    if (date == null) {
+      final match = RegExp(
+        r'^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$',
+      ).firstMatch(rawDate);
+      if (match != null) {
+        const months = {
+          'jan': 1,
+          'feb': 2,
+          'mar': 3,
+          'apr': 4,
+          'may': 5,
+          'jun': 6,
+          'jul': 7,
+          'aug': 8,
+          'sep': 9,
+          'oct': 10,
+          'nov': 11,
+          'dec': 12,
+        };
+        final month = months[match.group(2)!.toLowerCase()];
+        if (month != null) {
+          date = DateTime.tryParse(
+            '${match.group(3)}-${month.toString().padLeft(2, '0')}-${match.group(1)!.padLeft(2, '0')}',
+          );
+        }
+      }
+    }
+    if (date == null) return null;
+
+    final storedHour = event['eventHour'];
+    final storedMinute = event['eventMinute'];
+    if (storedHour is num && storedMinute is num) {
+      return DateTime(
+        date.year,
+        date.month,
+        date.day,
+        storedHour.toInt(),
+        storedMinute.toInt(),
+      );
+    }
+
+    final rawTime = event['time']?.toString().trim() ?? '';
+    final timeMatch = RegExp(
+      r'^(\d{1,2}):(\d{2})\s*(AM|PM)$',
+      caseSensitive: false,
+    ).firstMatch(rawTime);
+    if (timeMatch == null) return DateTime(date.year, date.month, date.day);
+
+    var hour = int.tryParse(timeMatch.group(1)!) ?? 0;
+    final minute = int.tryParse(timeMatch.group(2)!) ?? 0;
+    final period = timeMatch.group(3)!.toUpperCase();
+    if (period == 'PM' && hour < 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
-  String _getMonthName(int month) {
+  String _formatEventDate(DateTime date) {
     const months = [
       'Jan',
       'Feb',
@@ -285,7 +350,7 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
       'Nov',
       'Dec',
     ];
-    return (month >= 1 && month <= 12) ? months[month - 1] : '';
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   @override
@@ -296,22 +361,21 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
         ? DateTime.parse(savedDateStr)
         : null;
     final now = DateTime.now();
-    final diff = weddingDate?.difference(now);
+    final upcomingEvents =
+        _events
+            .map((event) => (event: event, date: _eventDateTime(event)))
+            .where((item) => item.date != null && item.date!.isAfter(now))
+            .toList()
+          ..sort((a, b) => a.date!.compareTo(b.date!));
+    final nextEvent = upcomingEvents.isEmpty ? null : upcomingEvents.first;
+    final countdownDate =
+        nextEvent?.date ??
+        (weddingDate != null && weddingDate.isAfter(now) ? weddingDate : null);
+    final countdownTitle = nextEvent?.event['title']?.toString().trim();
+    final diff = countdownDate?.difference(now);
     final days = (diff != null && !diff.isNegative) ? diff.inDays : 0;
     final hours = (diff != null && !diff.isNegative) ? (diff.inHours % 24) : 0;
     final mins = (diff != null && !diff.isNegative) ? (diff.inMinutes % 60) : 0;
-
-    final savedLoc = StorageHelper().getWeddingLocation();
-    final location = (savedLoc != null && savedLoc.isNotEmpty)
-        ? savedLoc
-        : 'Chandigarh';
-    final dateDisplay = weddingDate != null
-        ? '${weddingDate.day} ${_getMonthName(weddingDate.month)} ${weddingDate.year}'
-        : 'Set Wedding Date';
-    final userName = StorageHelper().getUserName()?.trim().isNotEmpty == true
-        ? StorageHelper().getUserName()!
-        : 'Your Event';
-
     return SafeArea(
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -319,115 +383,165 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'My Event Plan 💍',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$userName • $dateDisplay • $location',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.darkGrey,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_note_rounded,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                  onPressed: () async {
-                    await Navigator.of(
-                      context,
-                    ).push(FadeScaleRoute(page: const WeddingDetailsScreen()));
-                    if (mounted) setState(() {});
-                  },
-                ),
-              ],
+            const Text(
+              'My Event Plan',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.black,
+              ),
             ),
             const SizedBox(height: 18),
 
             // Countdown Card
-            GestureDetector(
-              onTap: () async {
-                await Navigator.of(
-                  context,
-                ).push(FadeScaleRoute(page: const WeddingDetailsScreen()));
-                if (mounted) setState(() {});
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryDark.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'COUNTDOWN TO THE BIG DAY',
-                      style: TextStyle(
-                        color: AppColors.goldLight,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.22),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -34,
+                    top: -44,
+                    child: Container(
+                      width: 126,
+                      height: 126,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.white.withValues(alpha: 0.08),
+                          width: 20,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    if (weddingDate != null)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildTimerBlock('$days', 'DAYS'),
-                          _buildTimerBlock('$hours', 'HOURS'),
-                          _buildTimerBlock('$mins', 'MINS'),
-                        ],
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              color: AppColors.white,
-                              size: 20,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: AppColors.white.withValues(
+                                    alpha: 0.18,
+                                  ),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.event_available_rounded,
+                                color: AppColors.goldLight,
+                                size: 21,
+                              ),
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Tap to set wedding date',
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    countdownDate == null
+                                        ? 'YOUR COUNTDOWN'
+                                        : 'UP NEXT',
+                                    style: const TextStyle(
+                                      color: AppColors.goldLight,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    countdownTitle?.isNotEmpty == true
+                                        ? countdownTitle!
+                                        : weddingDate == null
+                                        ? 'Plan a special day'
+                                        : 'Your Wedding Day',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                  ],
-                ),
+                        const SizedBox(height: 18),
+                        if (countdownDate != null) ...[
+                          Row(
+                            children: [
+                              _buildTimerBlock('$days', 'DAYS'),
+                              _buildTimerBlock('$hours', 'HOURS'),
+                              _buildTimerBlock('$mins', 'MINS'),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                color: AppColors.white.withValues(alpha: 0.8),
+                                size: 15,
+                              ),
+                              const SizedBox(width: 7),
+                              Text(
+                                _formatEventDate(countdownDate),
+                                style: TextStyle(
+                                  color: AppColors.white.withValues(
+                                    alpha: 0.88,
+                                  ),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 13,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withValues(alpha: 0.11),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.white.withValues(alpha: 0.12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Add an upcoming event to start your countdown.',
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -470,10 +584,13 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
               ..._events.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final ev = entry.value;
+                final eventDate = _eventDateTime(ev);
                 return _buildEventRow(
                   context,
                   ev['title']?.toString() ?? 'Event',
-                  ev['date']?.toString() ?? '',
+                  eventDate == null
+                      ? ev['date']?.toString() ?? ''
+                      : _formatEventDate(eventDate),
                   ev['time']?.toString() ?? '',
                   ev['location']?.toString() ?? '',
                   Icons.favorite_rounded,
@@ -494,159 +611,316 @@ class _CustomerWeddingTabState extends State<_CustomerWeddingTab> {
 
   void _showAddEventSheet(BuildContext context) {
     final titleCtrl = TextEditingController();
-    final dateCtrl = TextEditingController(text: '28 Dec 2026');
-    final timeCtrl = TextEditingController(text: '7:00 PM');
     final venueCtrl = TextEditingController();
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    var showErrors = false;
+    var isSaving = false;
+    ModalRoute<dynamic>? sheetRoute;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Add Wedding Function',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: titleCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Event Name (e.g. Cocktail Night)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+      builder: (ctx) {
+        sheetRoute ??= ModalRoute.of(ctx);
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: dateCtrl,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Add Wedding Function',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: titleCtrl,
+                      textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
-                        labelText: 'Date',
+                        labelText: 'Event name *',
+                        errorText: showErrors && titleCtrl.text.trim().isEmpty
+                            ? 'Event name is required'
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (_) {
+                        if (showErrors) setSheetState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final now = DateTime.now();
+                              final picked = await showDatePicker(
+                                context: ctx,
+                                initialDate: selectedDate ?? now,
+                                firstDate: DateTime(
+                                  now.year,
+                                  now.month,
+                                  now.day,
+                                ),
+                                lastDate: DateTime(now.year + 10),
+                                helpText: 'Select event date',
+                              );
+                              if (picked != null) {
+                                setSheetState(() => selectedDate = picked);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Event date *',
+                                errorText: showErrors && selectedDate == null
+                                    ? 'Required'
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month_rounded,
+                                    color: AppColors.primary,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      selectedDate == null
+                                          ? 'Choose date'
+                                          : _formatEventDate(selectedDate!),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: selectedDate == null
+                                            ? AppColors.grey
+                                            : AppColors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: ctx,
+                                initialTime: selectedTime ?? TimeOfDay.now(),
+                                helpText: 'Select event time',
+                              );
+                              if (picked != null) {
+                                setSheetState(() => selectedTime = picked);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Event time *',
+                                errorText: showErrors && selectedTime == null
+                                    ? 'Required'
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time_rounded,
+                                    color: AppColors.primary,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      selectedTime?.format(ctx) ??
+                                          'Choose time',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: selectedTime == null
+                                            ? AppColors.grey
+                                            : AppColors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: venueCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: 'Venue location (optional)',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: timeCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Time',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: isSaving
+                            ? null
+                            : () async {
+                                final newTitle = titleCtrl.text.trim();
+                                setSheetState(() => showErrors = true);
+                                if (newTitle.isEmpty ||
+                                    selectedDate == null ||
+                                    selectedTime == null) {
+                                  return;
+                                }
+                                final newEvent = {
+                                  'title': newTitle,
+                                  'date': DateTime(
+                                    selectedDate!.year,
+                                    selectedDate!.month,
+                                    selectedDate!.day,
+                                  ).toIso8601String(),
+                                  'time': selectedTime!.format(ctx),
+                                  'eventHour': selectedTime!.hour,
+                                  'eventMinute': selectedTime!.minute,
+                                  'location': venueCtrl.text.trim(),
+                                };
+                                final updatedEvents = [..._events, newEvent];
+                                setSheetState(() => isSaving = true);
+                                try {
+                                  await StorageHelper().saveWeddingEvents(
+                                    updatedEvents,
+                                  );
+                                  if (!mounted || !ctx.mounted) return;
+                                  setState(() => _events = updatedEvents);
+                                  Navigator.pop(ctx);
+                                  Utils.showSuccess(
+                                    'Added $newTitle to Schedule!',
+                                  );
+                                } catch (_) {
+                                  if (!ctx.mounted) return;
+                                  setSheetState(() => isSaving = false);
+                                  Utils.showError(
+                                    'Could not save this event. Please try again.',
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
+                        child: isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Save Event'),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: venueCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Venue Location',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final newTitle = titleCtrl.text.trim();
-                    if (newTitle.isEmpty) return;
-                    final newEvent = {
-                      'title': newTitle,
-                      'date': dateCtrl.text.trim(),
-                      'time': timeCtrl.text.trim(),
-                      'location': venueCtrl.text.trim().isEmpty
-                          ? 'Chandigarh'
-                          : venueCtrl.text.trim(),
-                    };
-                    setState(() {
-                      _events.add(newEvent);
-                    });
-                    _saveEvents();
-                    Navigator.pop(ctx);
-                    Utils.showSuccess('Added $newTitle to Schedule!');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Save Event'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
+        );
+      },
+    ).whenComplete(() {
+      final route = sheetRoute;
+      if (route == null) {
+        titleCtrl.dispose();
+        venueCtrl.dispose();
+        return;
+      }
+      route.completed.whenComplete(() {
+        titleCtrl.dispose();
+        venueCtrl.dispose();
+      });
+    });
   }
 
   Widget _buildTimerBlock(String val, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            val,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.white,
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          color: AppColors.white.withValues(alpha: 0.13),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.16)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              val,
+              style: const TextStyle(
+                fontSize: 25,
+                height: 1,
+                fontWeight: FontWeight.w900,
+                color: AppColors.white,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-          ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 9,
+                letterSpacing: 1.1,
+                color: AppColors.cream,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppColors.cream,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1055,11 +1329,12 @@ class _CustomerBookingsTabState extends State<_CustomerBookingsTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      backgroundColor: AppColors.white,
       builder: (ctx) => SafeArea(
         child: Container(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            maxHeight: MediaQuery.of(ctx).size.height * 0.96,
           ),
           padding: const EdgeInsets.all(22),
           decoration: const BoxDecoration(
@@ -2627,6 +2902,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
         if (Get.isRegistered<AuthController>()) {
           await Get.find<AuthController>().logout();
         } else {
+          await FcmNotificationService.instance.removeTokenFromServer();
           await StorageHelper().clearAllData();
         }
         if (!context.mounted) return;
@@ -2661,6 +2937,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
     if (Get.isRegistered<AuthController>()) {
       await Get.find<AuthController>().logout();
     } else {
+      await FcmNotificationService.instance.removeTokenFromServer();
       await StorageHelper().clearAllData();
     }
     if (!context.mounted) return;

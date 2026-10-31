@@ -40,19 +40,23 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _loadBookings() async {
+  Future<void> _loadBookings({bool showLoader = true}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _errorMsg = null;
-    });
+    if (showLoader) {
+      setState(() {
+        _isLoading = true;
+        _errorMsg = null;
+      });
+    }
     try {
       final result = await _vendorApi.getBookings(limit: 100);
       if (!mounted) return;
       if (result.isSuccess == true && result.data != null) {
+        AppBookingService.instance.setVendorBookings(result.data!.bookings);
         setState(() {
           _allBookings = result.data!.bookings;
           _isLoading = false;
+          _errorMsg = null;
         });
       } else {
         setState(() {
@@ -188,7 +192,8 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      backgroundColor: AppColors.white,
       builder: (_) =>
           _VendorBookingDetailsSheet(booking: booking, api: _vendorApi),
     );
@@ -375,108 +380,136 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
 
           // Body: loading / error / list
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMsg != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.cloud_off_rounded,
-                            size: 56,
-                            color: AppColors.grey,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final showPlaceholder =
+                    _isLoading || _errorMsg != null || bookings.isEmpty;
+                return RefreshIndicator(
+                  onRefresh: () => _loadBookings(showLoader: false),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: showPlaceholder ? 1 : bookings.length,
+                    itemBuilder: (context, index) {
+                      if (_isLoading) {
+                        return SizedBox(
+                          height: constraints.maxHeight,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _errorMsg!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.darkGrey,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _loadBookings,
-                            icon: const Icon(Icons.refresh_rounded, size: 16),
-                            label: const Text('Retry'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                        );
+                      }
+                      if (_errorMsg != null) {
+                        return SizedBox(
+                          height: constraints.maxHeight,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.cloud_off_rounded,
+                                    size: 56,
+                                    color: AppColors.grey,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _errorMsg!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.darkGrey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: _loadBookings,
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 16,
+                                    ),
+                                    label: const Text('Retry'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: AppColors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                : bookings.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _selectedFilter == 1
-                                ? Icons.mark_email_read_rounded
-                                : Icons.event_busy_rounded,
-                            size: 56,
-                            color: AppColors.grey.withValues(alpha: 0.6),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _selectedFilter == 1
-                                ? 'No Pending Requests'
-                                : _selectedFilter == 2
-                                ? 'No Upcoming Bookings'
-                                : _selectedFilter == 3
-                                ? 'No Completed Bookings'
-                                : _selectedFilter == 4
-                                ? 'No Cancelled Bookings'
-                                : 'No Bookings Found',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.black,
+                        );
+                      }
+                      if (bookings.isEmpty) {
+                        return SizedBox(
+                          height: constraints.maxHeight,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _selectedFilter == 1
+                                        ? Icons.mark_email_read_rounded
+                                        : Icons.event_busy_rounded,
+                                    size: 56,
+                                    color: AppColors.grey.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _selectedFilter == 1
+                                        ? 'No Pending Requests'
+                                        : _selectedFilter == 2
+                                        ? 'No Upcoming Bookings'
+                                        : _selectedFilter == 3
+                                        ? 'No Completed Bookings'
+                                        : _selectedFilter == 4
+                                        ? 'No Cancelled Bookings'
+                                        : 'No Bookings Found',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _selectedFilter == 1
+                                        ? 'New customer booking requests will appear here instantly for your review.'
+                                        : _selectedFilter == 4
+                                        ? 'Cancelled and rejected bookings will appear here.'
+                                        : 'Check other tabs to view upcoming and completed bookings.',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.darkGrey,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _selectedFilter == 1
-                                ? 'New customer booking requests will appear here instantly for your review.'
-                            : _selectedFilter == 4
-                            ? 'Cancelled and rejected bookings will appear here.'
-                            : 'Check other tabs to view upcoming and completed bookings.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.darkGrey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _loadBookings,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: bookings.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        return _buildBookingCard(bookings[index]);
-                      },
-                    ),
+                        );
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == bookings.length - 1 ? 0 : 12,
+                        ),
+                        child: _buildBookingCard(bookings[index]),
+                      );
+                    },
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -489,7 +522,8 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
     final isCompleted = b.isCompleted;
     final isCancelled = b.isCancelled;
     final statusColor = bookingStatusColor(b.status);
-    final cancelledLabel = b.status.toLowerCase() == 'cancelled' ||
+    final cancelledLabel =
+        b.status.toLowerCase() == 'cancelled' ||
             b.status.toLowerCase() == 'canceled'
         ? 'Booking Cancelled'
         : 'Booking Rejected';
@@ -507,9 +541,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
     final eventLocation = [b.eventLocation, b.venueLocation]
         .map((value) => value?.trim() ?? '')
         .firstWhere((value) => value.isNotEmpty, orElse: () => '');
-    final venue = eventLocation.isNotEmpty
-        ? eventLocation
-        : 'N/A';
+    final venue = eventLocation.isNotEmpty ? eventLocation : 'N/A';
     final totalAmount = b.totalAmount != null
         ? '₹${_formatAmount(b.totalAmount!)}'
         : 'N/A';
@@ -615,11 +647,16 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.18)),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.18),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -679,10 +716,7 @@ class _VendorBookingsTabState extends State<VendorBookingsTab> {
           ),
 
           const SizedBox(height: 10),
-          Divider(
-            height: 1,
-            color: statusColor.withValues(alpha: 0.12),
-          ),
+          Divider(height: 1, color: statusColor.withValues(alpha: 0.12)),
           const SizedBox(height: 12),
 
           Row(
@@ -1098,7 +1132,7 @@ class _VendorBookingDetailsSheetState
     return SafeArea(
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.96,
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         decoration: const BoxDecoration(

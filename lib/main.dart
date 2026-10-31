@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'data/injector.dart';
 import 'controllers/category_controller.dart';
 import 'core/constants/app_colors.dart';
@@ -11,9 +13,23 @@ import 'features/auth/login_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'utils/utils.dart';
 import 'utils/helper/storage_helper.dart';
+import 'core/services/fcm_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  var firebaseReady = false;
+  try {
+    await Firebase.initializeApp();
+    firebaseReady = true;
+  } catch (error) {
+    // Firebase app-specific config (google-services.json / GoogleService-Info.plist)
+    // is supplied by the Widoora Firebase project and may be added separately.
+    debugPrint('Firebase is not configured for this build: $error');
+  }
+  if (firebaseReady) {
+    FirebaseMessaging.onBackgroundMessage(handleFcmBackgroundMessage);
+    await FcmNotificationService.instance.initialize();
+  }
   await StorageHelper.init();
   Injector.onAccountRevoked = (message) async {
     final roleId = StorageHelper().getRoleId();
